@@ -91,7 +91,7 @@ class _LayrzRefreshVisualState extends State<LayrzRefreshVisual> with SingleTick
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final trackColor = tokens.colors.sf3;
-    final indicatorColor = tokens.colors.primary.shade500;
+    final indicatorColor = tokens.colors.primary;
     final isSpinning = widget.state == LayrzRefreshState.refreshing || widget.state == LayrzRefreshState.settling;
 
     // Re-evaluate reduce-motion on every build: MediaQuery may change without

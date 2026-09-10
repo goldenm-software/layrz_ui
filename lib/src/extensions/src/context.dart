@@ -56,6 +56,22 @@ extension LayrzContextExtensions on BuildContext {
     }
   }
 
+  /// Whether the active theme is dark (BETA).
+  ///
+  /// Returns `true` when [LayrzTheme.of]'s [LayrzThemeData.brightness] is
+  /// [Brightness.dark]. This is brightness-based, not width-based — do not
+  /// confuse or substitute it for [isCompact], which is a viewport-width
+  /// decision unrelated to color scheme. A narrow desktop window in light mode
+  /// is compact but not dark; a wide window in dark mode is dark but not compact.
+  bool get isDark => LayrzTheme.of(this).brightness == Brightness.dark;
+
+  /// The active theme's [Brightness] (BETA).
+  ///
+  /// Shorthand for `LayrzTheme.of(context).brightness`. Prefer [isDark] for a
+  /// simple light/dark decision; use this when you need the [Brightness] value
+  /// itself (for example to pass it on to a token-driven resolver).
+  Brightness get brightness => LayrzTheme.of(this).brightness;
+
   /// The tokenizer for convenient access to design tokens via shortcuts.
   ///
   /// Provides both group getters (e.g., [LayrzTokenizer.colors]) and

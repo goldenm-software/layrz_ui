@@ -18,10 +18,15 @@ void main() {
       await expectLater(font.load(), completes);
     });
 
-    test('every style getter reports the "JetBrains Mono" family', () {
+    // The bundled asset is declared in layrz_ui's own pubspec, so Flutter
+    // registers it namespaced as 'packages/layrz_ui/JetBrains Mono'. A
+    // TextStyle must pass `package: 'layrz_ui'` for the bare family name to
+    // resolve to that registered family -- without it the family matches
+    // nothing and text silently falls back to the default sans font.
+    test('every style getter resolves to the package-namespaced family', () {
       const font = LayrzJetBrainsMonoFont();
       for (final style in [font.display, font.headline, font.title, font.body, font.label]) {
-        expect(style.fontFamily, 'JetBrains Mono');
+        expect(style.fontFamily, 'packages/layrz_ui/JetBrains Mono');
       }
     });
 

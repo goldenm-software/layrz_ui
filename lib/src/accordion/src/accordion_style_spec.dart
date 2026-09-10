@@ -139,7 +139,7 @@ class LayrzAccordionStyleSpec {
       return LayrzAccordionStyleSpec(
         headerBackgroundColor: tokens.colors.sf1,
         headerContentColor: tokens.colors.fg3,
-        borderColor: tokens.colors.fg3,
+        borderColor: tokens.colors.divider,
         borderWidth: borderWidth,
         shadow: shadow,
       );
@@ -149,7 +149,7 @@ class LayrzAccordionStyleSpec {
       return LayrzAccordionStyleSpec(
         headerBackgroundColor: tokens.colors.sf3,
         headerContentColor: tokens.colors.fg1,
-        borderColor: tokens.colors.fg3,
+        borderColor: tokens.colors.divider,
         borderWidth: borderWidth,
         shadow: shadow,
       );
@@ -159,7 +159,7 @@ class LayrzAccordionStyleSpec {
       return LayrzAccordionStyleSpec(
         headerBackgroundColor: tokens.colors.sf2,
         headerContentColor: tokens.colors.fg1,
-        borderColor: tokens.colors.fg3,
+        borderColor: tokens.colors.divider,
         borderWidth: borderWidth,
         shadow: shadow,
       );
@@ -168,7 +168,7 @@ class LayrzAccordionStyleSpec {
     return LayrzAccordionStyleSpec(
       headerBackgroundColor: tokens.colors.sf1,
       headerContentColor: tokens.colors.fg1,
-      borderColor: tokens.colors.fg3,
+      borderColor: tokens.colors.divider,
       borderWidth: borderWidth,
       shadow: shadow,
     );

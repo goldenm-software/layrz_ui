@@ -1,6 +1,8 @@
 import 'dart:ui' show Tristate;
 
+import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:file_picker_linux/src/linux_platform_file.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -10,49 +12,76 @@ import 'package:layrz_ui/layrz_ui.dart';
 import '../helpers/pump_themed.dart';
 import '../helpers/pump_themed_app.dart';
 
-/// A fake [FilePicker] platform implementation, injected via [FilePicker.platform]
-/// so tests never touch a real platform channel.
+/// A fake [FilePickerPlatform] implementation, injected via
+/// [FilePickerPlatform.instance] so tests never touch a real platform channel.
 ///
-/// [file_picker] exposes its platform singleton as a plain settable static, which
-/// is the officially supported test seam (see the package's own test suite) --
-/// no `MethodChannel` mocking is needed.
-class _FakeFilePicker extends FilePicker {
-  /// The result [pickFiles] returns on its next call, or null to simulate the
-  /// user cancelling the picker.
-  FilePickerResult? nextResult;
+/// `file_picker` 12 made [FilePicker] itself `abstract final` (a static-only
+/// façade over [FilePickerPlatform.instance]), so it can no longer be
+/// subclassed directly -- the platform-interface seam below is the officially
+/// supported replacement (`FilePickerPlatform.instance = ...`, which passes
+/// `PlatformInterface.verifyToken` because this class extends
+/// [FilePickerPlatform] and inherits its token).
+class MockFilePickerPlatform extends FilePickerPlatform {
+  /// The result [pickFile] returns on its next call, or `null` to simulate
+  /// the user cancelling the picker.
+  PlatformFile? nextFile;
 
-  /// Records the [FileType] passed to the most recent [pickFiles] call.
+  /// The result [pickFiles] returns on its next call, or an empty list to
+  /// simulate the user cancelling the picker.
+  List<PlatformFile> nextFiles = const [];
+
+  /// Records the [FileType] passed to the most recent [pickFile]/[pickFiles]
+  /// call.
   FileType? lastType;
 
-  /// Records the `allowedExtensions` passed to the most recent [pickFiles] call.
+  /// Records the `allowedExtensions` passed to the most recent
+  /// [pickFile]/[pickFiles] call.
   List<String>? lastAllowedExtensions;
 
-  /// Records the `allowMultiple` flag passed to the most recent [pickFiles] call.
-  bool? lastAllowMultiple;
+  /// The number of times [pickFile] has been called.
+  int pickFileCallCount = 0;
 
   /// The number of times [pickFiles] has been called.
   int pickFilesCallCount = 0;
 
   @override
-  Future<FilePickerResult?> pickFiles({
+  Future<PlatformFile?> pickFile({
     String? dialogTitle,
     String? initialDirectory,
     FileType type = FileType.any,
     List<String>? allowedExtensions,
     Function(FilePickerStatus)? onFileLoading,
-    bool allowCompression = false,
     int compressionQuality = 0,
-    bool allowMultiple = false,
-    bool withData = false,
-    bool withReadStream = false,
-    bool lockParentWindow = false,
-    bool readSequential = false,
+    AndroidOptions androidOptions = const AndroidOptions(),
+    DarwinOptions darwinOptions = const DarwinOptions(),
+    WindowsOptions windowsOptions = const WindowsOptions(),
+    LinuxOptions linuxOptions = const LinuxOptions(),
+    WebOptions webOptions = const WebOptions(),
+  }) async {
+    pickFileCallCount++;
+    lastType = type;
+    lastAllowedExtensions = allowedExtensions;
+    return nextFile;
+  }
+
+  @override
+  Future<List<PlatformFile>> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    int compressionQuality = 0,
+    AndroidOptions androidOptions = const AndroidOptions(),
+    DarwinOptions darwinOptions = const DarwinOptions(),
+    WindowsOptions windowsOptions = const WindowsOptions(),
+    LinuxOptions linuxOptions = const LinuxOptions(),
+    WebOptions webOptions = const WebOptions(),
   }) async {
     pickFilesCallCount++;
     lastType = type;
     lastAllowedExtensions = allowedExtensions;
-    lastAllowMultiple = allowMultiple;
-    return nextResult;
+    return nextFiles;
   }
 }
 
@@ -79,16 +108,42 @@ List<String> dumpSemanticsLabels(WidgetTester tester) {
   return labels;
 }
 
+/// Builds a fake [PlatformFile] for test fixtures.
+///
+/// [LinuxPlatformFile] (from `package:file_picker_linux`, imported directly
+/// from its `src/` file rather than the package's top-level barrel) is used
+/// as the constructible [PlatformFile] implementation, because [PlatformFile]
+/// itself is `abstract base` and cannot be instantiated directly.
+///
+/// [WebPlatformFile] (`package:file_picker_web`) was tried first, since its
+/// own file has no web-only imports -- but its lone import,
+/// `platform_file_web_fetch.dart`, uses `dart:js_interop`, and *that*
+/// library fails to even **load** under `flutter test`'s VM runner (a
+/// compile-time "library not available on this platform" error, not a
+/// runtime one) -- so any import path reaching it, however indirect, breaks
+/// the whole suite. `file_picker_linux`'s [LinuxPlatformFile] has no such
+/// import anywhere in its chain, and is built here with an explicit
+/// [XFile.fromData] rather than [LinuxPlatformFile.fromPath] -- the io
+/// [XFile]'s plain constructor silently **ignores** its own `bytes`
+/// parameter (only `XFile.fromData` actually keeps them in memory), so
+/// `.fromPath(..., bytes: ...)` would read through to a real (non-existent)
+/// file on disk instead of returning the fixture bytes.
 PlatformFile _platformFile(String name, List<int> bytes) {
-  return PlatformFile(name: name, size: bytes.length, bytes: Uint8List.fromList(bytes));
+  final data = Uint8List.fromList(bytes);
+  return LinuxPlatformFile(
+    name: name,
+    uri: Uri.file('/tmp/$name'),
+    xFile: XFile.fromData(data, name: name),
+    bytesLength: data.length,
+  );
 }
 
 void main() {
-  late _FakeFilePicker fakePicker;
+  late MockFilePickerPlatform fakePicker;
 
   setUp(() {
-    fakePicker = _FakeFilePicker();
-    FilePicker.platform = fakePicker;
+    fakePicker = MockFilePickerPlatform();
+    FilePickerPlatform.instance = fakePicker;
   });
 
   Future<void> pumpWide(WidgetTester tester, Widget child) async {
@@ -110,9 +165,9 @@ void main() {
     });
 
     testWidgets('a picked file is committed via onChanged', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('a.png', [1, 2, 3]),
-      ]);
+      ];
       List<LayrzFileInputResult>? changed;
 
       await pumpWide(
@@ -129,8 +184,8 @@ void main() {
       expect(changed!.first.mimeType, 'image/png');
     });
 
-    testWidgets('a cancelled picker (null result) does not call onChanged', (tester) async {
-      fakePicker.nextResult = null;
+    testWidgets('a cancelled picker (empty result) does not call onChanged', (tester) async {
+      fakePicker.nextFiles = const [];
       var called = false;
 
       await pumpWide(
@@ -180,10 +235,10 @@ void main() {
 
   group('LayrzFileInput multi-file value', () {
     testWidgets('multiple picked files all appear in onChanged as a List', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('a.png', [1, 2, 3]),
         _platformFile('b.pdf', [4, 5, 6]),
-      ]);
+      ];
       List<LayrzFileInputResult>? changed;
 
       await pumpWide(tester, LayrzFileInput(onChanged: (files) => changed = files));
@@ -195,21 +250,20 @@ void main() {
       expect(changed!.map((f) => f.name), containsAll(['a.png', 'b.pdf']));
     });
 
-    testWidgets('allowMultiple is false when maxFiles is 1', (tester) async {
+    testWidgets('pickFile (single-file) is used instead of pickFiles when maxFiles is 1', (tester) async {
       await pumpWide(tester, const LayrzFileInput(maxFiles: 1));
 
       await tester.tap(find.byType(LayrzFileInput));
       await tester.pump();
 
-      expect(fakePicker.lastAllowMultiple, isFalse);
+      expect(fakePicker.pickFileCallCount, 1);
+      expect(fakePicker.pickFilesCallCount, 0);
     });
 
     testWidgets('picking again with maxFiles 1 replaces rather than appends', (tester) async {
       final handle = tester.ensureSemantics();
       try {
-        fakePicker.nextResult = FilePickerResult([
-          _platformFile('first.png', [1]),
-        ]);
+        fakePicker.nextFile = _platformFile('first.png', [1]);
         List<LayrzFileInputResult>? changed;
 
         await pumpWide(
@@ -224,9 +278,7 @@ void main() {
         // Once populated, the whole box is no longer the tap target (each row
         // owns its own action, see `_buildBox`'s doc) -- "Add more" re-opens
         // the picker instead.
-        fakePicker.nextResult = FilePickerResult([
-          _platformFile('second.png', [2]),
-        ]);
+        fakePicker.nextFile = _platformFile('second.png', [2]);
         await tester.tap(find.bySemanticsLabel('Add more files'));
         await tester.pumpAndSettle();
 
@@ -250,9 +302,9 @@ void main() {
     });
 
     testWidgets('a picked file outside allowedExtensions is rejected, not committed', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('malware.exe', [1, 2, 3]),
-      ]);
+      ];
       var called = false;
 
       await pumpWide(
@@ -272,9 +324,9 @@ void main() {
     testWidgets('the rejection message stays visible after the initial rejection (not a vanishing toast)', (
       tester,
     ) async {
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('bad.exe', [1]),
-      ]);
+      ];
 
       await pumpWide(tester, const LayrzFileInput(allowedExtensions: ['png']));
 
@@ -292,9 +344,9 @@ void main() {
     });
 
     testWidgets('a custom rejectionMessage is shown instead of the default', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('bad.exe', [1]),
-      ]);
+      ];
 
       await pumpWide(
         tester,
@@ -308,9 +360,9 @@ void main() {
     });
 
     testWidgets('a subsequent successful pick clears the rejection message', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('bad.exe', [1]),
-      ]);
+      ];
 
       await pumpWide(tester, const LayrzFileInput(allowedExtensions: ['png']));
 
@@ -318,9 +370,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('rejected'), findsOneWidget);
 
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('good.png', [1, 2, 3]),
-      ]);
+      ];
       await tester.tap(find.byType(LayrzFileInput));
       await tester.pumpAndSettle();
 
@@ -330,9 +382,9 @@ void main() {
 
   group('LayrzFileInput image preview', () {
     testWidgets('a picked image file renders via LayrzFileInputPreview', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('photo.png', [1, 2, 3]),
-      ]);
+      ];
 
       await pumpWide(tester, const LayrzFileInput());
 
@@ -347,9 +399,9 @@ void main() {
     testWidgets('clear affordance removes a file and reports the updated list', (tester) async {
       final handle = tester.ensureSemantics();
       try {
-        fakePicker.nextResult = FilePickerResult([
+        fakePicker.nextFiles = [
           _platformFile('a.png', [1, 2, 3]),
-        ]);
+        ];
         List<LayrzFileInputResult>? changed;
 
         await pumpWide(tester, LayrzFileInput(onChanged: (files) => changed = files));
@@ -371,9 +423,9 @@ void main() {
     });
 
     testWidgets('clear affordance is keyboard-reachable via FocusableActionDetector', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('a.png', [1, 2, 3]),
-      ]);
+      ];
 
       await pumpWide(tester, const LayrzFileInput());
 
@@ -393,9 +445,9 @@ void main() {
     testWidgets('"Add more" re-opens the picker from the populated state', (tester) async {
       final handle = tester.ensureSemantics();
       try {
-        fakePicker.nextResult = FilePickerResult([
+        fakePicker.nextFiles = [
           _platformFile('a.png', [1, 2, 3]),
-        ]);
+        ];
 
         await pumpWide(tester, const LayrzFileInput());
 
@@ -417,10 +469,10 @@ void main() {
     ) async {
       final handle = tester.ensureSemantics();
       try {
-        fakePicker.nextResult = FilePickerResult([
+        fakePicker.nextFiles = [
           _platformFile('a.png', [1]),
           _platformFile('b.png', [2]),
-        ]);
+        ];
         List<LayrzFileInputResult>? changed;
 
         await pumpWide(
@@ -449,9 +501,9 @@ void main() {
     testWidgets('"Clear all" does not appear with a single file', (tester) async {
       final handle = tester.ensureSemantics();
       try {
-        fakePicker.nextResult = FilePickerResult([
+        fakePicker.nextFiles = [
           _platformFile('a.png', [1]),
-        ]);
+        ];
 
         await pumpWide(tester, const LayrzFileInput());
 
@@ -501,9 +553,9 @@ void main() {
     });
 
     testWidgets('the box shows file previews instead of the hint once populated', (tester) async {
-      fakePicker.nextResult = FilePickerResult([
+      fakePicker.nextFiles = [
         _platformFile('a.png', [1, 2, 3]),
-      ]);
+      ];
 
       await pumpWide(tester, const LayrzFileInput(hintText: 'Drop your files here'));
 

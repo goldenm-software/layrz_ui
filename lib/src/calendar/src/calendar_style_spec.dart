@@ -38,12 +38,12 @@ class LayrzCalendarDayCellStyleSpec {
   }) {
     final Color backgroundColor;
     if (isToday) {
-      backgroundColor = tokens.colors.primary.shade500.withValues(alpha: 0.08);
+      backgroundColor = tokens.colors.primary.withValues(alpha: 0.08);
     } else {
       backgroundColor = tokens.colors.sf1;
     }
 
-    final Color borderColor = isToday ? tokens.colors.primary.shade500 : tokens.colors.divider;
+    final Color borderColor = isToday ? tokens.colors.primary : tokens.colors.divider;
 
     final Color dateColor;
     if (isDisabled) {
@@ -58,7 +58,7 @@ class LayrzCalendarDayCellStyleSpec {
       backgroundColor: backgroundColor,
       borderColor: borderColor,
       dateColor: dateColor,
-      eventColor: tokens.colors.info.shade500,
+      eventColor: tokens.colors.info,
     );
   }
 

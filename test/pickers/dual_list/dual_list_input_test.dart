@@ -1,0 +1,637 @@
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_ui/layrz_ui.dart';
+import 'package:layrz_ui/src/pickers/src/shared/picker_metrics.dart';
+
+import '../../helpers/no_overflow.dart';
+import '../../helpers/pump_themed.dart';
+
+/// Finds the (icon-only, Fab-style) [LayrzButton] whose [LayrzButton.labelText]
+/// equals [label] -- the move-all affordances render no visible text
+/// ([find.text] cannot see them), only a [Semantics] label carrying it.
+Finder _findButtonByLabel(String label) =>
+    find.byWidgetPredicate((widget) => widget is LayrzButton && widget.labelText == label);
+
+void main() {
+  final items = <LayrzSelectItem<String>>[
+    const LayrzSelectItem(value: 'apple', child: Text('Apple'), searchableStrings: {'Apple'}),
+    const LayrzSelectItem(value: 'banana', child: Text('Banana'), searchableStrings: {'Banana'}),
+    const LayrzSelectItem(value: 'cherry', child: Text('Cherry'), searchableStrings: {'Cherry'}),
+  ];
+
+  /// Sets a wide (desktop, `isCompact == false`) viewport.
+  void setDesktopViewport(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+  }
+
+  /// Sets a narrow (compact, `isCompact == true`) viewport.
+  void setCompactViewport(WidgetTester tester) {
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+  }
+
+  group('LayrzDualListInput — desktop two-panel surface', () {
+    guardedTestWidgets('renders both panels with their own item partitions', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const ['banana'],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      expect(find.text('Available (2)'), findsOneWidget);
+      expect(find.text('Selected (1)'), findsOneWidget);
+      expect(find.text('Apple'), findsOneWidget);
+      expect(find.text('Cherry'), findsOneWidget);
+      expect(find.text('Banana'), findsOneWidget);
+    });
+
+    guardedTestWidgets('tapping an Available row moves it to Selected and fires onChanged', (tester) async {
+      setDesktopViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      expect(find.text('Available (3)'), findsOneWidget);
+      expect(find.text('Selected (0)'), findsOneWidget);
+
+      await tester.tap(find.text('Apple'));
+      await tester.pumpAndSettle();
+
+      expect(committed, ['apple']);
+      expect(find.text('Available (2)'), findsOneWidget);
+      expect(find.text('Selected (1)'), findsOneWidget);
+    });
+
+    guardedTestWidgets('tapping a Selected row moves it back to Available and fires onChanged', (tester) async {
+      setDesktopViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const ['apple', 'banana'],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      expect(find.text('Available (1)'), findsOneWidget);
+      expect(find.text('Selected (2)'), findsOneWidget);
+
+      await tester.tap(find.text('Apple'));
+      await tester.pumpAndSettle();
+
+      expect(committed, ['banana']);
+      expect(find.text('Available (2)'), findsOneWidget);
+      expect(find.text('Selected (1)'), findsOneWidget);
+    });
+
+    guardedTestWidgets('onChanged reports values in items order regardless of transfer order', (tester) async {
+      setDesktopViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      await tester.tap(find.text('Cherry'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Apple'));
+      await tester.pumpAndSettle();
+
+      expect(committed, ['apple', 'cherry'], reason: 'must follow items order, not tap order');
+    });
+
+    guardedTestWidgets('move-all-to-selected transfers every visible Available item at once', (tester) async {
+      setDesktopViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      await tester.tap(_findButtonByLabel('Toggle all to selected'));
+      await tester.pumpAndSettle();
+
+      expect(committed, ['apple', 'banana', 'cherry']);
+      expect(find.text('Available (0)'), findsOneWidget);
+      expect(find.text('Selected (3)'), findsOneWidget);
+    });
+
+    guardedTestWidgets('move-all-to-available transfers every visible Selected item at once', (tester) async {
+      setDesktopViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const ['apple', 'banana', 'cherry'],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      await tester.tap(_findButtonByLabel('Toggle all to available'));
+      await tester.pumpAndSettle();
+
+      expect(committed, isEmpty);
+      expect(find.text('Available (3)'), findsOneWidget);
+      expect(find.text('Selected (0)'), findsOneWidget);
+    });
+
+    guardedTestWidgets('search narrows only the Available panel, leaving Selected unaffected', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const ['banana'],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      // Both panels have search fields (their own EditableText each) -- the
+      // first one belongs to Available.
+      final searchFields = find.byType(EditableText);
+      expect(searchFields, findsNWidgets(2));
+
+      await tester.enterText(searchFields.first, 'cherry');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cherry'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
+      // Selected panel (Banana) is untouched by Available's own search.
+      expect(find.text('Banana'), findsOneWidget);
+    });
+
+    guardedTestWidgets('move-all-to-selected with an Available search active moves only the matching items', (
+      tester,
+    ) async {
+      setDesktopViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      // Both panels render a search field -- the first belongs to Available.
+      final searchFields = find.byType(EditableText);
+      await tester.enterText(searchFields.first, 'an');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      // 'an' matches Banana only -- Apple and Cherry stay out of view.
+      expect(find.text('Banana'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
+      expect(find.text('Cherry'), findsNothing);
+
+      await tester.tap(_findButtonByLabel('Toggle all to selected'));
+      await tester.pumpAndSettle();
+
+      expect(committed, ['banana'], reason: 'only the searched/visible Available item should transfer');
+      expect(find.text('Selected (1)'), findsOneWidget);
+      // Apple and Cherry never matched the query -- they must stay in
+      // Available, not be swept along by the move-all button.
+      expect(find.text('Available (2)'), findsOneWidget);
+    });
+
+    guardedTestWidgets('move-all-to-available with a Selected search active moves only the matching items', (
+      tester,
+    ) async {
+      setDesktopViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const ['apple', 'banana', 'cherry'],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      // Both panels render a search field -- the second belongs to Selected.
+      final searchFields = find.byType(EditableText);
+      await tester.enterText(searchFields.at(1), 'cherry');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Cherry'), findsOneWidget);
+      expect(find.text('Apple'), findsNothing);
+      expect(find.text('Banana'), findsNothing);
+
+      await tester.tap(_findButtonByLabel('Toggle all to available'));
+      await tester.pumpAndSettle();
+
+      expect(committed, ['apple', 'banana'], reason: 'only the searched/visible Selected item should transfer back');
+      // Cherry left Selected; Apple and Banana were never part of the
+      // filtered move and must remain selected.
+      expect(find.text('Selected (2)'), findsOneWidget);
+      expect(find.text('Available (1)'), findsOneWidget);
+    });
+
+    guardedTestWidgets('move-all-to-selected is disabled when the Available search matches nothing', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      final searchFields = find.byType(EditableText);
+      await tester.enterText(searchFields.first, 'zzz-no-match');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<LayrzButton>(_findButtonByLabel('Toggle all to selected'));
+      expect(button.style, LayrzButtonStyle.textFab);
+      expect(button.isDisabled, isTrue);
+      expect(button.onTap, isNull);
+    });
+
+    guardedTestWidgets('a disabled field does not respond to row taps', (tester) async {
+      setDesktopViewport(tester);
+      var committed = false;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          disabled: true,
+          onChanged: (_) => committed = true,
+        ),
+      );
+
+      await tester.tap(find.text('Apple'));
+      await tester.pumpAndSettle();
+
+      expect(committed, isFalse);
+    });
+
+    guardedTestWidgets('errors render below the two-panel surface', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          errors: const ['This field is required'],
+        ),
+      );
+
+      expect(find.text('This field is required'), findsOneWidget);
+    });
+
+    guardedTestWidgets('hideDetails suppresses the error block', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          errors: const ['This field is required'],
+          hideDetails: true,
+        ),
+      );
+
+      expect(find.text('This field is required'), findsNothing);
+    });
+
+    guardedTestWidgets('a caller-supplied value change reconciles the panels', (tester) async {
+      setDesktopViewport(tester);
+      final valueNotifier = ValueNotifier<List<String>>(const []);
+
+      await pumpThemed(
+        tester,
+        ValueListenableBuilder<List<String>>(
+          valueListenable: valueNotifier,
+          builder: (context, value, _) {
+            return LayrzDualListInput<String>(
+              labelText: 'Fruits',
+              items: items,
+              value: value,
+              itemExtent: 52,
+              availableListName: 'Available',
+              selectedListName: 'Selected',
+            );
+          },
+        ),
+      );
+
+      expect(find.text('Selected (0)'), findsOneWidget);
+
+      // Externally-driven value change (never through this widget's own
+      // onChanged) -- proves didUpdateWidget's reconciliation.
+      valueNotifier.value = ['apple'];
+      await tester.pumpAndSettle();
+
+      expect(find.text('Selected (1)'), findsOneWidget);
+      valueNotifier.dispose();
+    });
+
+    guardedTestWidgets('empty items list shows the empty-state text in both panels', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: const <LayrzSelectItem<String>>[],
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      expect(find.text('No item found'), findsNWidgets(2));
+    });
+
+    guardedTestWidgets('a custom emptyListText overrides the localized default', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: const <LayrzSelectItem<String>>[],
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          emptyListText: 'Nothing here',
+        ),
+      );
+
+      expect(find.text('Nothing here'), findsNWidgets(2));
+    });
+
+    guardedTestWidgets('availableListName/selectedListName render as each panel\'s title', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Left',
+          selectedListName: 'Right',
+        ),
+      );
+
+      expect(find.text('Left (3)'), findsOneWidget);
+      expect(find.text('Right (0)'), findsOneWidget);
+    });
+
+    guardedTestWidgets('enableAvailableSearch/enableSelectedSearch false removes each panel\'s search field', (
+      tester,
+    ) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          enableAvailableSearch: false,
+          enableSelectedSearch: false,
+        ),
+      );
+
+      expect(find.byType(EditableText), findsNothing);
+    });
+  });
+
+  group('LayrzDualListInput — compact delegation (DESIGN-43)', () {
+    guardedTestWidgets('at a WIDE viewport the two-panel desktop surface is shown, MultiSelect is absent', (
+      tester,
+    ) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      expect(find.text('Available (3)'), findsOneWidget);
+      expect(find.byType(LayrzMultiSelectInput<String>), findsNothing);
+    });
+
+    guardedTestWidgets('at a NARROW viewport MultiSelect is shown, the two-panel desktop surface is absent', (
+      tester,
+    ) async {
+      setCompactViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      expect(find.byType(LayrzMultiSelectInput<String>), findsOneWidget);
+      expect(find.text('Available (3)'), findsNothing);
+      expect(find.text('Selected (0)'), findsNothing);
+    });
+
+    guardedTestWidgets('the compact delegate forwards items/value/labelText/itemExtent', (tester) async {
+      setCompactViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const ['cherry'],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      final multiSelect = tester.widget<LayrzMultiSelectInput<String>>(find.byType(LayrzMultiSelectInput<String>));
+      expect(multiSelect.items, items);
+      expect(multiSelect.value, ['cherry']);
+      expect(multiSelect.labelText, 'Fruits');
+      expect(multiSelect.itemExtent, 52);
+    });
+
+    guardedTestWidgets('committing through the compact MultiSelect delegate fires onChanged', (tester) async {
+      setCompactViewport(tester);
+      List<String>? committed;
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          value: const [],
+          itemExtent: 52,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+          onChanged: (values) => committed = values,
+        ),
+      );
+
+      final multiSelect = tester.widget<LayrzMultiSelectInput<String>>(find.byType(LayrzMultiSelectInput<String>));
+      multiSelect.onChanged?.call(['apple']);
+
+      expect(committed, ['apple']);
+    });
+  });
+
+  group('LayrzDualListInput — itemExtent floor assertion', () {
+    test('throws when itemExtent is below kLayrzPickerMinItemExtent', () {
+      expect(
+        () => LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          itemExtent: kLayrzPickerMinItemExtent - 1,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    guardedTestWidgets('accepts an itemExtent exactly at kLayrzPickerMinItemExtent', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          itemExtent: kLayrzPickerMinItemExtent,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      expect(find.byType(LayrzDualListInput<String>), findsOneWidget);
+    });
+
+    guardedTestWidgets('accepts an itemExtent above kLayrzPickerMinItemExtent', (tester) async {
+      setDesktopViewport(tester);
+
+      await pumpThemed(
+        tester,
+        LayrzDualListInput<String>(
+          labelText: 'Fruits',
+          items: items,
+          itemExtent: kLayrzPickerMinItemExtent + 12,
+          availableListName: 'Available',
+          selectedListName: 'Selected',
+        ),
+      );
+
+      expect(find.byType(LayrzDualListInput<String>), findsOneWidget);
+    });
+  });
+}

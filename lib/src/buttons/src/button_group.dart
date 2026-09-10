@@ -168,7 +168,7 @@ class LayrzButtonGroup extends StatelessWidget {
         (context, controller) => LayrzButton(
           labelText: triggerHintText!,
           icon: triggerIcon ?? MdiIcons.dotsVertical,
-          style: LayrzButtonStyle.filledFab,
+          style: LayrzButtonStyle.textFab,
           onTap: controller.isOpen ? controller.close : controller.open,
         );
 

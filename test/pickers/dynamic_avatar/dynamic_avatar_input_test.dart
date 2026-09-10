@@ -4,11 +4,11 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_mdi_remap/flutter_mdi_remap.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_ui/src/file_input/file_input.dart';
 import 'package:layrz_ui/src/images/src/avatar.dart';
 import 'package:layrz_ui/src/images/src/avatar_source.dart';
 import 'package:layrz_ui/src/pickers/src/dynamic_avatar/dynamic_avatar_tile.dart';
 import 'package:layrz_ui/src/pickers/src/dynamic_avatar/dynamic_avatar_input.dart';
-import 'package:layrz_ui/src/pickers/src/image/image_input.dart';
 
 import '../../helpers/find_button_label.dart';
 import '../../helpers/no_overflow.dart';
@@ -139,10 +139,10 @@ void main() {
 
   group('LayrzDynamicAvatarInput — closed-field clear badge', () {
     // The clear affordance is an icon-only circular badge overlaid on the
-    // tile's top-right corner (mirroring `LayrzImageInput`'s own), announced
-    // via `Semantics(label: 'Remove avatar')` -- `tester.tap` on that
-    // semantics finder hit-tests through to the badge's own `GestureDetector`
-    // beneath it.
+    // tile's top-right corner, announced via
+    // `Semantics(label: 'Remove avatar')` -- `tester.tap` on that semantics
+    // finder hit-tests through to the badge's own `GestureDetector` beneath
+    // it.
     Finder clearBadgeFinder() => find.bySemanticsLabel('Remove avatar');
 
     guardedTestWidgets('no clear badge is shown when the value is null (empty tile)', (tester) async {
@@ -481,7 +481,7 @@ void main() {
   });
 
   group('LayrzDynamicAvatarInput — Upload tab', () {
-    guardedTestWidgets('the Upload tab renders an image tile', (tester) async {
+    guardedTestWidgets('the Upload tab renders a file input tile', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -494,18 +494,17 @@ void main() {
       await tester.tap(find.text('Base64'));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(MdiIcons.imagePlusOutline), findsOneWidget);
-      // The base64 emit path itself is driven by `file_picker`'s native
+      expect(find.byType(LayrzFileInput), findsOneWidget);
+      expect(find.byIcon(MdiIcons.cloudUploadOutline), findsOneWidget);
+      // The file-pick emit path itself is driven by `file_picker`'s native
       // system dialog, which cannot be invoked from a widget test -- this
-      // tab's rendering is asserted here; the base64-to-LayrzAvatarBase64
-      // mapping the surface wires onto LayrzImageInput.onChanged is
+      // tab's rendering is asserted here; the file-to-LayrzAvatarBase64
+      // mapping the surface wires onto LayrzFileInput.onChanged is
       // exercised directly below by invoking that callback, without going
       // through the OS picker.
     });
 
-    guardedTestWidgets('a base64 string emitted by LayrzImageInput commits a LayrzAvatarBase64 and closes', (
-      tester,
-    ) async {
+    guardedTestWidgets('a file emitted by LayrzFileInput commits a LayrzAvatarBase64 and closes', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -521,15 +520,20 @@ void main() {
       await tester.tap(find.text('Base64'));
       await tester.pumpAndSettle();
 
-      final imageInput = tester.widget<LayrzImageInput>(find.byType(LayrzImageInput));
-      imageInput.onChanged?.call('data:image/png;base64,AAAA');
+      final fileInput = tester.widget<LayrzFileInput>(find.byType(LayrzFileInput));
+      final result = LayrzFileInputResult(
+        name: 'avatar.png',
+        mimeType: 'image/png',
+        bytes: Uint8List.fromList([0, 0, 0, 0]),
+      );
+      fileInput.onChanged?.call([result]);
       await tester.pumpAndSettle();
 
-      expect(changed, const LayrzAvatarBase64('data:image/png;base64,AAAA'));
-      expect(find.byType(LayrzImageInput), findsNothing);
+      expect(changed, LayrzAvatarBase64(result.dataUri));
+      expect(find.byType(LayrzFileInput), findsNothing);
     });
 
-    guardedTestWidgets('a null/empty emission from LayrzImageInput does not commit', (tester) async {
+    guardedTestWidgets('an empty emission from LayrzFileInput does not commit', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -545,12 +549,12 @@ void main() {
       await tester.tap(find.text('Base64'));
       await tester.pumpAndSettle();
 
-      final imageInput = tester.widget<LayrzImageInput>(find.byType(LayrzImageInput));
-      imageInput.onChanged?.call(null);
+      final fileInput = tester.widget<LayrzFileInput>(find.byType(LayrzFileInput));
+      fileInput.onChanged?.call(const []);
       await tester.pumpAndSettle();
 
       expect(changed, isNull);
-      expect(find.byType(LayrzImageInput), findsOneWidget);
+      expect(find.byType(LayrzFileInput), findsOneWidget);
     });
   });
 

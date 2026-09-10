@@ -56,7 +56,7 @@ class LayrzBadgeStyleSpec {
   /// resolved accent regardless of [type] when non-null — this is how a caller
   /// supplies a custom color without having to also pass `type: custom`.
   /// When [type] is [LayrzBadgeType.custom] and [color] is null, the accent
-  /// falls back to `tokens.colors.primary.shade500`. [contentColor] is derived
+  /// falls back to `tokens.colors.primary`. [contentColor] is derived
   /// from the accent via [LayrzColorExtensions.contrastColor] so text/icon
   /// content always has adequate contrast against the fill.
   static LayrzBadgeStyleSpec resolve({
@@ -64,7 +64,7 @@ class LayrzBadgeStyleSpec {
     required Color? color,
     required LayrzTokens tokens,
   }) {
-    final accent = color ?? type.colorToken(tokens) ?? tokens.colors.primary.shade500;
+    final accent = color ?? type.colorToken(tokens) ?? tokens.colors.primary;
     return LayrzBadgeStyleSpec(
       backgroundColor: accent,
       contentColor: accent.contrastColor,

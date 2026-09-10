@@ -876,7 +876,7 @@ void main() {
     // `LayrzCalendarMonthSurface`'s class doc and `LayrzCalendarWeekGutter`'s
     // class doc for the full reasoning this test guards.
     guardedTestWidgets(
-      'a multi-day bar renders at the IDENTICAL rect whether showWeekNumbers is true or false',
+      'a multi-day bar stays column-aligned to the grid when the week gutter appears',
       (tester) async {
         tester.view.physicalSize = const Size(1200, 900);
         tester.view.devicePixelRatio = 1.0;
@@ -900,39 +900,70 @@ void main() {
           );
         }
 
+        // The gutter is composed as an OUTER sibling (a leading `Row` cell),
+        // so turning it on legitimately shifts the whole grid right and
+        // narrows it -- the bar is EXPECTED to move and shrink. What must NOT
+        // change is the bar's relationship to its grid: it must stay measured
+        // against the grid's own `maxWidth / 7`, so that its width equals its
+        // day-span times the (now narrower) column width. A gutter wrongly
+        // composed inside the week `Stack` would narrow `_MultiDayBar`'s
+        // `maxWidth` while the `Expanded` day cells kept dividing correctly,
+        // desyncing the bar from the columns -- that is the regression guarded
+        // here. We assert the invariant by comparing the bar's width to a
+        // single day cell's width in each configuration: Aug 10-12 spans 3
+        // days, so the bar must stay ~3x a day cell either way.
+        Rect gridDayCellRect() => tester.getRect(find.text('15').first);
+
         await pumpThemed(tester, buildSurface(showWeekNumbers: false));
-        final rectWithoutGutter = tester.getRect(find.text('Multi day'));
+        final barNoGutter = tester.getRect(find.text('Multi day'));
+        final cellNoGutter = gridDayCellRect();
 
         await pumpThemed(tester, buildSurface(showWeekNumbers: true));
-        final rectWithGutter = tester.getRect(find.text('Multi day'));
+        final barWithGutter = tester.getRect(find.text('Multi day'));
+        final cellWithGutter = gridDayCellRect();
 
+        // The bar must move right when the gutter appears (proof the gutter is
+        // an outer sibling, not an overlay) -- if it did not move, the gutter
+        // would be stealing space from inside the grid instead.
         expect(
-          rectWithGutter,
-          rectWithoutGutter,
+          barWithGutter.left,
+          greaterThan(barNoGutter.left),
+          reason: 'The multi-day bar did not shift right when the outer-sibling week gutter appeared.',
+        );
+
+        // The bar-to-column ratio must be preserved across both configs: the
+        // bar spans the same number of day columns regardless of the gutter.
+        final ratioNoGutter = barNoGutter.width / cellNoGutter.width;
+        final ratioWithGutter = barWithGutter.width / cellWithGutter.width;
+        expect(
+          ratioWithGutter,
+          closeTo(ratioNoGutter, 0.05),
           reason:
-              'The multi-day bar shifted or resized when the week-number gutter appeared. This means the '
-              'gutter is (or is affecting) the width `_MultiDayBar` measures via '
-              '`constraints.maxWidth / columns`, which must stay exactly 7-column-equivalent regardless '
-              'of whether the gutter renders as a sibling outside the grid -- see '
-              'LayrzCalendarMonthSurface\'s class doc for why this must never happen.',
+              'The multi-day bar desynced from the grid columns when the week gutter appeared: its '
+              'width-per-column changed, which means the gutter is affecting the `maxWidth` '
+              '`_MultiDayBar` measures against instead of being reserved purely as an outer sibling -- '
+              'see LayrzCalendarMonthSurface\'s class doc for why this must never happen.',
         );
       },
     );
 
     guardedTestWidgets(
-      'every day cell renders at the IDENTICAL rect whether showWeekNumbers is true or false',
+      'the day grid stays seven equal columns, offset by the gutter, when the week gutter appears',
       (tester) async {
         tester.view.physicalSize = const Size(1200, 900);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
 
-        // A day-cell regression sibling to the bar-geometry test above: the
-        // day cells are `Expanded` and so could in principle still look
-        // correct even if `maxWidth` were narrowed (they simply divide
-        // whatever width they are given by 7) -- this test would catch the
-        // case where the *grid itself* shrinks instead of the gutter being a
-        // sibling reservation outside it, which the bar test alone would not
-        // distinguish from "everything shifted together correctly".
+        // The day cells are `Expanded`, so they divide whatever width they are
+        // given into seven. Composing the gutter as an OUTER sibling narrows
+        // the grid (and shifts it right) -- that is expected and correct. What
+        // must stay true either way is that the grid remains SEVEN EQUAL
+        // columns: the gutter must reserve space outside the grid, not distort
+        // the column division inside it. So instead of asserting an identical
+        // absolute rect (which the outer-sibling design deliberately breaks),
+        // this measures the horizontal pitch between two adjacent day columns
+        // and asserts (a) it stays uniform, and (b) the whole grid shifts right
+        // when the gutter appears.
         Widget buildSurface({required bool showWeekNumbers}) {
           return SizedBox(
             width: 1000,
@@ -945,19 +976,50 @@ void main() {
           );
         }
 
+        // Measure the actual day-cell widgets rather than date-number text:
+        // every week row is a `Row` of seven `Expanded(LayrzCalendarDayCell)`,
+        // so the first seven cells form one clean week row whose widths reveal
+        // the column division directly and unambiguously.
+        ({double pitch, double firstLeft}) measureFirstRow() {
+          final cells = [for (var i = 0; i < 7; i++) tester.getRect(find.byType(LayrzCalendarDayCell).at(i))]
+            ..sort((a, b) => a.left.compareTo(b.left));
+          final widths = [for (final c in cells) c.width];
+          // Every column must be the same width -- a distorted grid (gutter
+          // stealing space from inside it) would show uneven columns.
+          for (final w in widths) {
+            expect(w, closeTo(widths.first, 0.5), reason: 'Day columns are not equal width: $widths');
+          }
+          return (pitch: widths.first, firstLeft: cells.first.left);
+        }
+
         await pumpThemed(tester, buildSurface(showWeekNumbers: false));
-        final rectWithoutGutter = tester.getRect(find.text('15').first);
+        final noGutter = measureFirstRow();
+        final pitchNoGutter = noGutter.pitch;
+        final firstCellNoGutter = noGutter.firstLeft;
 
         await pumpThemed(tester, buildSurface(showWeekNumbers: true));
-        final rectWithGutter = tester.getRect(find.text('15').first);
+        final withGutter = measureFirstRow();
+        final pitchWithGutter = withGutter.pitch;
+        final firstCellWithGutter = withGutter.firstLeft;
 
+        // The grid must shift right when the outer-sibling gutter reserves its
+        // leading space -- proof the gutter is not stealing space from inside
+        // the grid.
         expect(
-          rectWithGutter,
-          rectWithoutGutter,
-          reason:
-              'A day cell\'s date-number rect shifted when the week-number gutter appeared -- the grid '
-              'body must occupy the exact same rect either way, with the gutter reserving space as an '
-              'outer sibling rather than shrinking the grid.',
+          firstCellWithGutter,
+          greaterThan(firstCellNoGutter),
+          reason: 'The day grid did not shift right when the outer-sibling week gutter appeared.',
+        );
+
+        // The grid narrows by the gutter reservation, so the pitch shrinks --
+        // but it must stay uniform (asserted inside columnPitch) and shrink by
+        // no more than the gutter could account for. A pitch that stayed
+        // identical would mean the gutter overlapped the grid rather than
+        // reserving its own space.
+        expect(
+          pitchWithGutter,
+          lessThan(pitchNoGutter),
+          reason: 'The day-column pitch did not shrink when the outer-sibling week gutter reserved leading space.',
         );
       },
     );

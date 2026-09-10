@@ -18,7 +18,18 @@ import 'package:layrz_ui/layrz_ui.dart';
 /// [debugCheckHasOverlay] in its build method, which asserts that an [Overlay]
 /// widget exists in the ancestor tree. Without it, every Fab test will fail with
 /// a runtime assertion before even building the button. The Overlay is created
-/// with a single dummy entry that is replaced by the actual content.
+/// with a single entry that hosts the actual content.
+///
+/// **Repeated calls replace the on-screen child.** [Overlay.initialEntries] is
+/// only consumed once, the moment an [OverlayState] is created — a second call
+/// to [pumpThemed] in the same test would otherwise land at the same tree
+/// position, reuse the existing [OverlayState], and silently keep showing the
+/// *previous* child while [initialEntries] is ignored. To keep every call
+/// live, the [Overlay] is given a fresh [UniqueKey] on each invocation, forcing
+/// Flutter to discard the old [OverlayState] and create a new one that
+/// consumes the new [initialEntries]. This preserves [Overlay] as a genuine
+/// ancestor of [child] (required by [debugCheckHasOverlay]) while still
+/// guaranteeing that the most recent [child] is what actually renders.
 ///
 /// Usage:
 /// ```dart
@@ -42,6 +53,10 @@ Future<void> pumpThemed(
       child: LayrzTheme(
         data: theme ?? LayrzThemeData.light(),
         child: Overlay(
+          // A fresh key per call forces a new OverlayState each time pumpThemed
+          // runs, so initialEntries is re-consumed with the current child
+          // instead of being silently ignored by a reused OverlayState.
+          key: UniqueKey(),
           initialEntries: [
             OverlayEntry(
               builder: (context) => Center(child: child),

@@ -222,7 +222,7 @@ class _LayrzPasswordChecklist extends StatelessWidget {
                     child: Icon(
                       item.met ? MdiIcons.checkCircleOutline : MdiIcons.closeCircleOutline,
                       size: 14.0 + tokens.spacing.sp1,
-                      color: item.met ? colors.success.shade500 : colors.fg4,
+                      color: item.met ? colors.success : colors.fg4,
                     ),
                   ),
                   SizedBox(width: tokens.spacing.sp1),

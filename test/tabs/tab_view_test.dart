@@ -413,7 +413,7 @@ void main() {
         find.ancestor(of: find.text('First'), matching: find.byType(LayrzTappable)).first,
       );
 
-      expect(tappable.color, tokens.colors.primary.shade500);
+      expect(tappable.color, tokens.colors.primary);
     });
 
     guardedTestWidgets('an unselected pill paints the background surface token, never transparent', (tester) async {

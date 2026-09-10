@@ -2,8 +2,13 @@
 // These constants define exact pixel values, spacing, and typography
 // specifications for the scaffold list panel, detail pane, and interactive elements.
 
-/// List panel width in logical pixels.
-const double kLayrzScaffoldListWidth = 250.0;
+/// The list panel's default width in logical pixels, used by [ListPanel] when
+/// its caller does not pass an explicit `width` (see `ListPanel.width`).
+///
+/// A fold-aware layout (`LayrzScaffoldShell._buildFoldedSideBySideLayout`) still
+/// overrides this with the physical seam's mapped leading extent, so this value
+/// only governs the panel's ordinary, non-folded default.
+const double kLayrzScaffoldListWidth = 400.0;
 
 /// List panel filter field height in logical pixels.
 const double kLayrzScaffoldFilterHeight = 30.0;

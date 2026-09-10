@@ -48,7 +48,7 @@ class _FindSpikeEditableFieldState extends State<FindSpikeEditableField> {
       controller: _controller,
       focusNode: _focusNode,
       style: tokens.typography.body.copyWith(color: tokens.colors.fg1),
-      cursorColor: tokens.colors.primary.shade500,
+      cursorColor: tokens.colors.primary,
       backgroundCursorColor: tokens.colors.fg4,
       // Material-free EditableText has no TextSelectionTheme ancestor to
       // fall back on, so without an explicit selectionColor a Ctrl+A/drag

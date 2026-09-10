@@ -29,7 +29,7 @@ class SpikeButton extends StatelessWidget {
         onTap: onTap,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: tokens.colors.primary.shade500,
+            color: tokens.colors.primary,
             borderRadius: tokens.radius.br2,
           ),
           child: Padding(

@@ -12,7 +12,7 @@ void main() {
 
     group('resolve() - layrz style', () {
       test('layrz inert: surface background, solid accent border, tonal left panel, accent icon', () {
-        final accent = tokens.colors.info.shade500;
+        final accent = tokens.colors.info;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
           accent: accent,
@@ -31,7 +31,7 @@ void main() {
       });
 
       test('layrz interactive: background is opaque', () {
-        final accent = tokens.colors.info.shade500;
+        final accent = tokens.colors.info;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
           accent: accent,
@@ -43,7 +43,7 @@ void main() {
       });
 
       test('layrz interactive: left panel is opaque flattened tonal (shadow prevention)', () {
-        final accent = tokens.colors.info.shade500;
+        final accent = tokens.colors.info;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
           accent: accent,
@@ -58,7 +58,7 @@ void main() {
       });
 
       test('layrz inert: left panel is translucent tonal (unchanged)', () {
-        final accent = tokens.colors.info.shade500;
+        final accent = tokens.colors.info;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
           accent: accent,
@@ -73,11 +73,11 @@ void main() {
 
       test('layrz: tonal left panel, accent border across severities', () {
         final severities = [
-          (name: 'info', color: tokens.colors.info.shade500),
-          (name: 'success', color: tokens.colors.success.shade500),
-          (name: 'warning', color: tokens.colors.warning.shade500),
-          (name: 'danger', color: tokens.colors.danger.shade500),
-          (name: 'contextual', color: tokens.colors.contextual.shade500),
+          (name: 'info', color: tokens.colors.info),
+          (name: 'success', color: tokens.colors.success),
+          (name: 'warning', color: tokens.colors.warning),
+          (name: 'danger', color: tokens.colors.danger),
+          (name: 'contextual', color: tokens.colors.contextual),
         ];
 
         for (final severity in severities) {
@@ -110,7 +110,7 @@ void main() {
 
     group('resolve() - filledIcon style', () {
       test('filledIcon inert: surface background, accent border, solid accent left panel, contrast icon', () {
-        final accent = tokens.colors.contextual.shade500;
+        final accent = tokens.colors.contextual;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
           accent: accent,
@@ -128,7 +128,7 @@ void main() {
       });
 
       test('filledIcon interactive: border is accent with base width', () {
-        final accent = tokens.colors.contextual.shade500;
+        final accent = tokens.colors.contextual;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
           accent: accent,
@@ -143,11 +143,11 @@ void main() {
 
       test('filledIcon border and left panel track accent colour across severity types', () {
         final severities = [
-          (name: 'info', color: tokens.colors.info.shade500),
-          (name: 'success', color: tokens.colors.success.shade500),
-          (name: 'warning', color: tokens.colors.warning.shade500),
-          (name: 'danger', color: tokens.colors.danger.shade500),
-          (name: 'contextual', color: tokens.colors.contextual.shade500),
+          (name: 'info', color: tokens.colors.info),
+          (name: 'success', color: tokens.colors.success),
+          (name: 'warning', color: tokens.colors.warning),
+          (name: 'danger', color: tokens.colors.danger),
+          (name: 'contextual', color: tokens.colors.contextual),
         ];
 
         for (final severity in severities) {
@@ -181,7 +181,7 @@ void main() {
       test('copyWith replaces only specified fields', () {
         final original = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
-          accent: tokens.colors.primary.shade500,
+          accent: tokens.colors.primary,
           tokens: tokens,
           isInteractive: false,
         );
@@ -199,13 +199,13 @@ void main() {
       test('two specs with identical fields are equal', () {
         final spec1 = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
-          accent: tokens.colors.primary.shade500,
+          accent: tokens.colors.primary,
           tokens: tokens,
           isInteractive: false,
         );
         final spec2 = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
-          accent: tokens.colors.primary.shade500,
+          accent: tokens.colors.primary,
           tokens: tokens,
           isInteractive: false,
         );
@@ -216,13 +216,13 @@ void main() {
       test('two specs with different fields are not equal', () {
         final spec1 = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
-          accent: tokens.colors.primary.shade500,
+          accent: tokens.colors.primary,
           tokens: tokens,
           isInteractive: false,
         );
         final spec2 = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
-          accent: tokens.colors.primary.shade500,
+          accent: tokens.colors.primary,
           tokens: tokens,
           isInteractive: false,
         );
@@ -235,13 +235,13 @@ void main() {
       test('equal specs have identical hash codes', () {
         final spec1 = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
-          accent: tokens.colors.success.shade500,
+          accent: tokens.colors.success,
           tokens: tokens,
           isInteractive: false,
         );
         final spec2 = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
-          accent: tokens.colors.success.shade500,
+          accent: tokens.colors.success,
           tokens: tokens,
           isInteractive: false,
         );
@@ -252,7 +252,7 @@ void main() {
 
     group('interactive alerts invariant — all fill colours must be opaque', () {
       test('every interactive style has opaque fill colours to prevent shadow bleed', () {
-        final accent = tokens.colors.primary.shade500;
+        final accent = tokens.colors.primary;
         final styles = LayrzAlertStyle.values;
         const transparent = Color(0x00000000);
 
@@ -298,7 +298,7 @@ void main() {
 
     group('border assertion — surviving styles unchanged', () {
       test('layrz style: solid accent border with base width', () {
-        final accent = tokens.colors.info.shade500;
+        final accent = tokens.colors.info;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.layrz,
           accent: accent,
@@ -311,7 +311,7 @@ void main() {
       });
 
       test('filledIcon style: solid accent border with base width', () {
-        final accent = tokens.colors.warning.shade500;
+        final accent = tokens.colors.warning;
         final spec = LayrzAlertStyleSpec.resolve(
           style: LayrzAlertStyle.filledIcon,
           accent: accent,

@@ -14,11 +14,10 @@ import 'dynamic_avatar_tile.dart';
 /// [LayrzAvatarSource], in the layrz_ui design system.
 ///
 /// [LayrzDynamicAvatarInput] presents its closed state as a **tappable
-/// avatar tile** ([LayrzDynamicAvatarTile]) — mirroring `LayrzImageInput`'s
-/// own tile presentation exactly, per the maintainer's explicit direction
-/// that this field's closed state should show the full avatar prominently
-/// rather than a compact picker-anchor row. The tile renders the current
-/// selection via [LayrzAvatar] — an image (URL or base64), an
+/// avatar tile** ([LayrzDynamicAvatarTile]), per the maintainer's explicit
+/// direction that this field's closed state should show the full avatar
+/// prominently rather than a compact picker-anchor row. The tile renders
+/// the current selection via [LayrzAvatar] — an image (URL or base64), an
 /// `MdiRemapIcon`, or a Unicode emoji — or, when [value] is `null`, a
 /// centered add-avatar affordance icon. Tapping the tile (empty or
 /// populated) opens [LayrzDynamicAvatarSurface] via
@@ -26,9 +25,8 @@ import 'dynamic_avatar_tile.dart';
 /// [LayrzBottomSheet] below `isCompact`), which lets the user pick from
 /// exactly four fixed modes — URL, Upload, Icon, and Emoji — or clear the
 /// selection back to `null`. A populated tile additionally carries an
-/// independently tappable circular clear (X) badge at its top-right corner,
-/// matching [LayrzDynamicAvatarTile]/`LayrzImageInput`'s own clear-badge
-/// convention.
+/// independently tappable circular clear (X) badge at its top-right corner
+/// (see [LayrzDynamicAvatarTile]'s own clear-badge convention).
 ///
 /// **The tabbed dialog surface is unchanged by this presentation** — only
 /// the closed field's own build changed; [LayrzDynamicAvatarSurface] (its
@@ -111,8 +109,8 @@ class LayrzDynamicAvatarInput extends StatefulWidget {
   /// presentation.
   ///
   /// The tile presentation has a single fixed size
-  /// ([kDynamicAvatarTileSize], matching `LayrzImageInput`'s own default) in
-  /// every state, so there is no dense/regular density distinction to make
+  /// ([kDynamicAvatarTileSize]) in every state, so there is no dense/regular
+  /// density distinction to make
   /// — this flag has no visible effect.
   final bool dense;
 
@@ -242,8 +240,7 @@ class _LayrzDynamicAvatarInputState extends State<LayrzDynamicAvatarInput> {
     );
   }
 
-  /// Builds the label row above the tile, mirroring [LayrzImageInput]'s
-  /// `_buildLabel` composition exactly.
+  /// Builds the label row above the tile.
   Widget _buildLabel(LayrzTokens tokens) {
     return Padding(
       padding: EdgeInsets.only(bottom: tokens.spacing.sp2),

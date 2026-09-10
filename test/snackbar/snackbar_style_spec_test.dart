@@ -89,10 +89,10 @@ void main() {
         expect(spec.surfaceColor, equals(tokens.colors.sf1));
       });
 
-      test('falls back to tokens.colors.primary.shade500 when customColor is null', () {
+      test('falls back to tokens.colors.primary when customColor is null', () {
         final spec = LayrzSnackbarStyleSpec.resolve(LayrzSnackbarType.custom, tokens);
 
-        expect(spec.accentColor, equals(tokens.colors.primary.shade500));
+        expect(spec.accentColor, equals(tokens.colors.primary));
       });
 
       test('descriptionColor stays the neutral grey token regardless of the custom accent', () {

@@ -171,7 +171,7 @@ void main() {
   group('LayrzPickersDayGrid — range interior colour (Finding 1)', () {
     // Regression test for the "solid black" defect: `LayrzColorSwatch
     // .fromColor` derives shade50 by subtracting 0.40 from the seed's HSL
-    // lightness, which clamps to fully opaque black for kPrimaryColor
+    // lightness, which clamps to fully opaque black for kLightPrimaryColor
     // (lightness ~0.19). `day_grid_cell.dart` no longer reads
     // `primary.shade50` at all for a range-interior cell -- the interior's
     // tint now comes entirely from the continuous bar underneath it, built

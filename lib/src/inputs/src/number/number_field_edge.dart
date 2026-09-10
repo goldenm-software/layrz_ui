@@ -107,9 +107,11 @@ class _NumberFieldControlState extends State<NumberFieldControl> {
     final Color pressedColor;
 
     if (widget.hasErrors) {
-      // Error state: use darker danger shades for clearly visible feedback
-      hoverColor = tokens.colors.danger.shade100;
-      pressedColor = tokens.colors.danger.shade200;
+      // Error state: tonal danger fills over the field surface for clearly
+      // visible feedback that reads on both light and dark themes; pressed is a
+      // touch stronger than hover.
+      hoverColor = tokens.colors.danger.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.sf3);
+      pressedColor = tokens.colors.danger.withOpacityValue(tokens.colors.tonalOpacity * 1.6).flattenOn(tokens.colors.sf3);
     } else {
       // Non-error states (focused, disabled, default): use neutral surface steps
       hoverColor = tokens.colors.sf3;

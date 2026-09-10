@@ -199,8 +199,8 @@ void main() {
         isDragging: false,
         isFocusVisible: true,
       );
-      expect(colors.activeTrackColor, tokens.colors.primary.shade600);
-      expect(colors.thumbColor, tokens.colors.primary.shade600);
+      expect(colors.activeTrackColor, tokens.colors.primary.darken(0.12));
+      expect(colors.thumbColor, tokens.colors.primary.darken(0.12));
     });
 
     test('a pressed thumb lifts to a higher elevation than resting', () {
@@ -224,7 +224,7 @@ void main() {
         isDragging: true,
         isFocusVisible: false,
       );
-      expect(colors.activeTrackColor, tokens.colors.primary.shade600);
+      expect(colors.activeTrackColor, tokens.colors.primary.darken(0.12));
       expect(colors.thumbElevation, 2);
     });
 
@@ -253,7 +253,7 @@ void main() {
       expect(colors.thumbElevation, 2);
     });
 
-    test('keyboard focus-visible shows a primary-shade700 border, distinct from hover', () {
+    test('keyboard focus-visible shows a darkened primary border, distinct from hover', () {
       final colors = resolveLayrzSliderColors(
         tokens: tokens,
         states: const {},
@@ -263,7 +263,7 @@ void main() {
         isFocusVisible: true,
       );
       expect(colors.activeTrackColor, tokens.colors.primary);
-      expect(colors.thumbBorderColor, tokens.colors.primary.shade700);
+      expect(colors.thumbBorderColor, tokens.colors.primary.darken(0.2));
     });
 
     test('default (no state) resolves to the base primary palette', () {

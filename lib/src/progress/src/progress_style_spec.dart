@@ -52,14 +52,14 @@ class LayrzProgressStyleSpec {
   ///
   /// [type] selects the semantic accent color, following the `LayrzChipType`
   /// convention. [color] is the explicit accent used when [type] is
-  /// [LayrzProgressType.custom]; it falls back to `tokens.colors.primary.shade500`
+  /// [LayrzProgressType.custom]; it falls back to `tokens.colors.primary`
   /// when null. [tokens] provides the surface color used for the track.
   static LayrzProgressStyleSpec resolve({
     required LayrzProgressType type,
     required Color? color,
     required LayrzTokens tokens,
   }) {
-    final accent = type.colorToken(tokens) ?? color ?? tokens.colors.primary.shade500;
+    final accent = type.colorToken(tokens) ?? color ?? tokens.colors.primary;
 
     return LayrzProgressStyleSpec(
       trackColor: tokens.colors.sf3,

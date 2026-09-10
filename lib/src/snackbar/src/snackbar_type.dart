@@ -89,19 +89,14 @@ enum LayrzSnackbarType {
   /// [tokens] supplies the live color tokens to resolve from, so custom themes are
   /// respected rather than hardcoding hex values.
   ///
-  /// Resolution favours real tokens over the design spec's literal hex values;
-  /// the spec's hexes (danger `#D32F2F`, success `#2E7D32`, warning `#E65100`,
-  /// info `#1565C0`, context `#37474F`) are the fallback target only, and are
-  /// matched here as closely as the token swatch allows:
-  /// - `danger` → `tokens.colors.danger.shade700` (`#D32F2F`, exact match).
-  /// - `success` → `tokens.colors.success.shade800` (`#2E7D32`, exact match).
-  /// - `warning` → `tokens.colors.warning.shade600` (`#E65100` on the
-  ///   `warningOrange` swatch used by `LayrzColorTokens.warning`, exact match).
-  /// - `info` → `tokens.colors.info.shade800` (`#1565C0`, exact match).
-  /// - `context` → `tokens.colors.contextual.shade800`. `LayrzColorTokens.contextual`
-  ///   is the Material grey swatch (not blue-grey), so this does not reproduce the
-  ///   spec's exact `#37474F` hex; it is the darkest available step on the token
-  ///   that still clears contrast, kept in preference to hardcoding an off-token hex.
+  /// Each accent is the plain semantic token, so the snackbar accent matches the
+  /// same semantic used everywhere else (buttons, chips, badges) rather than a
+  /// darkened variant:
+  /// - `danger` → `tokens.colors.danger`.
+  /// - `success` → `tokens.colors.success`.
+  /// - `warning` → `tokens.colors.warning`.
+  /// - `info` → `tokens.colors.info`.
+  /// - `context` → `tokens.colors.contextual`.
   ///
   /// For [custom], returns null — the caller must provide an explicit `color`.
   Color? accentColor(LayrzTokens tokens) {
@@ -109,15 +104,15 @@ enum LayrzSnackbarType {
       case LayrzSnackbarType.custom:
         return null;
       case LayrzSnackbarType.success:
-        return tokens.colors.success.shade800;
+        return tokens.colors.success;
       case LayrzSnackbarType.danger:
-        return tokens.colors.danger.shade700;
+        return tokens.colors.danger;
       case LayrzSnackbarType.warning:
-        return tokens.colors.warning.shade600;
+        return tokens.colors.warning;
       case LayrzSnackbarType.info:
-        return tokens.colors.info.shade800;
+        return tokens.colors.info;
       case LayrzSnackbarType.context:
-        return tokens.colors.contextual.shade800;
+        return tokens.colors.contextual;
     }
   }
 }

@@ -278,106 +278,45 @@ void main() {
     });
 
     group('semantic token regression', () {
-      test('danger color tokens remain byte-identical', () {
+      // Semantic token fields are single [Color]s (the former swatch's 500 shade).
+      // The full tonal ramps live on the [LayrzColors] palette swatches and are
+      // covered by the palette groups above; here we pin each token's flattened
+      // value so it stays byte-identical.
+      test('danger token is the red 500 value', () {
         final tokens = LayrzColorTokens.light();
-        // Verify danger is the red swatch
-        expect(tokens.danger, equals(LayrzColors.red));
-        // Verify all shades match exactly
-        expect(tokens.danger.shade50, equals(const Color(0xFFFFEBEE)));
-        expect(tokens.danger.shade100, equals(const Color(0xFFFFCDD2)));
-        expect(tokens.danger.shade200, equals(const Color(0xFFEF9A9A)));
-        expect(tokens.danger.shade300, equals(const Color(0xFFE57373)));
-        expect(tokens.danger.shade400, equals(const Color(0xFFEF5350)));
-        expect(tokens.danger.shade500, equals(const Color(0xFFF44336)));
-        expect(tokens.danger.shade600, equals(const Color(0xFFE53935)));
-        expect(tokens.danger.shade700, equals(const Color(0xFFD32F2F)));
-        expect(tokens.danger.shade800, equals(const Color(0xFFC62828)));
-        expect(tokens.danger.shade900, equals(const Color(0xFFB71C1C)));
+        expect(tokens.danger, equals(const Color(0xFFF44336)));
+        expect(tokens.danger, equals(LayrzColors.red.shade500));
       });
 
-      test('success color tokens remain byte-identical', () {
+      test('success token is the green 500 value', () {
         final tokens = LayrzColorTokens.light();
-        // Verify success is the green swatch
-        expect(tokens.success, equals(LayrzColors.green));
-        // Verify primary value unchanged
-        expect(tokens.success.shade500, equals(const Color(0xFF4CAF50)));
-        // Verify all shades match exactly
-        expect(tokens.success.shade50, equals(const Color(0xFFE8F5E9)));
-        expect(tokens.success.shade100, equals(const Color(0xFFC8E6C9)));
-        expect(tokens.success.shade200, equals(const Color(0xFFA5D6A7)));
-        expect(tokens.success.shade300, equals(const Color(0xFF81C784)));
-        expect(tokens.success.shade400, equals(const Color(0xFF66BB6A)));
-        expect(tokens.success.shade500, equals(const Color(0xFF4CAF50)));
-        expect(tokens.success.shade600, equals(const Color(0xFF43A047)));
-        expect(tokens.success.shade700, equals(const Color(0xFF388E3C)));
-        expect(tokens.success.shade800, equals(const Color(0xFF2E7D32)));
-        expect(tokens.success.shade900, equals(const Color(0xFF1B5E20)));
+        expect(tokens.success, equals(const Color(0xFF4CAF50)));
+        expect(tokens.success, equals(LayrzColors.green.shade500));
       });
 
-      test('warning color tokens remain byte-identical', () {
+      test('warning token is the warningOrange 500 value', () {
         final tokens = LayrzColorTokens.light();
-        // Verify warning is the dedicated warningOrange swatch (not the Material orange
-        // palette swatch, which keeps its own untouched values — see the "orange palette
-        // matches Material" test above).
-        expect(tokens.warning, equals(LayrzColors.warningOrange));
-        // Verify primary value is the darkened 500 (Material orange's own 800 shade).
-        expect(tokens.warning.shade500, equals(const Color(0xFFEF6C00)));
-        // Verify all shades match exactly.
-        expect(tokens.warning.shade50, equals(const Color(0xFFFFF3E0)));
-        expect(tokens.warning.shade100, equals(const Color(0xFFFFE0B2)));
-        expect(tokens.warning.shade200, equals(const Color(0xFFFFCC80)));
-        expect(tokens.warning.shade300, equals(const Color(0xFFFFB74D)));
-        expect(tokens.warning.shade400, equals(const Color(0xFFFFA726)));
-        expect(tokens.warning.shade500, equals(const Color(0xFFEF6C00)));
-        expect(tokens.warning.shade600, equals(const Color(0xFFE65100)));
-        expect(tokens.warning.shade700, equals(const Color(0xFFD84315)));
-        expect(tokens.warning.shade800, equals(const Color(0xFFBF360C)));
-        expect(tokens.warning.shade900, equals(const Color(0xFF8A2705)));
+        expect(tokens.warning, equals(const Color(0xFFEF6C00)));
+        expect(tokens.warning, equals(LayrzColors.warningOrange.shade500));
       });
 
       test('warning content color resolves to white', () {
         // The real contract: content (text/icons/badge counts) painted on
         // tokens.colors.warning must come out white, not black.
         final tokens = LayrzColorTokens.light();
-        expect(tokens.warning.shade500.contrastColor, equals(const Color(0xFFFFFFFF)));
+        expect(tokens.warning.contrastColor, equals(const Color(0xFFFFFFFF)));
       });
 
-      test('info color tokens remain byte-identical', () {
+      test('info token is the blue 500 value', () {
         final tokens = LayrzColorTokens.light();
-        // Verify info is the blue swatch
-        expect(tokens.info, equals(LayrzColors.blue));
-        // Verify primary value unchanged
-        expect(tokens.info.shade500, equals(const Color(0xFF2196F3)));
-        // Verify all shades match exactly
-        expect(tokens.info.shade50, equals(const Color(0xFFE3F2FD)));
-        expect(tokens.info.shade100, equals(const Color(0xFFBBDEFB)));
-        expect(tokens.info.shade200, equals(const Color(0xFF90CAF9)));
-        expect(tokens.info.shade300, equals(const Color(0xFF64B5F6)));
-        expect(tokens.info.shade400, equals(const Color(0xFF42A5F5)));
-        expect(tokens.info.shade500, equals(const Color(0xFF2196F3)));
-        expect(tokens.info.shade600, equals(const Color(0xFF1E88E5)));
-        expect(tokens.info.shade700, equals(const Color(0xFF1976D2)));
-        expect(tokens.info.shade800, equals(const Color(0xFF1565C0)));
-        expect(tokens.info.shade900, equals(const Color(0xFF0D47A1)));
+        expect(tokens.info, equals(const Color(0xFF2196F3)));
+        expect(tokens.info, equals(LayrzColors.blue.shade500));
       });
 
-      test('contextual color tokens remain byte-identical', () {
+      test('contextual token is the grey 500 value', () {
         final tokens = LayrzColorTokens.light();
-        // Verify contextual is the grey swatch
-        expect(tokens.contextual, equals(LayrzColors.grey));
-        // Verify primary value unchanged
-        expect(tokens.contextual.shade500, equals(const Color(0xFF9E9E9E)));
-        // Verify all shades match exactly
-        expect(tokens.contextual.shade50, equals(const Color(0xFFFAFAFA)));
-        expect(tokens.contextual.shade100, equals(const Color(0xFFF5F5F5)));
-        expect(tokens.contextual.shade200, equals(const Color(0xFFEEEEEE)));
-        expect(tokens.contextual.shade300, equals(const Color(0xFFE0E0E0)));
-        expect(tokens.contextual.shade400, equals(const Color(0xFFBDBDBD)));
-        expect(tokens.contextual.shade500, equals(const Color(0xFF9E9E9E)));
-        expect(tokens.contextual.shade600, equals(const Color(0xFF757575)));
-        expect(tokens.contextual.shade700, equals(const Color(0xFF616161)));
-        expect(tokens.contextual.shade800, equals(const Color(0xFF424242)));
-        expect(tokens.contextual.shade900, equals(const Color(0xFF212121)));
+        expect(tokens.contextual, equals(const Color(0xFF9E9E9E)));
+        expect(tokens.contextual, equals(LayrzColors.grey.shade500));
       });
     });
   });

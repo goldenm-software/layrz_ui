@@ -31,17 +31,21 @@ const double _kFallbackRevealExtent = 96;
 /// [LayrzScaffoldItem.actions] is non-empty, a trailing-edge action reveal.
 ///
 /// The row body stays tappable to open the detail pane at all times — including while
-/// the actions are revealed. Reveal is purely visual: a horizontal translation of the
-/// row body over the actions strip beneath it, never a resize of the row's own box
-/// (decision D15).
+/// the actions are revealed.
 ///
-/// **Desktop** (`context.isCompact == false`): the actions reveal on hover via a
-/// [MouseRegion] and hide on exit.
+/// **Desktop** (`context.isCompact == false`): the actions reveal on hover as an
+/// OVERLAY painted on top of the row body — the row body never translates, resizes,
+/// or otherwise moves (decision D15: hover may only vary colour/opacity/shadow/
+/// cursor). The overlay fades in/out purely via opacity, backed by a semi-transparent
+/// scrim so the row's own content stays partially visible behind the action buttons.
 ///
 /// **Mobile** (`context.isCompact == true`): the actions reveal after a leftward
 /// horizontal drag (tracked live, and snapped to fully revealed or fully hidden on
 /// release based on distance and velocity) and hide on a swipe back to the right, or
-/// on a tap of the row body while revealed.
+/// on a tap of the row body while revealed. This is a drag gesture, not a hover
+/// interaction state, so it keeps translating the row body over the actions strip
+/// exactly as before — decision D15 governs interaction *states* (hover/press/focus/
+/// disabled), not a user-driven swipe gesture.
 ///
 /// When [LayrzScaffoldItem.actions] is empty, or when the row is the currently
 /// [ScaffoldRow.isSelected] item, this widget renders identically to a plain
@@ -56,6 +60,15 @@ class ScaffoldRow<T> extends StatefulWidget {
   /// Whether this row is the currently opened/selected item.
   final bool isSelected;
 
+  /// Whether this row sits at an even position within the on-screen (filtered)
+  /// list, used to alternate the idle background between `tokens.colors.sf1`
+  /// (even) and `tokens.colors.sf2` (odd) — the same zebra-striping convention
+  /// `LayrzTable` uses (see `table_row.dart`'s `rowIndex.isEven` check).
+  ///
+  /// Ignored when [isSelected] is true: a selected row always paints `sf4`
+  /// regardless of parity.
+  final bool isEvenRow;
+
   /// Called when the row body is tapped, to open the detail pane for [item].
   ///
   /// `null` when the list panel has no tap handler configured, in which case the
@@ -66,11 +79,15 @@ class ScaffoldRow<T> extends StatefulWidget {
   ///
   /// - [item]: The item this row represents. Required.
   /// - [isSelected]: Whether this row is the currently opened/selected item. Required.
+  /// - [isEvenRow]: Whether this row sits at an even position in the on-screen list,
+  ///   used for zebra striping. Defaults to true (matching the previous single-tone
+  ///   `sf1` idle color for a row built without this parameter).
   /// - [onTap]: Called when the row body is tapped. Defaults to null (inert row).
   const ScaffoldRow({
     super.key,
     required this.item,
     required this.isSelected,
+    this.isEvenRow = true,
     this.onTap,
   });
 
@@ -219,22 +236,126 @@ class _ScaffoldRowState<T> extends State<ScaffoldRow<T>> {
     _revealExtent = _revealExtentFor(tokens);
 
     final isCompact = context.isCompact;
-    final double revealPixels;
-    if (isCompact) {
-      revealPixels = _isDragging ? -_dragExtent : (_isRevealed ? _revealExtent : 0.0);
-    } else {
-      revealPixels = _isHovered ? _revealExtent : 0.0;
+    final rowBody = _buildTappable(tokens: tokens, onTap: () => _onRowTap(isCompact));
+
+    if (!isCompact) {
+      return _buildDesktopOverlay(tokens: tokens, item: item, rowBody: rowBody);
     }
+
+    return _buildMobileSwipe(tokens: tokens, item: item, rowBody: rowBody);
+  }
+
+  /// Builds the desktop presentation: the row body is laid out once, never
+  /// translated or resized, and the actions strip is a same-place [Stack] layer
+  /// painted ON TOP of it, faded in/out purely via opacity on hover
+  /// (decision D15 — hover may vary colour/opacity/shadow/cursor only).
+  ///
+  /// A gradient scrim sits directly behind the action buttons so the row's own
+  /// content stays partially visible through the overlay rather than being
+  /// fully hidden by it.
+  ///
+  /// - [tokens]: The active [LayrzTokens]. Required.
+  /// - [item]: The item whose [LayrzScaffoldItem.actions] populate the overlay. Required.
+  /// - [rowBody]: The already-built, never-translated row body. Required.
+  Widget _buildDesktopOverlay({
+    required LayrzTokens tokens,
+    required LayrzScaffoldItem<T> item,
+    required Widget rowBody,
+  }) {
+    final overlay = Positioned.fill(
+      child: IgnorePointer(
+        // The overlay must not eat hover/pointer events while invisible, and while
+        // visible its own children (the action buttons) still resolve their own
+        // hit testing — the row body beneath it remains tappable at every opacity.
+        ignoring: !_isHovered,
+        child: AnimatedOpacity(
+          opacity: _isHovered ? 1.0 : 0.0,
+          duration: tokens.motion.dHover,
+          curve: tokens.motion.easing,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // A right-aligned scrim behind the action buttons — a gradient from
+              // transparent to a translucent tint of the row's own idle surface
+              // color — so the row's text/content is still legible behind the
+              // buttons rather than fully occluded ("with a transparency to still
+              // see the content behind" per the reviewer's request).
+              Align(
+                alignment: Alignment.centerRight,
+                child: FractionallySizedBox(
+                  widthFactor: 0.6,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        colors: [
+                          _rowIdleColor(tokens).withValues(alpha: 0),
+                          _rowIdleColor(tokens).withValues(alpha: 0.92),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  // `ListPanel` already reserves `kLayrzScrollbarThickness` of trailing
+                  // gutter for the ListView's own scrollbar (see the padding around
+                  // ListView.builder in list_panel.dart), so this row never shares pixels
+                  // with the scrollbar to begin with. This sp2 is purely the row's own
+                  // breathing room from its rounded edge, symmetric on both sides.
+                  padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: tokens.spacing.sp1,
+                    children: item.actions,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: ClipRRect(
+        // Matches the row body's own LayrzTappable(borderRadius: tokens.radius.br2)
+        // corners exactly, so the overlay never paints past the row's rounded surface.
+        borderRadius: tokens.radius.br2,
+        child: Stack(
+          // The row body paints first (underneath, stationary at all times, and it
+          // is the Stack's only non-positioned child so it alone determines the
+          // Stack's size); the actions overlay is Positioned.fill on top of it,
+          // visible only via opacity.
+          children: [rowBody, overlay],
+        ),
+      ),
+    );
+  }
+
+  /// Builds the mobile presentation: unchanged swipe-to-translate behavior. The
+  /// row body slides left over an actions strip painted beneath it, driven by
+  /// [_onHorizontalDragStart]/[_onHorizontalDragUpdate]/[_onHorizontalDragEnd].
+  ///
+  /// - [tokens]: The active [LayrzTokens]. Required.
+  /// - [item]: The item whose [LayrzScaffoldItem.actions] populate the strip. Required.
+  /// - [rowBody]: The row body to translate. Required.
+  Widget _buildMobileSwipe({
+    required LayrzTokens tokens,
+    required LayrzScaffoldItem<T> item,
+    required Widget rowBody,
+  }) {
+    final revealPixels = _isDragging ? -_dragExtent : (_isRevealed ? _revealExtent : 0.0);
 
     final actionsStrip = Positioned.fill(
       child: Align(
         alignment: Alignment.centerRight,
         child: Padding(
-          // `ListPanel` already reserves `kLayrzScrollbarThickness` of trailing
-          // gutter for the ListView's own scrollbar (see the padding around
-          // ListView.builder in list_panel.dart), so this row never shares pixels
-          // with the scrollbar to begin with. This sp2 is purely the row's own
-          // breathing room from its rounded edge, symmetric on both sides.
           padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -244,8 +365,6 @@ class _ScaffoldRowState<T> extends State<ScaffoldRow<T>> {
         ),
       ),
     );
-
-    final rowBody = _buildTappable(tokens: tokens, onTap: () => _onRowTap(isCompact));
 
     final translatedBody = AnimatedContainer(
       duration: _isDragging ? Duration.zero : tokens.motion.dHover,
@@ -266,14 +385,6 @@ class _ScaffoldRowState<T> extends State<ScaffoldRow<T>> {
       ),
     );
 
-    if (!isCompact) {
-      return MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: stack,
-      );
-    }
-
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onHorizontalDragStart: _onHorizontalDragStart,
@@ -281,6 +392,14 @@ class _ScaffoldRowState<T> extends State<ScaffoldRow<T>> {
       onHorizontalDragEnd: _onHorizontalDragEnd,
       child: stack,
     );
+  }
+
+  /// The row's own idle surface color — the same value [_buildTappable] passes
+  /// as `LayrzTappable.color` — used to tint the desktop overlay's scrim so it
+  /// reads as a translucent veil over this exact row rather than an arbitrary color.
+  Color _rowIdleColor(LayrzTokens tokens) {
+    if (widget.isSelected) return tokens.colors.sf4;
+    return widget.isEvenRow ? tokens.colors.sf1 : tokens.colors.sf2;
   }
 
   /// Builds the shared tappable shell (selection tint, border radius, disabled-when-
@@ -294,7 +413,11 @@ class _ScaffoldRowState<T> extends State<ScaffoldRow<T>> {
       disabled: widget.isSelected,
       onTap: onTap,
       borderRadius: tokens.radius.br2,
-      color: widget.isSelected ? tokens.colors.sf4 : tokens.colors.sf1,
+      // Precedence: selected (sf4) wins outright; otherwise the idle color
+      // alternates sf1/sf2 by row parity (matching LayrzTable's zebra striping —
+      // see table_row.dart's `rowIndex.isEven` check) and LayrzTappable itself
+      // still overrides this with sf3 on hover / sf4 on press.
+      color: _rowIdleColor(tokens),
       child: _buildRowContent(tokens),
     );
   }

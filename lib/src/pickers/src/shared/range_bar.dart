@@ -50,7 +50,7 @@ enum LayrzRangeBarColumn {
 /// `primary.withValues(alpha: tokens.colors.tonalOpacity)` here to work
 /// around [LayrzColorSwatch.fromColor] inverting its shade ramp (`shade50`
 /// subtracts lightness rather than adding it, so it clamps to black for a
-/// dark seed like the default `kPrimaryColor` — see that class's own doc).
+/// dark seed like the default `kLightPrimaryColor` — see that class's own doc).
 /// The maintainer's explicit ruling reverses that workaround: *"the color
 /// is primary, just primary, without transparency or filledTonal
 /// effect."* [LayrzColorSwatch.fromColor]'s inversion is real and still

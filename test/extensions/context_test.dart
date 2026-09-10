@@ -42,6 +42,44 @@ void main() {
       expect(resolved, same(themeData.tokens));
     });
 
+    testWidgets('isDark is true under a dark LayrzTheme', (tester) async {
+      final themeData = LayrzThemeData.dark();
+      late bool resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.isDark;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, isTrue);
+    });
+
+    testWidgets('isDark is false under a light LayrzTheme', (tester) async {
+      final themeData = LayrzThemeData.light();
+      late bool resolved;
+
+      await tester.pumpWidget(
+        LayrzTheme(
+          data: themeData,
+          child: Builder(
+            builder: (context) {
+              resolved = context.isDark;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolved, isFalse);
+    });
+
     testWidgets('tokenizer returns a LayrzTokenizer wrapping theme.tokens', (
       tester,
     ) async {

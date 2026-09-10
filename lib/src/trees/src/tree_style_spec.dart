@@ -71,7 +71,7 @@ class LayrzTreeRowStyleSpec {
     // not `primary.shade50`: `LayrzColorSwatch.fromColor` derives shade50 by
     // subtracting 0.40 from the seed's HSL lightness, which clamps to fully
     // opaque black for any seed under that lightness (e.g. the default
-    // `kPrimaryColor`, ~0.19) -- the exact defect `checkboxFillColor`'s doc
+    // `kLightPrimaryColor`, ~0.19) -- the exact defect `checkboxFillColor`'s doc
     // comment below warns about. Applying alpha to the seed colour itself
     // sidesteps the swatch derivation entirely and can never clamp to black.
     Color backgroundColor = (isSelected || isPartiallySelected)
@@ -93,10 +93,10 @@ class LayrzTreeRowStyleSpec {
       foregroundColor: tokens.colors.fg1,
       indentGuideColor: tokens.colors.divider,
       chevronColor: tokens.colors.fg2,
-      checkboxBorderColor: isSelected || isPartiallySelected ? tokens.colors.primary.shade500 : tokens.colors.fg3,
-      checkboxFillColor: tokens.colors.primary.shade500,
+      checkboxBorderColor: isSelected || isPartiallySelected ? tokens.colors.primary : tokens.colors.fg3,
+      checkboxFillColor: tokens.colors.primary,
       checkboxGlyphColor: tokens.colors.sf1,
-      activeBorderColor: isActive ? tokens.colors.primary.shade500 : const Color(0x00000000),
+      activeBorderColor: isActive ? tokens.colors.primary : const Color(0x00000000),
     );
   }
 
@@ -118,10 +118,10 @@ class LayrzTreeRowStyleSpec {
   /// The fill colour of the selection checkbox affordance when
   /// selected or partially selected.
   ///
-  /// This reads `primary.shade500`, not `primary.shade50`:
+  /// This reads .primary`, not `primary.shade50`:
   /// `LayrzColorSwatch.fromColor` derives shade50 by subtracting 0.40 from
   /// the seed's HSL lightness, which clamps to fully opaque black whenever
-  /// the seed itself is dark (e.g. the default `kPrimaryColor`, lightness
+  /// the seed itself is dark (e.g. the default `kLightPrimaryColor`, lightness
   /// ~0.19). shade500 is guaranteed sane, since it always equals the seed
   /// colour unchanged. This generator defect is still present upstream and
   /// unfixed; it is documented here because this is the field in this spec

@@ -296,9 +296,9 @@ class _LayrzAlertState extends State<LayrzAlert> {
     // Resolve accent colour.
     Color accentColor;
     if (widget.type == LayrzAlertType.custom) {
-      accentColor = widget.color ?? tokens.colors.primary.shade500;
+      accentColor = widget.color ?? tokens.colors.primary;
     } else {
-      accentColor = widget.type.colorToken(tokens) ?? tokens.colors.primary.shade500;
+      accentColor = widget.type.colorToken(tokens) ?? tokens.colors.primary;
     }
 
     // Resolve icon.

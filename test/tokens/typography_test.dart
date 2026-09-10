@@ -72,15 +72,21 @@ void main() {
       expect(theme.label.fontFamilyFallback, equals(const ['Noto Color Emoji']));
     });
 
+    // TextStyle.copyWith applies the base style's own `package` prefix to
+    // every entry of a newly-supplied fontFamilyFallback too (verified against
+    // the framework directly) -- so once the base font carries
+    // `package: 'layrz_ui'` (as LayrzJetBrainsMonoFont now correctly does),
+    // the fallback list comes back package-namespaced as well, not as the
+    // bare 'Noto Color Emoji' string.
     test('the emoji fallback is present even with a custom font supplied', () {
       final theme = LayrzTextTheme.defaults(
         textColor: const Color(0xFF000000),
         font: const LayrzJetBrainsMonoFont(),
       );
 
-      expect(theme.display.fontFamily, 'JetBrains Mono');
-      expect(theme.display.fontFamilyFallback, equals(const ['Noto Color Emoji']));
-      expect(theme.body.fontFamilyFallback, equals(const ['Noto Color Emoji']));
+      expect(theme.display.fontFamily, 'packages/layrz_ui/JetBrains Mono');
+      expect(theme.display.fontFamilyFallback, equals(const ['packages/layrz_ui/Noto Color Emoji']));
+      expect(theme.body.fontFamilyFallback, equals(const ['packages/layrz_ui/Noto Color Emoji']));
     });
 
     // Genuine no-throw contract. The factory ALSO fires registerOnWeb

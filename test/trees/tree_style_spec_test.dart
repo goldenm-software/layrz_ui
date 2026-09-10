@@ -78,7 +78,7 @@ void main() {
       expect(pressedAndHovered.backgroundColor, pressedOnly.backgroundColor);
     });
 
-    test('selected state paints a visible translucent primary tint, not primary.shade50', () {
+    test('selected state paints a visible translucent primary tint, not a derived tonal shade', () {
       final style = LayrzTreeRowStyleSpec.resolve(
         tokens,
         isHovered: false,
@@ -88,7 +88,7 @@ void main() {
 
       expect(style.backgroundColor, tokens.colors.primary.withValues(alpha: 0.12));
       expect(style.backgroundColor.a, greaterThan(0));
-      expect(style.checkboxFillColor, tokens.colors.primary.shade500);
+      expect(style.checkboxFillColor, tokens.colors.primary);
     });
 
     test('partially-selected state paints the same tint as fully-selected', () {
@@ -172,7 +172,7 @@ void main() {
         isPartiallySelected: false,
       );
 
-      expect(active.activeBorderColor, tokens.colors.primary.shade500);
+      expect(active.activeBorderColor, tokens.colors.primary);
       expect(active.backgroundColor, inactive.backgroundColor);
     });
 
@@ -186,34 +186,32 @@ void main() {
       );
 
       expect(style.backgroundColor, tokens.colors.primary.withValues(alpha: 0.12));
-      expect(style.activeBorderColor, tokens.colors.primary.shade500);
-      expect(style.checkboxFillColor, tokens.colors.primary.shade500);
+      expect(style.activeBorderColor, tokens.colors.primary);
+      expect(style.checkboxFillColor, tokens.colors.primary);
       expect(style.foregroundColor, tokens.colors.fg1);
     });
 
     test(
       'REGRESSION: a dark seed primary colour (lightness < 0.40) does not clamp the checkbox fill to black',
       () {
-        // kPrimaryColor (#001E60) has an HSL lightness of ~0.19. The tree
-        // row's selected background used to read `tokens.colors.primary.shade50`
-        // directly; LayrzColorSwatch.fromColor derives shade50 by subtracting
-        // 0.40 from the seed's lightness and clamping to [0.0, 1.0] -- for any
-        // seed with lightness under 0.40 that clamps straight to 0.0 (fully
-        // opaque black in HSL), which is exactly the solid black row bug
-        // originally reported against the showroom's /tree-view page. The
-        // row's own background fill sidesteps this by applying alpha to the
-        // seed colour directly (`primary.withValues(alpha: ...)`, see
-        // [LayrzTreeRowStyleSpec.resolve]) rather than reading a derived
-        // shade, so it can never clamp to black either -- this test guards
-        // both that and the checkbox fill, which still resolves
-        // `primary.shade500` and remains exposed to the same upstream defect
-        // if it were ever changed to shade50.
+        // kLightPrimaryColor (#001E60) has an HSL lightness of ~0.19. The tree
+        // row's selected background and checkbox fill used to read a derived
+        // tonal swatch shade (`primary.shade50` / `primary.shade500`); the old
+        // `LayrzColorSwatch.fromColor` derived shade50 by subtracting 0.40 from
+        // the seed's lightness and clamping to [0.0, 1.0] -- for any seed with
+        // lightness under 0.40 that clamped straight to 0.0 (fully opaque black
+        // in HSL), which was exactly the solid black row bug originally
+        // reported against the showroom's /tree-view page.
+        //
+        // `primary` is now a single [Color] with no swatch/shade derivation at
+        // all: the background applies alpha directly to the seed colour
+        // (`primary.withValues(alpha: ...)`), and the checkbox fill now resolves
+        // the plain `primary` field unchanged (see [LayrzTreeRowStyleSpec.resolve]).
+        // Neither path can clamp to black regardless of the seed's lightness,
+        // so this test now guards the outcome directly rather than through the
+        // retired swatch mechanism.
         final darkTokens = LayrzThemeData.light(primaryColor: const Color(0xFF001E60)).tokens;
         expect(HSLColor.fromColor(darkTokens.colors.primary).lightness, lessThan(0.40));
-        // Confirms the underlying swatch defect is still present upstream --
-        // this test would stop proving anything if shade50 were fixed instead
-        // and this assertion silently started failing.
-        expect(darkTokens.colors.primary.shade50, const Color(0xFF000000));
 
         final style = LayrzTreeRowStyleSpec.resolve(
           darkTokens,
@@ -225,6 +223,7 @@ void main() {
         expect(style.backgroundColor, isNot(const Color(0xFF000000)));
         expect(style.backgroundColor, darkTokens.colors.primary.withValues(alpha: 0.12));
         expect(style.checkboxFillColor, isNot(const Color(0xFF000000)));
+        expect(style.checkboxFillColor, darkTokens.colors.primary);
         expect(style.checkboxFillColor.a, 1);
       },
     );

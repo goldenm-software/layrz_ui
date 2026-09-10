@@ -1,10 +1,10 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/file_input/file_input.dart';
 import 'package:layrz_ui/src/images/src/avatar_source.dart';
 import 'package:layrz_ui/src/inputs/src/text/text_input.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
-import 'package:layrz_ui/src/pickers/src/image/image_input.dart';
 import 'package:layrz_ui/src/sheets/src/modal_route.dart';
 import 'package:layrz_ui/src/tabs/tabs.dart';
 
@@ -14,7 +14,7 @@ import 'dynamic_avatar_icon_tab.dart';
 
 /// The maximum size, in bytes, an image dropped/picked on the Upload tab may
 /// have — `1 MiB`, matching the work-unit brief's constraint for this
-/// surface specifically (not [LayrzImageInput]'s own configurable default).
+/// surface specifically (not [LayrzFileInput]'s own configurable default).
 const int kDynamicAvatarMaxUploadBytes = 1024 * 1024;
 
 /// The file extensions accepted by the Upload tab — matching the work-unit
@@ -45,7 +45,7 @@ int dynamicAvatarInitialTabIndex(LayrzAvatarSource? source) {
 ///
 /// **One dialog, one header — this is deliberate, not a simplification left
 /// for later.** [LayrzDynamicAvatarInput] does not embed the standalone
-/// `LayrzIconInput`/`LayrzEmojiInput`/`LayrzImageInput` *input* widgets
+/// `LayrzIconInput`/`LayrzEmojiInput`/`LayrzFileInput` *input* widgets
 /// (which would each open their own nested dialog on tap) nor does it reuse
 /// [LayrzIconSurface]/[LayrzEmojiSurface] wholesale (both carry their own
 /// header + close ("X"), which would double up with this surface's own
@@ -53,7 +53,7 @@ int dynamicAvatarInitialTabIndex(LayrzAvatarSource? source) {
 /// **inline** via the shared [LayrzGlyphGrid] primitive — see
 /// [LayrzDynamicAvatarIconTab]/[LayrzDynamicAvatarEmojiTab] in
 /// `dynamic_avatar_tabs.dart` — and the Upload tab hosts
-/// [LayrzImageInput] directly (it renders its own drop/tap tile inline and
+/// [LayrzFileInput] directly (it renders its own drop/tap tile inline and
 /// does not itself open a modal, so nesting it here is safe).
 ///
 /// **Commit-on-tap for Icon/Emoji** (mirrors every other single-glyph picker
@@ -61,8 +61,8 @@ int dynamicAvatarInitialTabIndex(LayrzAvatarSource? source) {
 /// caller ([LayrzDynamicAvatarInput]) closes the hosting surface immediately.
 /// **Commit-on-submit for URL**: the inline [LayrzTextInput] commits on
 /// submit or when its own apply affordance is tapped, not on every
-/// keystroke. **Commit-on-emit for Upload**: [LayrzImageInput] commits the
-/// moment it emits a non-null base64 string.
+/// keystroke. **Commit-on-emit for Upload**: [LayrzFileInput] commits the
+/// moment it emits a non-empty file list.
 ///
 /// **None/clear affordance.** [onClear] is surfaced via the header's
 /// [LayrzPickerDialogHeader.middleSlot] would collide with the close button
@@ -146,24 +146,25 @@ class LayrzDynamicAvatarSurfaceState extends State<LayrzDynamicAvatarSurface> {
     );
   }
 
-  /// Builds the Upload tab: [LayrzImageInput] hosted inline, constrained to
-  /// `gif`/`png`/`jpg` and `1 MiB` per the work-unit brief. Commits the
-  /// moment a non-null base64 string is emitted — a clear (`null`) emission
-  /// from the tile itself is not forwarded as a commit, since that tile's
-  /// own clear badge only resets its own local preview, not this surface's
-  /// selection.
+  /// Builds the Upload tab: [LayrzFileInput] hosted inline, constrained to
+  /// a single file of `gif`/`png`/`jpg` and `1 MiB` per the work-unit brief.
+  /// Commits the moment a non-empty file list is emitted — an empty
+  /// emission from the tile itself is not forwarded as a commit, since that
+  /// tile's own clear affordance only resets its own local preview, not this
+  /// surface's selection.
   Widget _buildUploadTab(BuildContext context) {
     final tokens = context.tokens;
     return Padding(
       padding: EdgeInsets.only(top: tokens.spacing.sp2),
       child: Align(
         alignment: Alignment.topCenter,
-        child: LayrzImageInput(
+        child: LayrzFileInput(
+          maxFiles: 1,
           allowedExtensions: kDynamicAvatarUploadExtensions,
           maxFileSizeBytes: kDynamicAvatarMaxUploadBytes,
-          onChanged: (base64) {
-            if (base64 == null || base64.isEmpty) return;
-            widget.onSourceSelected(LayrzAvatarBase64(base64));
+          onChanged: (files) {
+            if (files.isEmpty) return;
+            widget.onSourceSelected(LayrzAvatarBase64(files.first.dataUri));
           },
         ),
       ),

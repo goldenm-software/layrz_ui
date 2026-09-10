@@ -22,6 +22,7 @@ This is the **fourth components milestone** after M1 Foundation, M2 Core Primiti
 | 8 | DESIGN-81: Page transitions (`LayrzPageTransitions`: fade, slide, scale, rotation, none — shared builders for both `PageRouteBuilder.transitionsBuilder` and go_router's `CustomTransitionPage.transitionsBuilder`) | Merged · Review required |
 | 9 | LayrzNotificationItem (notification display in nav footer) | Todo |
 | 10 | DESIGN-95: LayrzRefreshIndicator (loading affordance for a refresh lifecycle; programmatic `LayrzRefreshController.refresh()` is the primary API, drag-to-refresh is an optional touch-only affordance) | Merged · Review required |
+| 11 | DESIGN-203: LayrzWorkspaceTabs (browser-style, controlled tab strip — open/close/reorder/select events only, bar-only, never owns body content; distinct from `LayrzTabView`) | Merged · Review required |
 
 **Note**: This table is the authoritative record of M5 work items, kept in step with the code in the same commit. Each row's status is updated when the item completes. The Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are identified as `DESIGN-N` for cross-reference). Items 1-3 were delivered ahead of formal M5 planning; they are marked Done and documented in detail in the wiki.
 
@@ -236,6 +237,38 @@ no platform branching on `LayrzPlatform`; no sliver support.
 
 ---
 
+### 11. DESIGN-203: LayrzWorkspaceTabs (Browser-Style Controlled Tab Strip)
+
+**Status**: Merged · Review required
+
+**What it does**:
+- A browser-like tab strip: the user opens (+), closes (×), reorders (drag), and selects tabs;
+  the strip itself never owns or renders any body content — the developer keeps the tab list and
+  active id in their own state and reacts to `onTabSelected`/`onTabClosed`/`onNewTab`/`onReorder`
+- Deliberately a **separate component from `LayrzTabView`**: `LayrzTabView` is a fixed,
+  author-defined content switcher that owns and swaps its own child; `LayrzWorkspaceTabs` is a
+  dynamic, user-driven workspace/document manager that renders bar-only
+- Chrome-style connected-tab visual: the active tab's chrome merges into the content panel below
+  it (flat bottom edge, rounded top, `sf1` fill matching the panel), painted by a new
+  `LayrzWorkspaceTabChromePainter` (`CustomPainter`, no context/tokens read internally, following
+  the `LayrzSelectionHandlePainter` convention)
+- Hand-rolled drag-to-reorder on `Listener` pointer events (no `ReorderableListView`/`Draggable` —
+  both are Material-only and off-limits here)
+
+**v1 scope resolved** (six open questions from the spec, all defaulted Chrome-like): horizontal
+scroll for overflow (no "more" menu); close (×) always on the active tab, hover-revealed on
+inactive ones; new-tab (+) pinned to the bar's right edge; tabs shrink to a minimum width
+(`kLayrzWorkspaceTabMinWidth`) before the strip scrolls; an empty `tabs` list renders just the (+)
+affordance; the widget makes no assumption about which tab becomes active after a close — entirely
+the caller's decision.
+
+**Out of v1** (per spec, revisit later): an overflow "more" menu, tab context menus,
+middle-click-to-close, tab groups/pinning beyond `LayrzWorkspaceTab.closable`.
+
+**API contract**: See [wiki LayrzWorkspaceTabs page](https://github.com/goldenm-software/layrz_ui/wiki/LayrzWorkspaceTabs).
+
+---
+
 ## Dependencies
 
 - **M1 (Tokens, Theme)**: LayrzTheme, LayrzThemeData, LayrzTokens, token resolution
@@ -252,5 +285,5 @@ no platform branching on `LayrzPlatform`; no sliver support.
 ---
 
 **Milestone 5 started**: 2026-08-19  
-**Last updated**: 2026-08-19  
+**Last updated**: 2026-09-09  
 **Related documents**: [Roadmap](roadmap.md), [Decisions D37 & D8](decisions.md#d8), [Component Catalog](https://github.com/goldenm-software/layrz_ui/wiki/Component-Catalog)

@@ -14,7 +14,7 @@ void main() {
         isDisabled: false,
       );
 
-      expect(spec.borderColor, tokens.colors.primary.shade500);
+      expect(spec.borderColor, tokens.colors.primary);
       expect(spec.dateColor, tokens.colors.fg1);
     });
 
@@ -64,7 +64,7 @@ void main() {
         isDisabled: false,
       );
 
-      expect(spec.eventColor, tokens.colors.info.shade500);
+      expect(spec.eventColor, tokens.colors.info);
     });
 
     test('copyWith replaces only the given fields', () {

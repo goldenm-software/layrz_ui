@@ -33,11 +33,31 @@ class LayrzShadowTokens {
   /// and then alpha-adjusted based on the elevation level.
   final Color shadowColor;
 
-  /// Outline color for the 1-pixel border at elevation 0.
+  /// Outline color for the 1-pixel border drawn at elevation 0.
   ///
-  /// Defaults to black at 10% opacity. Used when drawing the outline at elevation 0
-  /// (when [hideOnElevationZero] is false).
+  /// Defaults to black at 10% opacity. Drawn at elevation 0 only (when
+  /// [hideOnElevationZero] is false).
   final Color outlineColor;
+
+  /// Whether raised surfaces are lightened by elevation level (the Material-dark
+  /// "elevation overlay").
+  ///
+  /// Defaults to `false` (light theme: a drop shadow alone reads as elevation on
+  /// a light surface, so the fill is not tinted). The dark theme sets this to
+  /// `true`: a drop shadow reads weakly on a dark surface, so elevation is
+  /// signalled the way Material dark does it — by compositing white over the
+  /// surface fill at an opacity that grows with the level, making higher
+  /// surfaces progressively lighter. The shadow remains as a minor accent.
+  final bool elevationOverlay;
+
+  /// Multiplier applied to every generated shadow's opacity.
+  ///
+  /// Defaults to `1.0` (light theme). The dark theme sets it above 1.0 because a
+  /// black shadow at the base opacity reads too faintly against a dark surface to
+  /// separate layout regions (a rail from content, a card from the page); scaling
+  /// the opacity up restores that separation. The scaled opacity is clamped to a
+  /// valid `0.0–1.0` alpha.
+  final double shadowOpacityScale;
 
   /// Creates a new [LayrzShadowTokens].
   const LayrzShadowTokens({
@@ -45,7 +65,14 @@ class LayrzShadowTokens {
     this.baseRadius = 8.0,
     this.shadowColor = const Color(0xFF000000),
     this.outlineColor = const Color.fromRGBO(0, 0, 0, 0.1),
+    this.elevationOverlay = false,
+    this.shadowOpacityScale = 1.0,
   });
+
+  /// White-overlay opacity applied over the surface fill at each elevation level
+  /// (index 0–5) when [elevationOverlay] is true. Mirrors Material's dark
+  /// elevation-overlay curve: higher levels are lighter.
+  static const List<double> _overlayOpacities = [0.0, 0.05, 0.07, 0.09, 0.11, 0.13];
 
   /// Box shadow at elevation level 1.
   List<BoxShadow> get elevation1 => _generateShadows(elevation: 1, radius: baseRadius);
@@ -105,7 +132,7 @@ class LayrzShadowTokens {
     assert(radius == null || radius >= 0, 'radius must be non-negative');
 
     final r = radius ?? baseRadius;
-    final surfaceCol = color ?? surfaceColor;
+    final surfaceCol = _applyOverlay(color ?? surfaceColor, elevation);
 
     final List<BoxShadow>? shadows = elevation > 0
         ? _generateShadows(elevation: elevation, radius: r, reverse: reverse)
@@ -119,6 +146,16 @@ class LayrzShadowTokens {
       border: border,
       boxShadow: shadows,
     );
+  }
+
+  /// Lightens [base] by the [elevation]-level overlay opacity when
+  /// [elevationOverlay] is enabled; otherwise returns [base] unchanged.
+  Color _applyOverlay(Color base, double elevation) {
+    if (!elevationOverlay || elevation <= 0) return base;
+    final index = elevation.round().clamp(0, _overlayOpacities.length - 1);
+    final opacity = _overlayOpacities[index];
+    if (opacity <= 0) return base;
+    return Color.alphaBlend(Color.fromRGBO(255, 255, 255, opacity), base);
   }
 
   /// Generates a [BoxDecoration] with compact-ramp shadow and optional outline.
@@ -152,7 +189,7 @@ class LayrzShadowTokens {
     assert(radius == null || radius >= 0, 'radius must be non-negative');
 
     final r = radius ?? baseRadius;
-    final surfaceCol = color ?? surfaceColor;
+    final surfaceCol = _applyOverlay(color ?? surfaceColor, elevation);
 
     final List<BoxShadow>? shadows = elevation > 0
         ? _compactShadows(elevation: elevation, radius: r, reverse: reverse)
@@ -238,7 +275,7 @@ class LayrzShadowTokens {
     }
 
     final t = elevation.clamp(0, maxElevation) / 5.0;
-    final opacity = minOpacity + (maxOpacity - minOpacity) * t;
+    final opacity = ((minOpacity + (maxOpacity - minOpacity) * t) * shadowOpacityScale).clamp(0.0, 1.0);
     final blur = blurMultiplier * elevation + blurOffset;
     var offset = elevation;
     if (reverse) {
@@ -261,12 +298,16 @@ class LayrzShadowTokens {
     double? baseRadius,
     Color? shadowColor,
     Color? outlineColor,
+    bool? elevationOverlay,
+    double? shadowOpacityScale,
   }) {
     return LayrzShadowTokens(
       surfaceColor: surfaceColor ?? this.surfaceColor,
       baseRadius: baseRadius ?? this.baseRadius,
       shadowColor: shadowColor ?? this.shadowColor,
       outlineColor: outlineColor ?? this.outlineColor,
+      elevationOverlay: elevationOverlay ?? this.elevationOverlay,
+      shadowOpacityScale: shadowOpacityScale ?? this.shadowOpacityScale,
     );
   }
 
@@ -278,8 +319,11 @@ class LayrzShadowTokens {
           surfaceColor == other.surfaceColor &&
           baseRadius == other.baseRadius &&
           shadowColor == other.shadowColor &&
-          outlineColor == other.outlineColor;
+          outlineColor == other.outlineColor &&
+          elevationOverlay == other.elevationOverlay &&
+          shadowOpacityScale == other.shadowOpacityScale;
 
   @override
-  int get hashCode => Object.hash(surfaceColor, baseRadius, shadowColor, outlineColor);
+  int get hashCode =>
+      Object.hash(surfaceColor, baseRadius, shadowColor, outlineColor, elevationOverlay, shadowOpacityScale);
 }

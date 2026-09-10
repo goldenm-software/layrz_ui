@@ -15,20 +15,6 @@ import 'demos/combobox_input_demo.dart';
 import 'demos/select_input_demo.dart';
 import 'demos/duration_input_demo.dart';
 import 'demos/login_input_demo.dart';
-import 'demos/date_input_demo.dart';
-import 'demos/date_range_input_demo.dart';
-import 'demos/time_input_demo.dart';
-import 'demos/time_range_input_demo.dart';
-import 'demos/datetime_input_demo.dart';
-import 'demos/datetime_range_input_demo.dart';
-import 'demos/month_input_demo.dart';
-import 'demos/month_range_input_demo.dart';
-import 'demos/color_input_demo.dart';
-import 'demos/multi_select_input_demo.dart';
-import 'demos/emoji_input_demo.dart';
-import 'demos/icon_input_demo.dart';
-import 'demos/image_input_demo.dart';
-import 'demos/dynamic_avatar_input_demo.dart';
 
 /// A list-detail showcase of all input components in the layrz_ui design system.
 ///
@@ -143,108 +129,6 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Login',
       details: LoginInputDemo(),
       icon: MdiIcons.formTextboxPassword,
-    ),
-
-    // Date & Time category
-    InputDemo(
-      id: 'date-input',
-      name: 'Date Input',
-      category: 'Date & Time',
-      details: DateInputDemo(),
-      icon: MdiIcons.calendarOutline,
-    ),
-    InputDemo(
-      id: 'date-range-input',
-      name: 'Date Range Input',
-      category: 'Date & Time',
-      details: DateRangeInputDemo(),
-      icon: MdiIcons.calendarRangeOutline,
-    ),
-    InputDemo(
-      id: 'time-input',
-      name: 'Time Input',
-      category: 'Date & Time',
-      details: TimeInputDemo(),
-      icon: MdiIcons.clockOutline,
-    ),
-    InputDemo(
-      id: 'time-range-input',
-      name: 'Time Range Input',
-      category: 'Date & Time',
-      details: TimeRangeInputDemo(),
-      icon: MdiIcons.clockTimeFourOutline,
-    ),
-    InputDemo(
-      id: 'datetime-input',
-      name: 'DateTime Input',
-      category: 'Date & Time',
-      details: DateTimeInputDemo(),
-      icon: MdiIcons.calendarClockOutline,
-    ),
-    InputDemo(
-      id: 'datetime-range-input',
-      name: 'DateTime Range Input',
-      category: 'Date & Time',
-      details: DateTimeRangeInputDemo(),
-      icon: MdiIcons.calendarClock,
-    ),
-    InputDemo(
-      id: 'month-input',
-      name: 'Month Input',
-      category: 'Date & Time',
-      details: MonthInputDemo(),
-      icon: MdiIcons.calendarMonthOutline,
-    ),
-    InputDemo(
-      id: 'month-range-input',
-      name: 'Month Range Input',
-      category: 'Date & Time',
-      details: MonthRangeInputDemo(),
-      icon: MdiIcons.calendarMultiselectOutline,
-    ),
-
-    // Pickers category
-    InputDemo(
-      id: 'color-input',
-      name: 'Color Input',
-      category: 'Pickers',
-      details: ColorInputDemo(),
-      icon: MdiIcons.paletteOutline,
-    ),
-    InputDemo(
-      id: 'multi-select-input',
-      name: 'Multi-Select Input',
-      category: 'Pickers',
-      details: MultiSelectInputDemo(),
-      icon: MdiIcons.checkboxMultipleMarkedOutline,
-    ),
-    InputDemo(
-      id: 'emoji-input',
-      name: 'Emoji Input',
-      category: 'Pickers',
-      details: EmojiInputDemo(),
-      icon: MdiIcons.emoticonOutline,
-    ),
-    InputDemo(
-      id: 'icon-input',
-      name: 'Icon Input',
-      category: 'Pickers',
-      details: IconInputDemo(),
-      icon: MdiIcons.shapeOutline,
-    ),
-    InputDemo(
-      id: 'image-input',
-      name: 'Image Input',
-      category: 'Pickers',
-      details: ImageInputDemo(),
-      icon: MdiIcons.imageOutline,
-    ),
-    InputDemo(
-      id: 'dynamic-avatar-input',
-      name: 'Dynamic Avatar Input',
-      category: 'Pickers',
-      details: DynamicAvatarInputDemo(),
-      icon: MdiIcons.accountCircleOutline,
     ),
   ];
 

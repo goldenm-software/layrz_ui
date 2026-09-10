@@ -338,7 +338,7 @@ class _HourGridColumnState extends State<HourGridColumn> {
     final decoration = BoxDecoration(
       // Colour-only hover feedback per D15 -- the row's height, border width
       // and every other geometric property stay fixed regardless of hover.
-      color: isInteractive && _hoveredHour == hour ? tokens.colors.primary.shade500.withValues(alpha: 0.05) : null,
+      color: isInteractive && _hoveredHour == hour ? tokens.colors.primary.withValues(alpha: 0.05) : null,
       border: Border(
         top: BorderSide(color: tokens.colors.divider, width: tokens.border.stroke1),
       ),
@@ -567,7 +567,7 @@ class _TimedEventBlockState extends State<_TimedEventBlock> {
     final placement = widget.placement;
     final entry = placement.entry;
     final isInteractive = entry.onTap != null;
-    final color = entry.color ?? tokens.colors.info.shade500;
+    final color = entry.color ?? tokens.colors.info;
 
     final startMinutes = _minutesIntoDay(entry.start, date);
     final endMinutes = _minutesIntoDay(entry.end, date, isEnd: true);

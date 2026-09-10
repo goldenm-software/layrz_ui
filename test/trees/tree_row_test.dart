@@ -435,7 +435,7 @@ void main() {
       final decoration = decoratedBox.decoration as BoxDecoration;
 
       expect(decoration.color, tokens.colors.primary.withValues(alpha: 0.12));
-      expect((decoration.border as Border).top.color, tokens.colors.primary.shade500);
+      expect((decoration.border as Border).top.color, tokens.colors.primary);
 
       // The checkbox itself is still a visual marker of selection: filled
       // with the primary colour and painting the check glyph.

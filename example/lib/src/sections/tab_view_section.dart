@@ -190,7 +190,7 @@ class _IconSlotsDemoState extends State<_IconSlotsDemo> {
         SizedBox(height: tokens.spacing.sp3),
         Text(
           'Last onTabChanged index: $_lastChangedIndex',
-          style: tokens.typography.label.copyWith(color: tokens.colors.success[500]),
+          style: tokens.typography.label.copyWith(color: tokens.colors.success),
         ),
       ],
     );

@@ -109,7 +109,7 @@ final class LayrzDropdownLabel extends LayrzDropdownItem {
     final tokens = context.tokens;
 
     final band = color == null
-        ? tokens.colors.sf3
+        ? (context.isDark ? tokens.colors.sf2 : tokens.colors.sf3)
         : color!.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.sf1);
 
     return Semantics(

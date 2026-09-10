@@ -31,10 +31,13 @@ further M6 Data-display/Feedback additions, bringing the milestone to eight item
 | 6 | DESIGN-92: LayrzAccordion (single controlled disclosure panel over SDK `Expansible`) | Merged · Review required |
 | 7 | DESIGN-69: LayrzAiMarker (icon-only AI-disclosure marker with animated accent glint) | Merged · Review required |
 | 8 | DESIGN-91: LayrzSkeleton (loading placeholder built from caller-composed shape primitives) | Merged · Review required |
+| 9 | DESIGN-68: LayrzMarkdown (render-only Markdown view; fenced code via LayrzCodeSnippet; streaming-aware; raw HTML dropped) | Review required |
 
 **Note**: This table is the authoritative record of M6 work items, kept in step with the code in
-the same commit. All eight rows are implemented, tested, and merged to `development`; none has yet
-been reviewed by the maintainer on a real device — that is what `Review required` signals. Rows
+the same commit. All nine rows are implemented and tested; rows 1-8 are merged to `development`,
+and row 9 (`DESIGN-68`) is committed to `development` as part of the `1.0.0-prerelease.1` release.
+None has yet been reviewed by the maintainer on a real device — that is what `Review required`
+signals. Rows
 6-8 (`DESIGN-92`, `DESIGN-69`, `DESIGN-91`) are the second batch, released as part of `0.0.20`. The
 Notion ⚒️ Progress database is the shared, publicly linkable view of this same status (rows are
 identified as `DESIGN-N` for cross-reference).

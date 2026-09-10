@@ -110,7 +110,7 @@ class _LayrzFocusRingState extends State<LayrzFocusRing> {
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                border: _hasFocus ? Border.all(color: tokens.colors.primary.shade500, width: widget.borderWidth) : null,
+                border: _hasFocus ? Border.all(color: tokens.colors.primary, width: widget.borderWidth) : null,
               ),
             ),
           ),

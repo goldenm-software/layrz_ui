@@ -68,15 +68,15 @@ enum LayrzAlertType {
   Color? colorToken(LayrzTokens tokens) {
     switch (this) {
       case LayrzAlertType.info:
-        return tokens.colors.info.shade500;
+        return tokens.colors.info;
       case LayrzAlertType.success:
-        return tokens.colors.success.shade500;
+        return tokens.colors.success;
       case LayrzAlertType.warning:
-        return tokens.colors.warning.shade500;
+        return tokens.colors.warning;
       case LayrzAlertType.danger:
-        return tokens.colors.danger.shade500;
+        return tokens.colors.danger;
       case LayrzAlertType.context:
-        return tokens.colors.contextual.shade500;
+        return tokens.colors.contextual;
       case LayrzAlertType.custom:
         return null;
     }

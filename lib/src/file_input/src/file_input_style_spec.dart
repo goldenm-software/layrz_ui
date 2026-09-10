@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// The four visually distinct states [LayrzFileInput]'s drop-zone box can be in.
@@ -124,8 +125,15 @@ class LayrzFileInputStyleSpec {
     }
 
     if (hasErrors) {
+      // Matches the text-input error fill (see LayrzInputStyleSpec): a fixed
+      // near-white pink (#FFEBEE) on light — the historical value, unreachable by
+      // a danger-over-surface blend — and a tonal danger tint on dark where that
+      // pale wash would be invisible.
+      final backgroundColor = tokens.brightness == Brightness.dark
+          ? tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2)
+          : const Color(0xFFFFEBEE);
       return LayrzFileInputStyleSpec(
-        backgroundColor: tokens.colors.danger.shade50,
+        backgroundColor: backgroundColor,
         borderColor: tokens.colors.danger,
         borderWidth: tokens.border.stroke2,
         contentColor: tokens.colors.danger,

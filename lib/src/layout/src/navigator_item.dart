@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/context_menu/context_menu.dart';
 
 /// Sealed hierarchy representing a single item in the [LayrzLayout] navigation.
 ///
@@ -22,8 +24,8 @@ sealed class LayrzNavigatorItem {
 final class LayrzNavigatorPage extends LayrzNavigatorItem {
   /// Creates a navigable page item.
   ///
-  /// All parameters except [id] and [labelText] are optional and default to null
-  /// or false.
+  /// All parameters except [id] and [labelText] are optional and default to null,
+  /// false, or an empty list.
   const LayrzNavigatorPage({
     required this.id,
     required this.labelText,
@@ -31,6 +33,7 @@ final class LayrzNavigatorPage extends LayrzNavigatorItem {
     this.count,
     this.onTap,
     this.isSelected = false,
+    this.contextMenuActions = const [],
   });
 
   /// A stable identifier for this page.
@@ -71,6 +74,10 @@ final class LayrzNavigatorPage extends LayrzNavigatorItem {
   /// background and bold label text. Defaults to false.
   final bool isSelected;
 
+  /// The actions shown in a context menu when this page is right-clicked (desktop/web)
+  /// or long-pressed (touch). When empty (the default), the item has no context menu at all.
+  final List<LayrzContextMenuItem> contextMenuActions;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -81,10 +88,12 @@ final class LayrzNavigatorPage extends LayrzNavigatorItem {
           icon == other.icon &&
           count == other.count &&
           onTap == other.onTap &&
-          isSelected == other.isSelected;
+          isSelected == other.isSelected &&
+          listEquals(contextMenuActions, other.contextMenuActions);
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, labelText, icon, count, onTap, isSelected);
+  int get hashCode =>
+      Object.hash(runtimeType, id, labelText, icon, count, onTap, isSelected, Object.hashAll(contextMenuActions));
 
   /// Returns a copy of this page with the given fields replaced.
   LayrzNavigatorPage copyWith({
@@ -94,6 +103,7 @@ final class LayrzNavigatorPage extends LayrzNavigatorItem {
     int? count,
     VoidCallback? onTap,
     bool? isSelected,
+    List<LayrzContextMenuItem>? contextMenuActions,
   }) {
     return LayrzNavigatorPage(
       id: id ?? this.id,
@@ -102,6 +112,7 @@ final class LayrzNavigatorPage extends LayrzNavigatorItem {
       count: count ?? this.count,
       onTap: onTap ?? this.onTap,
       isSelected: isSelected ?? this.isSelected,
+      contextMenuActions: contextMenuActions ?? this.contextMenuActions,
     );
   }
 }

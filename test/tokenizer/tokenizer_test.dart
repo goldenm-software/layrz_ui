@@ -69,7 +69,7 @@ void main() {
       final tokenizer = LayrzTokenizer(tokens);
 
       expect(tokenizer.primary, equals(tokens.colors.primary));
-      expect((tokenizer.primary as LayrzColorSwatch).shade500, equals(kPrimaryColor));
+      expect(tokenizer.primary, equals(kLightPrimaryColor));
     });
 
     test('success shortcut returns colors.success', () {

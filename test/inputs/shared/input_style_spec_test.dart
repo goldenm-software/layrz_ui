@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -120,7 +121,10 @@ void main() {
         hasErrors: true,
       );
 
-      expect(spec.backgroundColor, tokens.colors.danger.shade50);
+      expect(
+        spec.backgroundColor,
+        tokens.brightness == Brightness.dark ? tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2) : const Color(0xFFFFEBEE),
+      );
       expect(spec.borderColor, tokens.colors.danger);
       // Text color must match the border's danger color (DESIGN-106 follow-up):
       // the error state previously left text at plain fg1, which read as a
@@ -211,7 +215,10 @@ void main() {
         hasErrors: true,
       );
 
-      expect(spec.backgroundColor, tokens.colors.danger.shade50);
+      expect(
+        spec.backgroundColor,
+        tokens.brightness == Brightness.dark ? tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2) : const Color(0xFFFFEBEE),
+      );
       expect(spec.borderColor, tokens.colors.danger);
     });
 

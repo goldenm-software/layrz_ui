@@ -50,7 +50,7 @@ void main() {
         );
 
         final icon = tester.widget<Icon>(find.byType(Icon));
-        expect(icon.color, equals(tokens.colors.info.shade500));
+        expect(icon.color, equals(tokens.colors.info));
       });
 
       testWidgets('success type renders icon in success colour', (tester) async {
@@ -61,7 +61,7 @@ void main() {
         );
 
         final icon = tester.widget<Icon>(find.byType(Icon));
-        expect(icon.color, equals(tokens.colors.success.shade500));
+        expect(icon.color, equals(tokens.colors.success));
       });
 
       testWidgets('warning type renders icon in warning colour', (tester) async {
@@ -72,7 +72,7 @@ void main() {
         );
 
         final icon = tester.widget<Icon>(find.byType(Icon));
-        expect(icon.color, equals(tokens.colors.warning.shade500));
+        expect(icon.color, equals(tokens.colors.warning));
       });
 
       testWidgets('danger type renders icon in danger colour', (tester) async {
@@ -83,7 +83,7 @@ void main() {
         );
 
         final icon = tester.widget<Icon>(find.byType(Icon));
-        expect(icon.color, equals(tokens.colors.danger.shade500));
+        expect(icon.color, equals(tokens.colors.danger));
       });
 
       testWidgets('context type renders icon in contextual colour', (tester) async {
@@ -94,7 +94,7 @@ void main() {
         );
 
         final icon = tester.widget<Icon>(find.byType(Icon));
-        expect(icon.color, equals(tokens.colors.contextual.shade500));
+        expect(icon.color, equals(tokens.colors.contextual));
       });
     });
 
@@ -123,7 +123,7 @@ void main() {
         );
 
         final icon = tester.widget<Icon>(find.byType(Icon));
-        expect(icon.color, equals(tokens.colors.primary.shade500));
+        expect(icon.color, equals(tokens.colors.primary));
       });
     });
 
@@ -168,7 +168,7 @@ void main() {
 
         expect(
           decoration.color,
-          equals(tokens.colors.info.shade500.withOpacityValue(tokens.colors.tonalOpacity)),
+          equals(tokens.colors.info.withOpacityValue(tokens.colors.tonalOpacity)),
         );
       });
 

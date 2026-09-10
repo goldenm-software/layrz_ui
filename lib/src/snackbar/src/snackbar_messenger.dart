@@ -1090,7 +1090,7 @@ class _OverflowChipState extends State<_OverflowChip> {
   @override
   Widget build(BuildContext context) {
     final tokens = widget.tokens;
-    final base = tokens.colors.contextual.shade800;
+    final base = tokens.colors.contextual.darken(0.3);
 
     return Semantics(
       button: true,

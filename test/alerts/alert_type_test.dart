@@ -52,38 +52,38 @@ void main() {
     });
 
     group('color resolution', () {
-      test('info type returns info.shade500', () {
+      test('info type returns.info', () {
         expect(
           LayrzAlertType.info.colorToken(tokens),
-          equals(tokens.colors.info.shade500),
+          equals(tokens.colors.info),
         );
       });
 
-      test('success type returns success.shade500', () {
+      test('success type returns.success', () {
         expect(
           LayrzAlertType.success.colorToken(tokens),
-          equals(tokens.colors.success.shade500),
+          equals(tokens.colors.success),
         );
       });
 
-      test('warning type returns warning.shade500', () {
+      test('warning type returns.warning', () {
         expect(
           LayrzAlertType.warning.colorToken(tokens),
-          equals(tokens.colors.warning.shade500),
+          equals(tokens.colors.warning),
         );
       });
 
-      test('danger type returns danger.shade500', () {
+      test('danger type returns.danger', () {
         expect(
           LayrzAlertType.danger.colorToken(tokens),
-          equals(tokens.colors.danger.shade500),
+          equals(tokens.colors.danger),
         );
       });
 
-      test('context type returns contextual.shade500', () {
+      test('context type returns.contextual', () {
         expect(
           LayrzAlertType.context.colorToken(tokens),
-          equals(tokens.colors.contextual.shade500),
+          equals(tokens.colors.contextual),
         );
       });
 

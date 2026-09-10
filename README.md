@@ -85,6 +85,35 @@ Live progress across milestones M1–M8 is tracked on the [Notion board](https:/
 
 ---
 
+## Kotlin Gradle Plugin warning
+
+`layrz_ui` depends on `desktop_drop` and `file_picker`, whose Android plugin modules apply the
+Kotlin Gradle Plugin (KGP) themselves. On AGP 9+, this triggers Flutter's KGP deprecation warning
+in your app's build output — something like *"plugins that apply Kotlin Gradle Plugin (KGP):
+desktop_drop, file_picker"*.
+
+Set `android.builtInKotlin=true` (alongside `android.newDsl=false`) in your app's
+`android/gradle.properties` regardless — it's still the correct fix for `file_picker`, and it makes
+`desktop_drop`'s own Kotlin setup defer to AGP's built-in Kotlin at build time instead of applying
+KGP itself.
+
+```properties
+android.builtInKotlin=true
+android.newDsl=false
+```
+
+**This silences the warning for `file_picker`, but not for `desktop_drop`.** Flutter detects KGP
+usage with a static text scan of each plugin's `build.gradle` — it greps the raw file for
+`apply plugin: 'kotlin-android'` rather than checking whether that line actually runs. `desktop_drop`
+0.8.4's `build.gradle` still contains that line, guarded behind a condition that `builtInKotlin=true`
+makes false — so the plugin is *never applied* at build time, but the text is still there for the
+scan to match. The warning is cosmetic on the current toolchain: the build succeeds either way, and
+nothing you set in `gradle.properties` or clear from the Gradle cache can remove a string that lives
+in `desktop_drop`'s own file. It will stop appearing once `desktop_drop` upstream ships a version
+whose `build.gradle` no longer contains that legacy line.
+
+---
+
 ## Running the example
 
 ```bash

@@ -153,7 +153,7 @@ class LayrzPickersDayGridCell extends StatelessWidget {
     // used here: [LayrzColorSwatch.fromColor] derives shade50 by
     // subtracting 0.40 from the seed's HSL lightness, which clamps to fully
     // opaque black for any seed under that lightness (e.g. the default
-    // `kPrimaryColor`, ~0.19) -- this is the exact "solid black" defect
+    // `kLightPrimaryColor`, ~0.19) -- this is the exact "solid black" defect
     // already diagnosed and worked around the same way in
     // `LayrzTreeRowStyleSpec.resolve` (see that file's doc comment).
     // Applying [tokens.colors.tonalOpacity] alpha to the seed colour itself
@@ -174,7 +174,7 @@ class LayrzPickersDayGridCell extends StatelessWidget {
     // range-member foreground assigned above) stays legible against it since
     // the blend never lightens past a mid tone. `Color.lerp` rather than
     // `LayrzColorSwatch.fromColor`'s `.shadeXXX` ramp: that derivation
-    // inverts for a dark seed like the default `kPrimaryColor` (see
+    // inverts for a dark seed like the default `kLightPrimaryColor` (see
     // `LayrzPickersRangeBar`'s own doc), clamping to black instead of
     // lightening.
     final hoverColor = isRangeMember ? Color.lerp(tokens.colors.primary, const Color(0xFFFFFFFF), 0.18)! : null;

@@ -218,4 +218,94 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('LayrzLayoutRailItem - DESIGN-207 contextMenuActions', () {
+    testWidgets('wraps the item in LayrzContextMenu when contextMenuActions is non-empty', (
+      WidgetTester tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(
+              id: 'home',
+              labelText: 'Home',
+              contextMenuActions: [
+                LayrzContextMenuEntry(labelText: 'Rename', onTap: () {}),
+              ],
+            ),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      final contextMenuFinder = find.byType(LayrzContextMenu);
+      expect(contextMenuFinder, findsOneWidget);
+
+      final contextMenuWidget = tester.widget<LayrzContextMenu>(contextMenuFinder);
+      expect(contextMenuWidget.entries, hasLength(1));
+      expect(contextMenuWidget.entries.single, isA<LayrzContextMenuEntry>());
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('does not wrap the item in LayrzContextMenu when contextMenuActions is empty', (
+      WidgetTester tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(id: 'home', labelText: 'Home'),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      expect(find.byType(LayrzContextMenu), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tap still fires onTap when contextMenuActions is non-empty', (WidgetTester tester) async {
+      addTearDown(tester.view.reset);
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+
+      var tapped = false;
+
+      await pumpThemedApp(
+        tester,
+        LayrzLayout(
+          logo: 'assets/test-logo.png',
+          items: [
+            LayrzNavigatorPage(
+              id: 'home',
+              labelText: 'Home',
+              onTap: () => tapped = true,
+              contextMenuActions: [
+                LayrzContextMenuEntry(labelText: 'Rename', onTap: () {}),
+              ],
+            ),
+          ],
+          body: const SizedBox(child: Text('Body')),
+        ),
+      );
+
+      await tester.tap(find.text('Home', findRichText: true));
+      await tester.pump();
+
+      expect(tapped, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  });
 }

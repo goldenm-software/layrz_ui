@@ -143,7 +143,7 @@ void main() {
   });
 
   group("LayrzScaffoldItem.actions — desktop hover reveal (wide viewport)", () {
-    testWidgets("actions are present in the tree but hidden (translated away) by default", (tester) async {
+    testWidgets("actions are present in the tree but invisible (opacity 0) by default", (tester) async {
       final controller = LayrzScaffoldController();
       final items = _itemsWithActions([
         LayrzButton.edit(labelText: "Edit", onTap: () {}, isFab: true),
@@ -154,18 +154,17 @@ void main() {
 
       expect(find.byType(LayrzButton), findsNWidgets(2));
 
-      // At rest, the row body fully covers the actions strip: the tappable row
-      // sits at the same x-origin as the row's own bounds (no translation applied).
-      final rowRect = tester.getRect(find.byType(LayrzTappable));
-      final actionsRect = tester.getRect(find.byWidgetPredicate((w) => w is Row && w.children.length == 2).last);
-      // The actions strip is pinned to the trailing edge, entirely behind the row body
-      // at rest — its right edge should not extend past the row's right edge.
-      expect(actionsRect.right, lessThanOrEqualTo(rowRect.right + 0.5));
+      // At rest, the overlay is faded fully out — the action buttons are laid out
+      // (present in the tree) but not visible.
+      final opacity = tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity).first);
+      expect(opacity.opacity, 0.0);
 
       controller.dispose();
     });
 
-    testWidgets("hovering the row reveals the actions by translating the row body left", (tester) async {
+    testWidgets("hovering the row reveals the actions as an overlay WITHOUT translating the row body", (
+      tester,
+    ) async {
       final controller = LayrzScaffoldController();
       final items = _itemsWithActions([
         LayrzButton.edit(labelText: "Edit", onTap: () {}, isFab: true),
@@ -185,16 +184,21 @@ void main() {
 
       final hoveredRect = tester.getRect(rowFinder);
 
-      // Geometry (size) must not change on hover — only position/translation (D15).
-      expect(hoveredRect.size, restRect.size);
-      // The row body must have translated left (toward the leading edge) to reveal
-      // the trailing actions strip underneath it.
-      expect(hoveredRect.left, lessThan(restRect.left));
+      // Geometry (size AND position) must not change on hover — no translation,
+      // no resize (decision D15: hover may vary colour/opacity/shadow/cursor only).
+      expect(hoveredRect, equals(restRect));
+
+      // The overlay is now fully visible and the action buttons are present.
+      final opacity = tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity).first);
+      expect(opacity.opacity, 1.0);
+      expect(find.byType(LayrzButton), findsNWidgets(2));
 
       controller.dispose();
     });
 
-    testWidgets("moving the pointer away hides the actions again", (tester) async {
+    testWidgets("moving the pointer away hides the actions again (opacity back to 0, still no translation)", (
+      tester,
+    ) async {
       final controller = LayrzScaffoldController();
       final items = _itemsWithActions([
         LayrzButton.edit(labelText: "Edit", onTap: () {}, isFab: true),
@@ -210,14 +214,17 @@ void main() {
       await gesture.addPointer(location: tester.getCenter(rowFinder));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
-      expect(tester.getRect(rowFinder).left, lessThan(restRect.left));
+      expect(tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity).first).opacity, 1.0);
+      expect(tester.getRect(rowFinder), equals(restRect));
 
       // Move away from the row entirely.
       await gesture.moveTo(const Offset(5, 5));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
-      expect(tester.getRect(rowFinder).left, closeTo(restRect.left, 0.5));
+      expect(tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity).first).opacity, 0.0);
+      // Still never translated, in either direction.
+      expect(tester.getRect(rowFinder), equals(restRect));
 
       controller.dispose();
     });
@@ -398,17 +405,20 @@ void main() {
     });
   });
 
-  group("LayrzScaffoldItem.actions — reveal extent scales with action count", () {
-    /// Computes the expected fully-revealed translation distance for [n] Fab
-    /// actions from the same tokens the row itself reads: `n` square Fab
+  group("LayrzScaffoldItem.actions — desktop overlay fits regardless of action count", () {
+    /// Computes the mobile swipe's fully-revealed translation distance for [n]
+    /// Fab actions from the same tokens the row itself reads: `n` square Fab
     /// buttons (`kLayrzButtonHeight` wide each) separated by `n - 1` `sp1`
-    /// gaps, inside `sp2` padding on each side of the strip.
+    /// gaps, inside `sp2` padding on each side of the strip. Desktop no longer
+    /// translates on hover (see FIX 62.1), so this extent now only governs the
+    /// compact/mobile swipe path — kept here since both groups in this file
+    /// share the same underlying `_revealExtentFor` computation in the row.
     double expectedRevealExtent(int n) {
       final spacing = LayrzThemeData.light().tokens.spacing;
       return n * kLayrzButtonHeight + (n - 1) * spacing.sp1 + 2 * spacing.sp2;
     }
 
-    testWidgets("2 Fab actions: hover reveals exactly 2*45 + 1*sp1 + 2*sp2", (tester) async {
+    testWidgets("2 Fab actions: hover reveals the overlay without translating the row", (tester) async {
       final controller = LayrzScaffoldController();
       final items = _itemsWithActions([
         LayrzButton.edit(labelText: "Edit", onTap: () {}, isFab: true),
@@ -427,23 +437,21 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
-      final revealedRect = tester.getRect(rowFinder);
-      final translated = restRect.left - revealedRect.left;
-      expect(translated, closeTo(expectedRevealExtent(2), 0.5));
+      // No translation at all, regardless of action count.
+      expect(tester.getRect(rowFinder), equals(restRect));
 
       // The fully-revealed rightmost action (Delete) must be entirely visible
-      // inside the row's clipped bounds: its right edge within the strip, and
-      // its left edge no further left than the translated row's own left edge.
+      // inside the row's clipped bounds.
       final deleteRect = tester.getRect(
         find.byWidgetPredicate((w) => w is Semantics && w.properties.label == "Delete").first,
       );
       expect(deleteRect.right, lessThanOrEqualTo(stackRect.right + 0.5));
-      expect(deleteRect.left, greaterThanOrEqualTo(revealedRect.left - 0.5));
+      expect(deleteRect.left, greaterThanOrEqualTo(stackRect.left - 0.5));
 
       controller.dispose();
     });
 
-    testWidgets("3 Fab actions: hover reveals exactly 3*45 + 2*sp1 + 2*sp2", (tester) async {
+    testWidgets("3 Fab actions: hover reveals the overlay without translating the row", (tester) async {
       final controller = LayrzScaffoldController();
       final items = _itemsWithActions([
         LayrzButton.edit(labelText: "Edit", onTap: () {}, isFab: true),
@@ -463,15 +471,37 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 250));
 
-      final revealedRect = tester.getRect(rowFinder);
-      final translated = restRect.left - revealedRect.left;
-      expect(translated, closeTo(expectedRevealExtent(3), 0.5));
+      // No translation at all, regardless of action count.
+      expect(tester.getRect(rowFinder), equals(restRect));
 
       final deleteRect = tester.getRect(
         find.byWidgetPredicate((w) => w is Semantics && w.properties.label == "Delete").first,
       );
       expect(deleteRect.right, lessThanOrEqualTo(stackRect.right + 0.5));
-      expect(deleteRect.left, greaterThanOrEqualTo(revealedRect.left - 0.5));
+      expect(deleteRect.left, greaterThanOrEqualTo(stackRect.left - 0.5));
+
+      controller.dispose();
+    });
+
+    testWidgets("mobile swipe extent still scales with action count (2 actions)", (tester) async {
+      final controller = LayrzScaffoldController();
+      final items = _itemsWithActions([
+        LayrzButton.edit(labelText: "Edit", onTap: () {}, isFab: true),
+        LayrzButton.delete(labelText: "Delete", onTap: () {}, isFab: true),
+      ]);
+
+      await _pumpShell(tester, items: items, controller: controller, size: _kCompactSize);
+
+      final rowFinder = find.byType(LayrzTappable);
+      final restRect = tester.getRect(rowFinder);
+
+      await tester.drag(rowFinder, const Offset(-500, 0));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
+
+      final revealedRect = tester.getRect(rowFinder);
+      final translated = restRect.left - revealedRect.left;
+      expect(translated, closeTo(expectedRevealExtent(2), 0.5));
 
       controller.dispose();
     });

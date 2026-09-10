@@ -89,7 +89,7 @@ class _ContextMenuDemoState extends State<_ContextMenuDemo> {
             LayrzContextMenuEntry(
               labelText: 'Delete',
               icon: MdiIcons.trashCanOutline,
-              color: tokens.colors.danger[500],
+              color: tokens.colors.danger,
               onTap: () => _handleAction('Delete'),
             ),
             LayrzContextMenuEntry(

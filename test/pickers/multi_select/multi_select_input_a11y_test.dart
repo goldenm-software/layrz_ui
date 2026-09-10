@@ -138,10 +138,19 @@ void main() {
         await tester.tap(find.text('Apple'));
         await tester.pumpAndSettle();
 
+        // Scoped to a row (button: true) -- a bare `selected == true` predicate
+        // also matches the "All"/"Selected" tab-strip segments added in
+        // DESIGN-43 (the "All" tab is selected by default), which are
+        // Semantics(button: true, selected: ...) nodes of their own.
         final selectedRowFinder = find.byWidgetPredicate(
-          (widget) => widget is Semantics && widget.properties.selected == true,
+          (widget) => widget is Semantics && widget.properties.selected == true && widget.properties.button == true,
         );
-        expect(selectedRowFinder, findsOneWidget);
+        expect(selectedRowFinder, findsWidgets);
+        expect(
+          tester.widgetList<Semantics>(selectedRowFinder).any((s) => s.properties.label == null),
+          isTrue,
+          reason: 'the selected fruit row itself carries no explicit Semantics label, unlike the tab segments',
+        );
       } finally {
         handle.dispose();
       }
