@@ -36,6 +36,7 @@ import 'src/sections/home_section.dart';
 import 'src/sections/images_section.dart';
 import 'src/sections/inputs_section.dart';
 import 'src/sections/layo_section.dart';
+import 'src/sections/markdown_section.dart';
 import 'src/sections/menus_section.dart';
 import 'src/sections/motion_section.dart';
 import 'src/sections/progress_section.dart';
@@ -281,6 +282,10 @@ final _router = GoRouter(
         GoRoute(
           path: '/layo',
           pageBuilder: (context, state) => NoTransitionPage(child: LayoSection()),
+        ),
+        GoRoute(
+          path: '/markdown',
+          pageBuilder: (context, state) => NoTransitionPage(child: MarkdownSection()),
         ),
         GoRoute(
           path: '/tab-view',

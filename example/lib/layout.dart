@@ -327,6 +327,13 @@ class ShowroomLayout extends ConsumerWidget {
         onTap: () => _navigateTo(context, '/layo'),
       ),
       LayrzNavigatorPage(
+        id: '/markdown',
+        labelText: 'Markdown',
+        icon: MdiIcons.fileDocumentOutline,
+        isSelected: currentRoute == '/markdown',
+        onTap: () => _navigateTo(context, '/markdown'),
+      ),
+      LayrzNavigatorPage(
         id: '/menus',
         labelText: 'Menus',
         icon: MdiIcons.dotsSquare,
