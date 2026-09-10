@@ -16,6 +16,8 @@ CLAUDE.md
 
 # Claude
 .claude/
+plugin.json
+.claude-plugin/
 
 # Build and tooling output. These MUST be listed here: a .pubignore fully
 # REPLACES .gitignore for publishing, so the /build/, /coverage/, doc/api/,
