@@ -256,7 +256,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.0.0-prerelease.2"
+    version: "1.0.0-prerelease.3"
   leak_tracker:
     dependency: transitive
     description:

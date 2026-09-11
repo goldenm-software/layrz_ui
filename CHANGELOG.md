@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-prerelease.3
+
+- Added the static `LayrzUiL10n.delegate` accessor, a `LocalizationsDelegate<LayrzUiL10n>` that can be dropped straight into `LayrzApp.localizationsDelegates` without constructing `LayrzUiL10nDelegate` yourself, mirroring `GlobalWidgetsLocalizations.delegate`.
+
 ## 1.0.0-prerelease.2
 
 A smaller follow-up to `1.0.0-prerelease.1`, focused on polish and fixes for the layout and
