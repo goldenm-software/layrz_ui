@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'l10n_delegate.dart';
 import 'namespaces/actions.dart';
 import 'namespaces/about.dart';
 import 'namespaces/ai.dart';
@@ -138,6 +139,23 @@ abstract class LayrzUiL10n
         LayrzUiL10nWeekdaysMixin {
   /// Creates an instance of [LayrzUiL10n].
   const LayrzUiL10n();
+
+  /// A [LocalizationsDelegate] that loads the default English [LayrzUiL10n].
+  ///
+  /// Mirrors `GlobalWidgetsLocalizations.delegate`: drop it straight into
+  /// `LayrzApp.localizationsDelegates` without constructing the delegate class
+  /// yourself.
+  ///
+  /// ```dart
+  /// LayrzApp(
+  ///   localizationsDelegates: const [LayrzUiL10n.delegate],
+  ///   // ...
+  /// )
+  /// ```
+  ///
+  /// Caller-supplied delegates registered before this one take precedence, so a
+  /// custom subclass's delegate wins while this remains the English fallback.
+  static const LocalizationsDelegate<LayrzUiL10n> delegate = LayrzUiL10nDelegate();
 
   /// Retrieves the [LayrzUiL10n] instance from the given context.
   ///
