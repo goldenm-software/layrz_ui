@@ -342,6 +342,33 @@ void main() {
       });
     });
 
+    group('LayrzUiL10n.delegate static accessor', () {
+      test('is a LayrzUiL10nDelegate typed on LayrzUiL10n', () {
+        expect(LayrzUiL10n.delegate, isA<LayrzUiL10nDelegate>());
+        expect(LayrzUiL10n.delegate, isA<LocalizationsDelegate<LayrzUiL10n>>());
+      });
+
+      testWidgets('resolves LayrzUiL10n when used directly in Localizations', (tester) async {
+        late LayrzUiL10n resolved;
+        await tester.pumpWidget(
+          Localizations(
+            locale: const Locale('en'),
+            delegates: const [
+              LayrzUiL10n.delegate,
+              DefaultWidgetsLocalizations.delegate,
+            ],
+            child: Builder(
+              builder: (context) {
+                resolved = LayrzUiL10n.of(context);
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+        );
+        expect(resolved, isA<LayrzUiL10nDefault>());
+      });
+    });
+
     group('LayrzApp integration', () {
       test('builds localizationsDelegates list correctly', () {
         // Verify that the _buildLocalizationsDelegates logic works as expected
