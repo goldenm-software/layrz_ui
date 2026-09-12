@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0-prerelease.4
+
+- **BREAKING — `LayrzScaffoldShell.onDetailsBuild` removed.** The detail pane is now driven by `LayrzScaffoldController.open({required WidgetBuilder builder, Key? key})`; `key` is optional and only highlights the matching row, so a "create new" detail with no backing list item is now possible. Row taps are caller-owned via the new `onItemTap` (a row with no `onItemTap` is inert). `DetailPane` is no longer generic. Migrate `onDetailsBuild: (item) => Detail(item)` to `onItemTap: (item) => controller.open(key: item.key, builder: (_) => Detail(item.item))`. See decision D79.
+- Added `LayrzDetailScaffold` — a pinned-title / scrollable-body / optional pinned `LayrzButton` actions frame to return as the detail builder's content. It fills height (actions pinned to the bottom) in the desktop pane and shrink-wraps inside a bottom sheet, adapting via the new `LayrzBottomSheetScope`.
+- Added `LayrzBottomSheetScope`, a public `InheritedWidget` (`LayrzBottomSheetScope.maybeOf(context)`) installed around a `LayrzBottomSheet`'s content, so descendants can detect they are inside a sheet through any wrapper widgets.
+- Added `totalCount` and `filteredCount` (`ValueListenable<int>`) to `LayrzScaffoldController`, mirroring `LayrzTableController`, for an "N of M" results label.
+- Added an optional `value` parameter to `LayrzTextInput`, so it can be used with `value:` + `onChanged:` and no per-field controller.
+- Fixed `LayrzApp` `themeMode.system` always resolving to light — it now reads platform brightness from `WidgetsBinding.instance.platformDispatcher` and updates live when the OS toggles.
+- Fixed the `LayrzScaffoldShell` list-panel scrollbar overlapping row content by reserving the gutter inside the `ListView`.
+
 ## 1.0.0-prerelease.3
 
 - Added the static `LayrzUiL10n.delegate` accessor, a `LocalizationsDelegate<LayrzUiL10n>` that can be dropped straight into `LayrzApp.localizationsDelegates` without constructing `LayrzUiL10nDelegate` yourself, mirroring `GlobalWidgetsLocalizations.delegate`.
