@@ -5260,3 +5260,187 @@ Before dark mode can be called production-ready:
 - **D14**: Precedent for a clean-break rename with no alias (`kAccentColor`'s removal), followed
   here for `kPrimaryColor` → `kLightPrimaryColor`.
 
+---
+
+## D79: `LayrzScaffoldShell` Detail Pane Goes Builder-Based — `onDetailsBuild` Removed, `LayrzDetailScaffold` Added
+
+**Date**: 2026-09-11
+**Status**: Decided
+**Category**: Architecture / API
+
+### Context
+
+Since D37, `LayrzScaffoldShell<T>` drove its detail pane from a required
+`onDetailsBuild: Widget Function(T)` parameter: the shell resolved the opened key against its own
+`items` list and handed the matching domain object to that callback. Two real limitations followed
+directly from that item-centric shape:
+
+- **No detail pane could exist without a backing list item.** A "create new" form — the single most
+  common companion to any list-detail view — has no `T` to resolve `onDetailsBuild` against. Callers
+  worked around this with synthetic placeholder items, sentinel values, or a second, parallel modal
+  outside the shell entirely, none of which is a real solution.
+- **Title and actions could not update reactively.** Anything the detail pane needed to show above
+  or below its own content (a header, footer buttons) had to be baked into the single `Widget`
+  `onDetailsBuild` returned, with no notifier-driven path to change it — changing what the pane's
+  chrome showed meant closing and reopening the pane.
+
+### Options Considered
+
+- **Add open-time `title`/`actions` arguments to the existing `onDetailsBuild(T)` shape.** Rejected:
+  this still could not open a pane with no `T`, and any subsequent chrome change (e.g. an actions
+  row that must disable itself once a form field is invalid) still required tearing the pane down
+  and reopening it with new arguments — the same reactivity gap, just narrower.
+- **A notifier-driven title/actions slot**, where the shell exposes `ValueNotifier`s for the pane's
+  chrome that the open detail content writes into. Rejected: this plumbs mutable state back up
+  through the controller for something that is naturally local to whatever `StatefulWidget` the
+  caller's own detail content already is — a `setState` in the caller's own form is simpler and
+  needs no new controller surface.
+- **Chosen: the caller supplies the detail content directly as a builder, and any reactive chrome is
+  just part of that builder's own build method.** `LayrzScaffoldController.open({required
+  WidgetBuilder builder, Key? key})` replaces `onDetailsBuild` entirely. The builder is not
+  looked up against `items` at all — `key` is now optional and serves only to highlight the matching
+  list row, decoupled from what the pane actually renders. A caller opening a "create new" flow
+  passes `builder` with no `key`; the same `builder`'s own `setState` (its title bar text, its footer
+  button's enabled state) handles whatever the notifier-slots option would have needed a new
+  controller surface for.
+
+### Decision
+
+- **`onDetailsBuild` is removed from `LayrzScaffoldShell<T>`.** There is no replacement parameter
+  with the same shape — the shell no longer resolves any opened key against its `items` list to
+  produce detail content.
+- **`LayrzScaffoldController.open({required WidgetBuilder builder, Key? key})`** is the sole way to
+  open the detail pane. `key` is optional: passing it highlights the matching row in the list panel
+  (compared against `LayrzScaffoldItem.key`); omitting it (or passing a synthetic key matching no
+  row) opens a detail pane with no row highlighted — the "create new item" case this decision exists
+  to unblock. Re-opening with an identical `(key, builder)` pair (by `identical()` on the builder) is
+  a no-op; any change to either field takes effect and notifies listeners.
+- **`LayrzScaffoldController.isOpen` is now builder-based** (`_openedBuilder != null`), not
+  key-based — a keyless "create" open must still read as open. `close()` clears both `openedKey` and
+  `openedBuilder`.
+- **`DetailPane` is de-generified**: `DetailPane<T>` becomes `DetailPane`, and it takes a
+  `WidgetBuilder? builder` instead of the old `opened`/`contentBuilder` pair resolved from `T`. It
+  renders `LayrzScaffoldController.openedBuilder` verbatim, with no opinion on what it builds.
+- **New `onItemTap: void Function(LayrzScaffoldItem<T> item)?` on `LayrzScaffoldShell`.** The shell
+  itself no longer decides what a row tap does — the caller wires it explicitly, typically
+  `onItemTap: (item) => controller.open(key: item.key, builder: (_) => Detail(item.item))`. A row
+  with `onItemTap` left `null` is intentionally inert: no tap semantics are attached, rather than
+  falling back to some shell-owned default behavior.
+- **New `LayrzDetailScaffold`** (`lib/src/scaffold/src/detail_scaffold.dart`): a three-slot
+  title/body/actions frame meant to be returned directly from a detail `builder` — pinned `title`,
+  a scrollable `body` (owns its own `LayrzScrollbar` + `SingleChildScrollView`, so the caller's
+  `body` needs no `Expanded`/`Flexible` of its own), and an optional pinned `List<LayrzButton>?
+  actions` footer, right-aligned, rendered only when non-null and non-empty. Its three-slot shape
+  mirrors `LayrzDialog`'s own title/content/actions layout and reuses the same spacing/typography
+  tokens, so a detail pane and a dialog read as the same visual language.
+- **`LayrzDetailScaffold` adapts to where it is rendered, rather than being told.** `DetailPane`
+  hands the detail `builder` a bounded box in the wide/folded side-by-side layout (it sits inside an
+  `Expanded`) but an *unbounded* one when the same builder output is instead shown inside
+  `LayrzBottomSheet` on narrow viewports (which wraps it in a `SingleChildScrollView` unless the
+  caller opts out). `LayrzDetailScaffold` resolves this by checking for a `LayrzBottomSheetScope`
+  ancestor: outside a sheet, `body` is wrapped in `Expanded` inside a `Column(mainAxisSize:
+  MainAxisSize.max)`, so `body` fills remaining height and `actions` pins to the pane's bottom;
+  inside a sheet, `body` is wrapped in `Flexible` inside a `Column(mainAxisSize: MainAxisSize.min)`,
+  which shrink-wraps instead of throwing an unbounded-height `RenderFlex` error.
+- **New `LayrzBottomSheetScope`**, a public `InheritedWidget` in `bottom_sheet.dart`
+  (`LayrzBottomSheetScope.maybeOf(context)`), wrapped once around a `LayrzBottomSheet`'s entire
+  content subtree. `LayrzDetailScaffold` is its first consumer, but the scope itself carries no
+  scaffold-specific meaning — any descendant can ask "am I inside a bottom sheet right now."
+
+#### Sub-decision: ancestor lookup, not a shell-side type check
+
+The bottom-sheet detection above was **not** implemented as `LayrzScaffoldShell` (or `DetailPane`)
+inspecting the widget the `builder` returned and `copyWith`-ing a flag onto it when it happened to be
+a `LayrzDetailScaffold`. That approach was tried and abandoned: a real detail `builder` very often
+does not return `LayrzDetailScaffold` directly — it returns some other widget (a form, wrapped in
+the caller's own `StatefulWidget`) that itself builds `LayrzDetailScaffold` one or more levels
+further down. A type check performed once, immediately on the builder's direct output, sees only the
+caller's wrapper and never reaches the `LayrzDetailScaffold` underneath it — so the flag it would
+have set never reaches the widget that needs it.
+
+`InheritedWidget` ancestor lookup has no such distance limit: `LayrzBottomSheetScope.maybeOf`
+resolves via `dependOnInheritedWidgetOfExactType`, which walks up the element tree regardless of how
+many intermediate wrapper widgets sit in between. Wrapping the sheet's entire content subtree in the
+scope once, at the point `LayrzBottomSheet` itself builds that subtree, makes the scope discoverable
+from anywhere inside it — direct child or ten levels down — with no cooperation required from
+whatever the caller's `builder` happens to return along the way. The general lesson: when a
+descendant needs to know something about its structural position that may be arbitrarily many
+wrapper widgets removed from the point that position is decided, prefer an `InheritedWidget` scope
+over threading a flag through the immediate return value — the latter silently stops working the
+moment a caller interposes their own wrapper, which is the common case, not the exception.
+
+### Breaking Change
+
+**`onDetailsBuild` no longer exists on `LayrzScaffoldShell<T>`.** Any consumer passing it must
+migrate to the `onItemTap` + `controller.open` pattern:
+
+```dart
+// Before
+LayrzScaffoldShell<Category>(
+  onDetailsBuild: (item) => CategoryDetail(item),
+  ...
+)
+
+// After
+LayrzScaffoldShell<Category>(
+  onItemTap: (item) => controller.open(
+    key: item.key,
+    builder: (_) => LayrzDetailScaffold(
+      title: Text(item.item.name),
+      body: CategoryForm(item.item),
+    ),
+  ),
+  ...
+)
+```
+
+Detail content is not required to be a `LayrzDetailScaffold` — `DetailPane` renders whatever
+`builder` returns — but `LayrzDetailScaffold` is the recommended frame for anything wanting a
+title/body/actions layout consistent with the rest of the library.
+
+### Consequences
+
+- `lib/src/scaffold/src/detail_scaffold.dart` is new, public, and exported from
+  `lib/src/scaffold/scaffold.dart`.
+- `lib/src/sheets/src/bottom_sheet.dart` gains the public `LayrzBottomSheetScope` type, exported from
+  `lib/src/sheets/sheets.dart`.
+- `lib/src/scaffold/src/detail_pane.dart`'s `DetailPane<T>` becomes `DetailPane` (no longer generic),
+  and every call site constructing it updates accordingly.
+- `lib/src/scaffold/src/scaffold_shell.dart`, `lib/src/scaffold/src/scaffold_controller.dart`, and
+  `lib/src/scaffold/src/list_panel.dart` all needed changes to thread `onItemTap` through and to stop
+  resolving `openedKey` against `items` for detail content.
+- **`LayrzScaffoldController` also gains `totalCount`/`filteredCount`** (`ValueListenable<int>`,
+  updated via `updateCounts({required int total, required int filtered})`), mirroring
+  `LayrzTableController`'s `totalCount`/`visibleCount` pair. Unlike the table controller there is no
+  "selected count," since `LayrzScaffoldShell` has no multiselect — only total and post-search
+  counts. This addition is unrelated to the builder-based rework itself but landed in the same pass;
+  it lets a caller show an "X of Y" results label without the shell resolving or exposing item data
+  directly.
+- `wiki/Widgets/LayrzScaffoldShell.md` (and any wiki page referencing `onDetailsBuild`) needs a
+  rewrite of its detail-pane section to the `onItemTap` + `controller.open` pattern, and a new
+  `wiki/Widgets/LayrzDetailScaffold.md` page registered in `wiki/Widgets/_Sidebar.md`.
+- A future reader must not assume `onDetailsBuild` still exists anywhere in the shell's API — this
+  entry is the current, authoritative record of the detail-pane contract.
+
+### Review Trigger
+
+Revisit this decision if either of the following becomes a real need:
+
+- **A detail pane must open with no interaction at all** (e.g. deep-linking straight into an item's
+  detail view on shell mount) — the current model still requires something to call
+  `controller.open`, which is trivially satisfiable from `initState`/a route listener today, but a
+  built-in "initial open" parameter may be worth adding if this pattern recurs often enough.
+- **Multiple simultaneous detail panes are needed** (e.g. a split view showing two items at once) —
+  `LayrzScaffoldController` holds exactly one `(key, builder)` pair; supporting more is a structural
+  change to the controller, not a caller-side workaround.
+
+### Related Decisions
+
+- **D37**: Established `LayrzScaffoldShell`'s original scope, including the item-centric
+  `onDetailsBuild` contract this entry removes.
+- **D69**: `LayrzResponsiveModal`'s viewport-width-decided-once posture is unrelated to this entry's
+  builder change, but `LayrzScaffoldShell`'s own desktop-pane-vs-mobile-sheet split (which
+  `LayrzDetailScaffold` adapts to) follows the same wide/narrow decision shape.
+- **D73**: The foldable-hinge-aware side-by-side split this entry's detail pane still renders into
+  unchanged — only what feeds the pane's content changed, not the pane's own layout selection logic.
+
