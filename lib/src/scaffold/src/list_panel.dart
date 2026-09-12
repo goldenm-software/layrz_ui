@@ -4,6 +4,7 @@ import "package:layrz_ui/src/extensions/extensions.dart";
 import "package:layrz_ui/src/inputs/inputs.dart";
 import "package:layrz_ui/src/tokens/src/tokens.dart";
 
+import "scaffold_controller.dart";
 import "scaffold_item.dart";
 import "scaffold_row.dart";
 
@@ -17,6 +18,12 @@ class ListPanel<T> extends StatefulWidget {
 
   /// The key of the currently opened item, or null.
   final Key? openedKey;
+
+  /// The shell's controller, used to publish [LayrzScaffoldController.totalCount] and
+  /// [LayrzScaffoldController.filteredCount] each time this panel recomputes its
+  /// filtered items. Optional so the panel remains constructible standalone (e.g. in
+  /// existing tests) without a controller; when null, counts are simply not published.
+  final LayrzScaffoldController? controller;
 
   /// Callback when an item is tapped.
   final ValueChanged<LayrzScaffoldItem<T>>? onTap;
@@ -50,6 +57,8 @@ class ListPanel<T> extends StatefulWidget {
   ///
   /// - [items]: The items to display in the list. Required.
   /// - [openedKey]: The key of the currently opened item, or null. Required.
+  /// - [controller]: The shell's controller, used to publish item counts. Defaults to
+  ///   null, which simply skips publishing counts.
   /// - [onTap]: Callback when an item is tapped. Required.
   /// - [searchable]: Whether to show the search field. Defaults to true.
   /// - [footer]: Optional footer widget. Defaults to null.
@@ -62,6 +71,7 @@ class ListPanel<T> extends StatefulWidget {
     super.key,
     required this.items,
     required this.openedKey,
+    this.controller,
     this.onTap,
     this.searchable = true,
     this.footer,
@@ -95,6 +105,10 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
     // If items changed, reapply filter
     if (oldWidget.items != widget.items) {
       _updateFiltered();
+    } else if (oldWidget.controller != widget.controller) {
+      // The controller instance itself changed (items and search are unchanged) — still
+      // push the already-computed counts to the new controller so it isn't left at 0.
+      _publishCounts();
     }
   }
 
@@ -119,6 +133,27 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
           .toList();
     }
     setState(() {});
+    _publishCounts();
+  }
+
+  /// Publishes the current total/filtered item counts to [ListPanel.controller], if any.
+  ///
+  /// Deferred to a post-frame callback: [_updateFiltered] runs from [initState] (during
+  /// this widget's own build), from the search controller's listener, and from
+  /// [didUpdateWidget] — all contexts where mutating [LayrzScaffoldController]'s
+  /// `ValueNotifier`s synchronously could notify a listener that is itself mid-build
+  /// (e.g. a `ValueListenableBuilder` elsewhere in the same frame). Mirrors the same
+  /// post-frame-callback discipline `scaffold_shell.dart` already uses for
+  /// `_itemsChangeNotifier`.
+  void _publishCounts() {
+    final controller = widget.controller;
+    if (controller == null) return;
+    final total = widget.items.length;
+    final filtered = _filteredItems.length;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      controller.updateCounts(total: total, filtered: filtered);
+    });
   }
 
   @override
@@ -146,22 +181,35 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
           Expanded(
             child: _filteredItems.isEmpty
                 ? _buildEmptyState(tokens)
-                : Padding(
+                : ListView.builder(
                     // Reserves the vertical scrollbar's gutter (LayrzScrollBehavior
                     // installs one globally on pointer platforms — see
-                    // kLayrzScrollbarThickness) so its thumb overlays this padding
-                    // strip instead of the rows' own content, most visibly the
-                    // trailing-edge action reveal in ScaffoldRow. Same fix as
-                    // kLayrzCalendarHourGridEndPadding for the calendar's day/week
-                    // scroll surfaces.
+                    // kLayrzScrollbarThickness) so its thumb paints clear of the
+                    // rows' own content, most visibly the trailing-edge action
+                    // reveal in ScaffoldRow.
+                    //
+                    // This padding MUST live on the ListView itself, not on a
+                    // Padding wrapped around it. LayrzScrollBehavior installs the
+                    // RawScrollbar inside the Scrollable (via ScrollConfiguration),
+                    // so the thumb paints flush against the ListView's own render
+                    // box, at whatever width that box ends up being. A Padding
+                    // wrapping the ListView shrinks the Scrollable's box by the
+                    // same amount it insets the content, so the thumb and the
+                    // rows' right edge still land on the same X — no gutter is
+                    // actually created. Passing the padding to ListView.padding
+                    // keeps the Scrollable/Viewport at the panel's full content
+                    // width (so the thumb paints at that outer edge) while only
+                    // the sliver content is inset, leaving a real gap between the
+                    // rows and the thumb. Mirrors how the calendar's day/week hour
+                    // grid reserves kLayrzCalendarHourGridEndPadding *inside* its
+                    // SingleChildScrollView's child instead of around the
+                    // scrollable — see calendar_day_surface.dart.
                     padding: const EdgeInsets.only(right: kLayrzScrollbarThickness),
-                    child: ListView.builder(
-                      itemCount: _filteredItems.length,
-                      itemExtent: widget.itemExtent,
-                      itemBuilder: (context, index) {
-                        return _buildListItem(context, tokens, _filteredItems[index], index);
-                      },
-                    ),
+                    itemCount: _filteredItems.length,
+                    itemExtent: widget.itemExtent,
+                    itemBuilder: (context, index) {
+                      return _buildListItem(context, tokens, _filteredItems[index], index);
+                    },
                   ),
           ),
           if (widget.footer != null) ...[

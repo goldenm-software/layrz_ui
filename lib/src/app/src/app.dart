@@ -376,7 +376,31 @@ List<LocalizationsDelegate<dynamic>> buildLayrzUiL10nDelegates(
   return delegates;
 }
 
-class _LayrzAppState extends State<LayrzApp> {
+class _LayrzAppState extends State<LayrzApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// Rebuilds this widget whenever the platform's brightness setting changes.
+  ///
+  /// This is what makes [LayrzThemeMode.system] live: [build] resolves
+  /// [WidgetsBinding.platformDispatcher]'s current brightness on every call,
+  /// so a rebuild triggered here re-reads it and switches between [LayrzApp.theme]
+  /// and [LayrzApp.darkTheme] as the OS setting flips, without requiring the
+  /// app to be restarted.
+  @override
+  void didChangePlatformBrightness() {
+    setState(() {});
+  }
+
   /// Combines user-supplied localizations delegates with the default [LayrzUiL10nDelegate].
   ///
   /// Preserves the order of user delegates (which take precedence), then appends
@@ -484,7 +508,15 @@ class _LayrzAppState extends State<LayrzApp> {
       case LayrzThemeMode.dark:
         themeData = darkData;
       case LayrzThemeMode.system:
-        final brightness = MediaQuery.maybePlatformBrightnessOf(context) ?? Brightness.light;
+        // `MediaQuery.maybePlatformBrightnessOf(context)` cannot be used here:
+        // `context` is the one passed into this `build()`, which sits ABOVE
+        // the `WidgetsApp`/`WidgetsApp.router` this method itself constructs
+        // and returns below — and `WidgetsApp` is what installs the root
+        // `MediaQuery`. Looked up from here, there is no `MediaQuery` ancestor
+        // yet, so `maybePlatformBrightnessOf` always returns null and silently
+        // falls back to light. Reading `platformDispatcher` directly needs no
+        // ancestor, and `didChangePlatformBrightness` (below) keeps it live.
+        final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
         themeData = brightness == Brightness.dark ? darkData : lightData;
     }
     final appColor = widget.color ?? themeData.primaryColor;

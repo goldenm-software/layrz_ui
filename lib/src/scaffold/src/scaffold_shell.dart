@@ -49,8 +49,19 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// The items to display in the list.
   final List<LayrzScaffoldItem<T>> items;
 
-  /// Callback to build the detail content for an opened item.
-  final Widget Function(T) onDetailsBuild;
+  /// Called when a list row is tapped.
+  ///
+  /// The shell no longer opens the detail pane on tap by itself — the caller
+  /// decides what happens, typically by opening the detail pane for the tapped
+  /// item's own content:
+  ///
+  /// ```dart
+  /// onItemTap: (item) => controller.open(key: item.key, builder: (_) => Detail(item.item)),
+  /// ```
+  ///
+  /// Leaving this null makes rows inert on tap (no detail pane, no highlight
+  /// change) — useful for a purely informational list. Defaults to null.
+  final void Function(LayrzScaffoldItem<T> item)? onItemTap;
 
   /// Controller for managing the opened item.
   final LayrzScaffoldController controller;
@@ -75,7 +86,8 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// Creates a new [LayrzScaffoldShell].
   ///
   /// - [items]: The items to display in the list. Required.
-  /// - [onDetailsBuild]: Callback to build the detail content for an opened item. Required.
+  /// - [onItemTap]: Called when a list row is tapped. Defaults to null, which leaves
+  ///   rows inert on tap.
   /// - [controller]: Controller for managing the opened item. Required.
   /// - [footer]: Optional footer widget for the list panel. Defaults to null.
   /// - [searchable]: Whether the search field is visible. Defaults to true.
@@ -85,7 +97,7 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   const LayrzScaffoldShell({
     super.key,
     required this.items,
-    required this.onDetailsBuild,
+    this.onItemTap,
     required this.controller,
     this.footer,
     this.searchable = true,
@@ -350,31 +362,14 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     return resolveFoldSplit(features: features, shellRect: shellRect);
   }
 
-  /// Find the item with the opened key, or null if not found in the full list.
-  ///
-  /// This looks up the opened key in the unfiltered items list, so the detail pane
-  /// can stay open even when its item is filtered out of the search results.
-  LayrzScaffoldItem<T>? _findOpenedItem() {
-    final openedKey = widget.controller.openedKey;
-    if (openedKey == null) return null;
-    try {
-      return widget.items.firstWhere((item) => item.key == openedKey);
-    } catch (e) {
-      return null;
-    }
-  }
-
   Widget _buildWideLayout(BuildContext context, LayrzTokens tokens) {
-    final openedItem = _findOpenedItem();
-
     return Row(
       children: [
         ListPanel<T>(
           items: widget.items,
           openedKey: widget.controller.openedKey,
-          onTap: (item) {
-            widget.controller.open(item.key);
-          },
+          controller: widget.controller,
+          onTap: widget.onItemTap,
           searchable: widget.searchable,
           footer: widget.footer,
           title: widget.title,
@@ -386,9 +381,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
           color: tokens.colors.divider,
         ),
         Expanded(
-          child: DetailPane<T>(
-            opened: openedItem?.item,
-            contentBuilder: openedItem != null ? widget.onDetailsBuild : null,
+          child: DetailPane(
+            builder: widget.controller.openedBuilder,
           ),
         ),
       ],
@@ -405,16 +399,13 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   /// actual occlusion otherwise. The two panes are deliberately asymmetric,
   /// matching the physical seam -- they are never equalised to 50/50.
   Widget _buildFoldedSideBySideLayout(BuildContext context, LayrzTokens tokens, LayrzFoldSplit split) {
-    final openedItem = _findOpenedItem();
-
     return Row(
       children: [
         ListPanel<T>(
           items: widget.items,
           openedKey: widget.controller.openedKey,
-          onTap: (item) {
-            widget.controller.open(item.key);
-          },
+          controller: widget.controller,
+          onTap: widget.onItemTap,
           searchable: widget.searchable,
           footer: widget.footer,
           title: widget.title,
@@ -424,9 +415,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
         ),
         split.gap == 0 ? Container(width: 1, color: tokens.colors.divider) : SizedBox(width: split.gap),
         Expanded(
-          child: DetailPane<T>(
-            opened: openedItem?.item,
-            contentBuilder: openedItem != null ? widget.onDetailsBuild : null,
+          child: DetailPane(
+            builder: widget.controller.openedBuilder,
           ),
         ),
       ],
@@ -438,9 +428,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     final panel = ListPanel<T>(
       items: widget.items,
       openedKey: widget.controller.openedKey,
-      onTap: (item) {
-        widget.controller.open(item.key);
-      },
+      controller: widget.controller,
+      onTap: widget.onItemTap,
       searchable: widget.searchable,
       footer: widget.footer,
       title: widget.title,
@@ -463,9 +452,11 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
 
   /// Shows the detail sheet for narrow layouts.
   ///
-  /// Opens a LayrzBottomSheet with the detail content. Handles the case where
-  /// the opened item is no longer in the list, and manages dismissal to close
-  /// the controller (unless the shell initiated the pop via band transition).
+  /// Opens a LayrzBottomSheet rendering [LayrzScaffoldController.openedBuilder].
+  /// Handles the case where the controller closes (or is re-opened with a null
+  /// builder, which cannot happen through [LayrzScaffoldController.open] but is
+  /// guarded defensively) while the sheet is still open, and manages dismissal to
+  /// close the controller (unless the shell initiated the pop via band transition).
   Future<void> _showNarrowDetailSheet(BuildContext context) async {
     // Guard: if sheet is already open, do not open again (prevents stacking)
     if (_sheetOpen) return;
@@ -494,8 +485,9 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
       return;
     }
 
-    // If the opened item doesn't exist, close the controller
-    if (_findOpenedItem() == null) {
+    // If there is no detail content to show, close the controller instead of
+    // presenting an empty sheet.
+    if (widget.controller.openedBuilder == null) {
       _sheetOpen = false;
       if (mounted) {
         widget.controller.close();
@@ -532,15 +524,16 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
         return ListenableBuilder(
           listenable: Listenable.merge([widget.controller, _itemsChangeNotifier]),
           builder: (context, _) {
-            final openedItem = _findOpenedItem();
-            if (openedItem == null) {
-              // Item was removed from the list while the sheet is genuinely still
-              // open; pop the sheet in the next frame. Guarding on `_sheetOpen` (not
-              // just context-mounted) matters: this `ListenableBuilder` stays mounted
-              // for the sheet route's own exit animation, so a user-initiated dismiss
-              // (barrier tap / drag) reaches here too — via `widget.controller.close()`
-              // notifying this same listenable while the route animates out. At that
-              // point `_sheetOpen` is already false (set right after the dismiss's
+            final openedBuilder = widget.controller.openedBuilder;
+            if (openedBuilder == null) {
+              // The controller closed (or was re-opened with nothing to show) while
+              // the sheet is genuinely still open; pop the sheet in the next frame.
+              // Guarding on `_sheetOpen` (not just context-mounted) matters: this
+              // `ListenableBuilder` stays mounted for the sheet route's own exit
+              // animation, so a user-initiated dismiss (barrier tap / drag) reaches
+              // here too — via `widget.controller.close()` notifying this same
+              // listenable while the route animates out. At that point `_sheetOpen`
+              // is already false (set right after the dismiss's
               // `await LayrzBottomSheet.show` resolves, before this rebuild runs), so
               // it is a clean discriminator between "still open, must pop" and
               // "already closing, must not pop again" — unlike context.mounted, which
@@ -553,8 +546,7 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
               return const SizedBox.shrink();
             }
             return DetailPane(
-              opened: openedItem.item,
-              contentBuilder: widget.onDetailsBuild,
+              builder: openedBuilder,
             );
           },
         );

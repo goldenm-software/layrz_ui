@@ -66,7 +66,6 @@ void main() {
               child: LayrzScaffoldShell<_TestItem>(
                 controller: controller,
                 items: _buildItems(),
-                onDetailsBuild: (item) => Text("detail:${item.name}"),
                 itemExtent: 56.0,
               ),
             ),
@@ -75,7 +74,7 @@ void main() {
         await tester.pump();
 
         // Open the detail sheet on the narrow layout.
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
         await tester.pumpAndSettle();
         expect(find.text("detail:Alpha"), findsOneWidget);
@@ -90,7 +89,6 @@ void main() {
               child: LayrzScaffoldShell<_TestItem>(
                 controller: controller,
                 items: _buildItems(), // new instance, same keys
-                onDetailsBuild: (item) => Text("detail:${item.name}"),
                 itemExtent: 56.0,
               ),
             ),
@@ -134,7 +132,6 @@ void main() {
               child: LayrzScaffoldShell<_TestItem>(
                 controller: controller,
                 items: _buildItems(),
-                onDetailsBuild: (item) => Text("detail:${item.name}"),
                 itemExtent: 56.0,
               ),
             ),
@@ -142,7 +139,7 @@ void main() {
         );
         await tester.pump();
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
         expect(find.text("detail:Alpha"), findsOneWidget);
 
@@ -154,7 +151,6 @@ void main() {
               child: LayrzScaffoldShell<_TestItem>(
                 controller: controller,
                 items: _buildItems(), // new instance, same keys
-                onDetailsBuild: (item) => Text("detail:${item.name}"),
                 itemExtent: 56.0,
               ),
             ),

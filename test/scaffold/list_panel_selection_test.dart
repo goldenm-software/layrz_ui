@@ -34,7 +34,6 @@ void main() {
               child: LayrzScaffoldShell<_TestItem>(
                 controller: controller,
                 items: const <LayrzScaffoldItem<_TestItem>>[],
-                onDetailsBuild: (item) => Text('detail:${item.name}'),
                 itemExtent: 56.0,
               ),
             ),
@@ -63,7 +62,6 @@ void main() {
             child: LayrzScaffoldShell<_TestItem>(
               controller: controller,
               items: const <LayrzScaffoldItem<_TestItem>>[],
-              onDetailsBuild: (item) => Text('detail:${item.name}'),
               itemExtent: 56.0,
             ),
           ),

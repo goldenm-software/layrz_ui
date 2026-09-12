@@ -129,7 +129,10 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
               searchableStrings: {item.title},
             );
           }).toList(),
-          onDetailsBuild: _buildDetails,
+          onItemTap: (item) => _controller.open(
+            key: item.key,
+            builder: (context) => _buildDetails(item.item),
+          ),
         ),
       ),
     );

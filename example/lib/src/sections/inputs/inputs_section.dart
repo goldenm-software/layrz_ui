@@ -203,7 +203,10 @@ class _InputsSectionState extends State<InputsSection> {
       }).toList(),
       controller: _controller,
       searchable: true,
-      onDetailsBuild: _buildDetails,
+      onItemTap: (item) => _controller.open(
+        key: item.key,
+        builder: (context) => _buildDetails(item.item),
+      ),
     );
   }
 

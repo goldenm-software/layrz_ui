@@ -800,6 +800,111 @@ void main() {
       expect(container, findsOneWidget);
     });
 
+    testWidgets('value seeds the field when no controller is supplied', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Value seeded',
+          value: 'initial',
+        ),
+      );
+
+      final editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.controller.text, 'initial');
+    });
+
+    testWidgets('typing into a value-seeded field fires onChanged with the new text', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      String? changedValue;
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Value seeded',
+          value: 'initial',
+          onChanged: (value) => changedValue = value,
+        ),
+      );
+
+      await tester.enterText(find.byType(EditableText), 'initial typed');
+      expect(changedValue, 'initial typed');
+    });
+
+    testWidgets('changing value via rebuild updates the displayed text', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Value seeded',
+          value: 'first',
+        ),
+      );
+
+      var editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.controller.text, 'first');
+
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Value seeded',
+          value: 'second',
+        ),
+      );
+
+      editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.controller.text, 'second');
+    });
+
+    testWidgets('controller wins over value when both are supplied', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final controller = TextEditingController(text: 'ctrl');
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Controller wins',
+          controller: controller,
+          value: 'val',
+        ),
+      );
+
+      final editableText = tester.widget<EditableText>(find.byType(EditableText));
+      expect(editableText.controller.text, 'ctrl');
+    });
+
+    testWidgets('caller-supplied controller is still not disposed when value is also passed', (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final controller = TextEditingController(text: 'ctrl');
+      await pumpThemed(
+        tester,
+        LayrzTextInput(
+          labelText: 'Controller wins',
+          controller: controller,
+          value: 'val',
+        ),
+      );
+
+      await pumpThemed(tester, const SizedBox());
+
+      // Disposed controllers throw on further access; this must not throw.
+      expect(() => controller.text, returnsNormally);
+      expect(controller.text, 'ctrl');
+    });
+
     testWidgets('hint and editable text share vertical centre', (tester) async {
       await pumpThemed(
         tester,

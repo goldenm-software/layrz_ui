@@ -49,7 +49,6 @@ Future<void> _pumpShellApp(
         child: LayrzScaffoldShell<_TestItem>(
           controller: controller,
           items: items,
-          onDetailsBuild: (item) => Text("detail:${item.name}"),
           itemExtent: 56.0,
         ),
       ),
@@ -94,7 +93,7 @@ void main() {
     testWidgets("barrier tap dismissal pops exactly once and throws nothing", (tester) async {
       await _pumpShellApp(tester, controller: controller, items: items, observer: observer);
 
-      controller.open(const ValueKey("1"));
+      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       await tester.pump();
       await tester.pumpAndSettle();
       expect(find.text("detail:Alpha"), findsOneWidget);
@@ -115,7 +114,7 @@ void main() {
     testWidgets("drag-to-dismiss pops exactly once and throws nothing", (tester) async {
       await _pumpShellApp(tester, controller: controller, items: items, observer: observer);
 
-      controller.open(const ValueKey("1"));
+      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       await tester.pump();
       await tester.pumpAndSettle();
       expect(find.text("detail:Alpha"), findsOneWidget);

@@ -61,19 +61,24 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
+      // `LayrzApp` sits at the ROOT of the tree in real usage — there is no
+      // ancestor `MediaQuery` above it, since `WidgetsApp` is what installs
+      // one. Driving brightness via `platformBrightnessTestValue` (rather
+      // than wrapping in an outer `MediaQuery`, which would mask the bug this
+      // test exists to catch) reflects that.
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
       late bool resolvedIsDark;
 
       await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(platformBrightness: Brightness.dark),
-          child: LayrzApp(
-            title: 'Test App',
-            home: Builder(
-              builder: (context) {
-                resolvedIsDark = context.isDark;
-                return const SizedBox.shrink();
-              },
-            ),
+        LayrzApp(
+          title: 'Test App',
+          home: Builder(
+            builder: (context) {
+              resolvedIsDark = context.isDark;
+              return const SizedBox.shrink();
+            },
           ),
         ),
       );
@@ -86,24 +91,114 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
       late bool resolvedIsDark;
 
       await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(platformBrightness: Brightness.light),
-          child: LayrzApp(
-            title: 'Test App',
-            home: Builder(
-              builder: (context) {
-                resolvedIsDark = context.isDark;
-                return const SizedBox.shrink();
-              },
-            ),
+        LayrzApp(
+          title: 'Test App',
+          home: Builder(
+            builder: (context) {
+              resolvedIsDark = context.isDark;
+              return const SizedBox.shrink();
+            },
           ),
         ),
       );
 
       expect(resolvedIsDark, isFalse);
+    });
+
+    testWidgets('LayrzThemeMode.dark stays dark regardless of platformBrightness', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Platform reports light, but the explicit `.dark` mode must win.
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+      late bool resolvedIsDark;
+
+      await tester.pumpWidget(
+        LayrzApp(
+          title: 'Test App',
+          themeMode: LayrzThemeMode.dark,
+          home: Builder(
+            builder: (context) {
+              resolvedIsDark = context.isDark;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolvedIsDark, isTrue);
+    });
+
+    testWidgets('LayrzThemeMode.light stays light regardless of platformBrightness', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      // Platform reports dark, but the explicit `.light` mode must win.
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+      late bool resolvedIsDark;
+
+      await tester.pumpWidget(
+        LayrzApp(
+          title: 'Test App',
+          themeMode: LayrzThemeMode.light,
+          home: Builder(
+            builder: (context) {
+              resolvedIsDark = context.isDark;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolvedIsDark, isFalse);
+    });
+
+    testWidgets('LayrzThemeMode.system live-updates isDark when platformBrightness changes at runtime', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+
+      late bool resolvedIsDark;
+
+      await tester.pumpWidget(
+        LayrzApp(
+          title: 'Test App',
+          home: Builder(
+            builder: (context) {
+              resolvedIsDark = context.isDark;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(resolvedIsDark, isFalse);
+
+      // Flip the platform brightness after the first pump and notify the
+      // binding, exactly as the real `platformDispatcher` would when the OS
+      // setting changes while the app is running.
+      tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+      tester.binding.handlePlatformBrightnessChanged();
+      await tester.pump();
+
+      expect(resolvedIsDark, isTrue);
     });
 
     testWidgets('themeMode defaults to LayrzThemeMode.system', (tester) async {

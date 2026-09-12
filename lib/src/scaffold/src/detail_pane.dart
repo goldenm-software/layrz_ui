@@ -6,16 +6,19 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// The right detail pane of the scaffold shell.
 ///
-/// Shows the detail content built by [contentBuilder] when [opened] is non-null,
-/// or an empty state otherwise. The detail content is wrapped in its own
-/// [SelectableRegion], scoped independently of whatever ancestor selection scope
-/// (e.g. `LayrzLayout`'s `selectableContent`) this pane happens to be composed
-/// under -- see [contentBuilder] for why this matters.
-class DetailPane<T> extends StatelessWidget {
-  /// The currently opened item, or null.
-  final T? opened;
-
-  /// Callback to build the detail content.
+/// Shows the content built by [builder] when it is non-null, or an empty state
+/// otherwise. The detail content is wrapped in its own [SelectableRegion], scoped
+/// independently of whatever ancestor selection scope (e.g. `LayrzLayout`'s
+/// `selectableContent`) this pane happens to be composed under -- see [builder]
+/// for why this matters.
+///
+/// [DetailPane] no longer resolves an opened item against `LayrzScaffoldShell`'s
+/// item list itself -- it renders whatever [LayrzScaffoldController.openedBuilder]
+/// currently is, verbatim. This is what lets a "create new item" detail pane exist
+/// with no backing list item at all: the caller supplies [builder] directly via
+/// `LayrzScaffoldController.open`, and this pane has no opinion on what it builds.
+class DetailPane extends StatelessWidget {
+  /// Builds the detail pane's content, or null to show the empty state.
   ///
   /// The built content is wrapped in its own [SelectableRegion] (double-tap
   /// selects a word, long-press selects a word and enables drag-to-extend --
@@ -27,16 +30,15 @@ class DetailPane<T> extends StatelessWidget {
   /// resolves against THIS content, never against whatever list content
   /// happens to sit in an ancestor selection scope -- see [DetailPane]'s own
   /// class doc.
-  final Widget Function(T)? contentBuilder;
+  final WidgetBuilder? builder;
 
   /// Creates a new [DetailPane].
   ///
-  /// - [opened]: The currently opened item, or null. Defaults to null.
-  /// - [contentBuilder]: Callback to build the detail content, or null. Defaults to null.
+  /// - [builder]: Builds the detail pane's content, or null. Defaults to null, which
+  ///   shows the empty state.
   const DetailPane({
     super.key,
-    this.opened,
-    this.contentBuilder,
+    this.builder,
   });
 
   @override
@@ -45,15 +47,12 @@ class DetailPane<T> extends StatelessWidget {
 
     return Container(
       color: tokens.colors.sf1,
-      child: opened == null ? _buildEmptyState(tokens) : _buildSelectableContent(context, opened as T),
+      child: builder == null ? _buildEmptyState(tokens) : _buildSelectableContent(context, builder!),
     );
   }
 
-  Widget _buildSelectableContent(BuildContext context, T item) {
-    final content = contentBuilder?.call(item);
-    if (content == null) {
-      return const SizedBox.shrink();
-    }
+  Widget _buildSelectableContent(BuildContext context, WidgetBuilder builder) {
+    final content = builder(context);
     // In the wide and folded layouts this pane sits inside an `Expanded`,
     // which hands it a bounded box -- a shrink-wrapping [content] (e.g. a
     // `Column(mainAxisSize: MainAxisSize.min)`) has no reason on its own to

@@ -66,7 +66,7 @@ Future<void> _pumpShell(
     child: LayrzScaffoldShell<_TestItem>(
       controller: controller,
       items: items,
-      onDetailsBuild: (item) => Text("detail:${item.name}"),
+      onItemTap: (item) => controller.open(key: item.key, builder: (_) => Text("detail:${item.item.name}")),
       itemExtent: 56.0,
     ),
   );
@@ -545,7 +545,13 @@ void main() {
       // then occludes the underlying list row by design — so this asserts the row's
       // own (pre-sheet) structure takes the plain path, rather than attempting a
       // swipe gesture against a row a real sheet would already cover.
-      final controller = LayrzScaffoldController(initialOpenedKey: const ValueKey("1"));
+      //
+      // `initialOpenedKey` alone leaves `openedBuilder` null, which the shell now
+      // treats as "nothing to show" and closes on sight — so `open` is called with a
+      // real builder up front, before the first pump, to keep the detail genuinely
+      // open exactly as `initialOpenedKey` alone used to.
+      final controller = LayrzScaffoldController(initialOpenedKey: const ValueKey("1"))
+        ..open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       final items = _itemsWithActions([
         LayrzButton.edit(labelText: "Edit", onTap: () {}, isFab: true),
       ]);
@@ -560,7 +566,6 @@ void main() {
           child: LayrzScaffoldShell<_TestItem>(
             controller: controller,
             items: items,
-            onDetailsBuild: (item) => Text("detail:${item.name}"),
             itemExtent: 56.0,
           ),
         ),

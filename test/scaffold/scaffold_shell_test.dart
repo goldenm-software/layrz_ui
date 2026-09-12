@@ -11,7 +11,6 @@ void main() {
       final shell = LayrzScaffoldShell(
         items: items,
         controller: controller,
-        onDetailsBuild: (item) => const SizedBox(),
         itemExtent: 48.0,
       );
 
@@ -26,7 +25,6 @@ void main() {
       final shell = LayrzScaffoldShell<Map<String, dynamic>>(
         items: items,
         controller: controller,
-        onDetailsBuild: (item) => const SizedBox(),
         itemExtent: 48.0,
       );
 
@@ -39,7 +37,6 @@ void main() {
       final shell = LayrzScaffoldShell<String>(
         items: const [],
         controller: controller,
-        onDetailsBuild: (_) => const SizedBox(),
         itemExtent: 48.0,
       );
 
@@ -65,7 +62,7 @@ void main() {
           ),
         ],
         controller: controller,
-        onDetailsBuild: (_) => const Text("detail"),
+        onItemTap: (item) => controller.open(key: item.key, builder: (_) => const Text("detail")),
         footer: footer,
         searchable: false,
         title: title,
@@ -83,7 +80,6 @@ void main() {
       final shell = LayrzScaffoldShell<String>(
         items: const [],
         controller: controller,
-        onDetailsBuild: (_) => const SizedBox(),
         itemExtent: 48.0,
       );
 

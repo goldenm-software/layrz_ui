@@ -65,8 +65,8 @@ Future<void> _pumpFoldedShell(
               child: LayrzScaffoldShell<_TestItem>(
                 controller: controller,
                 items: items,
-                onDetailsBuild: (item) => Text("detail:${item.name}"),
                 itemExtent: 56.0,
+                onItemTap: (item) => controller.open(key: item.key, builder: (_) => Text("detail:${item.item.name}")),
               ),
             ),
           );
@@ -99,7 +99,7 @@ void main() {
           displayFeatures: [_verticalFold(viewX: 452, height: 1000)],
         );
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
         await tester.pumpAndSettle();
 
@@ -189,7 +189,7 @@ void main() {
           final rowSemantics = tester.getSemantics(find.byType(LayrzTappable).first);
           expect(rowSemantics, matchesSemantics(hasTapAction: true));
 
-          controller.open(const ValueKey("1"));
+          controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
           await tester.pump();
           await tester.pumpAndSettle();
 

@@ -26,6 +26,14 @@ import '../shared/input_slot.dart';
 /// - **Error**: Renders danger-colored border and error icon, displays error messages below.
 /// - **Read-only lock icon**: Appears only in read-only state, never in disabled state.
 class LayrzTextInput extends StatefulWidget {
+  /// The current text value of the input field.
+  ///
+  /// When set, the field initializes to this value. Ignored when a [controller]
+  /// is supplied; the controller is then the source of truth. This lets a form
+  /// use `value:` together with [onChanged] without declaring a
+  /// [TextEditingController] for every field, which matters for large forms.
+  final String? value;
+
   /// The label text displayed above the input field.
   final String? labelText;
 
@@ -204,6 +212,7 @@ class LayrzTextInput extends StatefulWidget {
   /// Creates a new [LayrzTextInput] with the given properties.
   const LayrzTextInput({
     super.key,
+    this.value,
     this.labelText,
     this.hintText,
     this.isRequired = false,
@@ -270,6 +279,12 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
+    // Only seed text from `value` when this state owns the controller — a
+    // caller-supplied controller is always the source of truth, per the
+    // precedence documented on [LayrzTextInput.value].
+    if (widget.controller == null && widget.value != null) {
+      _controller.text = widget.value!;
+    }
     _focusNode = widget.focusNode ?? FocusNode();
   }
 
@@ -282,6 +297,17 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
         _controller.dispose();
       }
       _controller = widget.controller ?? TextEditingController();
+      if (widget.controller == null && widget.value != null) {
+        _controller.text = widget.value!;
+      }
+    } else if (widget.controller == null &&
+        widget.value != oldWidget.value &&
+        widget.value != null &&
+        _controller.text != widget.value) {
+      // Only sync when the internal controller's text actually differs, to
+      // avoid clobbering the caret mid-edit when `value` merely echoes what
+      // the user already typed.
+      _controller.text = widget.value!;
     }
     // If focusNode changed, update the reference
     if (widget.focusNode != oldWidget.focusNode) {
