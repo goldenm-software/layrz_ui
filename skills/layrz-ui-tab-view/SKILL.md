@@ -1,6 +1,6 @@
 ---
 name: layrz-ui-tab-view
-description: Use LayrzTabView in a layrz_ui Flutter widget. Apply when rendering a fixed, author-defined tab strip and content switcher — scrollable (default) or evenly-distributed (isScrollable: false) pill layout, with per-tab leading/trailing icon or widget slots.
+description: "Use LayrzTabView in a layrz_ui Flutter widget. Apply when rendering a fixed, author-defined tab strip and content switcher — scrollable (default) or evenly-distributed (isScrollable: false) pill layout, with per-tab leading/trailing icon or widget slots."
 ---
 
 > **Dart syntax:** This library requires Dart ≥ 3.13. Use dot shorthand for all enum values — never the fully-qualified form.

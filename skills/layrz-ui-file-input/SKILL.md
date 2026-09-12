@@ -1,6 +1,6 @@
 ---
 name: layrz-ui-file-input
-description: Use LayrzFileInput in a layrz_ui Flutter widget. Apply when adding a file upload field — click-to-browse (primary affordance) plus drag-and-drop, single (`maxFiles: 1`) or multi-file, extension/size validation with a persistent rejection message, and results as `List<LayrzFileInputResult>` with base64/data-URI conversion built in.
+description: "Use LayrzFileInput in a layrz_ui Flutter widget. Apply when adding a file upload field — click-to-browse (primary affordance) plus drag-and-drop, single (`maxFiles: 1`) or multi-file, extension/size validation with a persistent rejection message, and results as `List<LayrzFileInputResult>` with base64/data-URI conversion built in."
 ---
 
 > **Dart syntax:** This library requires Dart ≥ 3.13. Use dot shorthand for all enum values — never the fully-qualified form.
