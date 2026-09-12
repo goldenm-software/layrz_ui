@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.0-prerelease.5
+
+- Fixed the skill manifests `layrz-ui-file-input`, `layrz-ui-find-in-page-host`, and `layrz-ui-tab-view` failing to load — their `description:` frontmatter contained an unquoted inline colon (e.g. `` `maxFiles: 1` ``, `` `enableFindInPage: false` ``, `isScrollable: false`) that broke YAML parsing. The descriptions are now quoted.
+
 ## 1.0.0-prerelease.4
 
 - **BREAKING — `LayrzScaffoldShell.onDetailsBuild` removed.** The detail pane is now driven by `LayrzScaffoldController.open({required WidgetBuilder builder, Key? key})`; `key` is optional and only highlights the matching row, so a "create new" detail with no backing list item is now possible. Row taps are caller-owned via the new `onItemTap` (a row with no `onItemTap` is inert). `DetailPane` is no longer generic. Migrate `onDetailsBuild: (item) => Detail(item)` to `onItemTap: (item) => controller.open(key: item.key, builder: (_) => Detail(item.item))`. See decision D79.

@@ -1,6 +1,6 @@
 ---
 name: layrz-ui-find-in-page-host
-description: Use LayrzFindInPageHost in a layrz_ui Flutter app. Apply when the app needs browser-style Ctrl/Cmd+F find-in-page — installed automatically by LayrzApp (opt-out via `enableFindInPage: false`), reached via `LayrzFindInPageHost.of(context).controller` to drive open/close/search programmatically, e.g. from a custom "Find" menu item.
+description: "Use LayrzFindInPageHost in a layrz_ui Flutter app. Apply when the app needs browser-style Ctrl/Cmd+F find-in-page — installed automatically by LayrzApp (opt-out via `enableFindInPage: false`), reached via `LayrzFindInPageHost.of(context).controller` to drive open/close/search programmatically, e.g. from a custom \"Find\" menu item."
 ---
 
 > **Dart syntax:** This library requires Dart ≥ 3.13. Use dot shorthand for all enum values — never the fully-qualified form.
