@@ -494,6 +494,47 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
        );
 }
 
+/// Marks the subtree as being rendered inside a [LayrzBottomSheet].
+///
+/// [LayrzBottomSheet] hands its `builder` an *unbounded* height (its content
+/// sits inside a [SingleChildScrollView]), while other presentations of the
+/// same content -- e.g. [LayrzScaffoldShell]'s wide/folded detail pane --
+/// hand it a *bounded* box instead. A widget that needs to lay out
+/// differently in the two cases (e.g. [LayrzDetailScaffold], which must
+/// avoid an unbounded-height `Expanded` inside the sheet) can call
+/// [LayrzBottomSheetScope.maybeOf] to detect which one it is in, without
+/// [LayrzBottomSheet]'s caller having to thread a flag through every
+/// intermediate wrapper widget by hand.
+///
+/// This is deliberately an [InheritedWidget] rather than a constructor flag
+/// stamped onto the builder's direct output: a real caller's `builder`
+/// rarely returns the widget that cares about this distinction directly --
+/// it typically returns some other widget (e.g. a form) that *itself*
+/// builds the widget that cares, one or more levels down. Because
+/// [BuildContext.dependOnInheritedWidgetOfExactType] walks up the element
+/// tree regardless of how many intermediate widgets sit in between, wrapping
+/// the sheet's entire content subtree in this scope once, here, makes the
+/// scope discoverable from anywhere inside it -- direct child or not.
+class LayrzBottomSheetScope extends InheritedWidget {
+  /// Creates a scope marking its [child] subtree as inside a
+  /// [LayrzBottomSheet].
+  const LayrzBottomSheetScope({super.key, required super.child});
+
+  /// Returns the nearest [LayrzBottomSheetScope] above [context], or `null`
+  /// when [context] is not inside a [LayrzBottomSheet].
+  ///
+  /// Establishes a rebuild dependency on the scope the same way any other
+  /// `dependOnInheritedWidgetOfExactType` read does, though in practice this
+  /// scope never actually notifies (see [updateShouldNotify]) since whether a
+  /// given subtree is inside a sheet never changes across that subtree's own
+  /// lifetime.
+  static LayrzBottomSheetScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<LayrzBottomSheetScope>();
+
+  @override
+  bool updateShouldNotify(LayrzBottomSheetScope oldWidget) => false;
+}
+
 /// Carries whether the on-screen keyboard is currently covering part of the
 /// screen down to [_BottomSheetContentState], from [_BottomSheetRoute]'s
 /// `transitionBuilder`.
@@ -895,10 +936,18 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                           children: [
                             // Content
                             Expanded(
+                              // LayrzBottomSheetScope wraps widget.builder(context)'s OWN
+                              // output specifically (not some ancestor of this Expanded) so
+                              // that output -- and anything it in turn builds, however many
+                              // wrapper widgets deep -- is a genuine descendant of the scope.
+                              // See LayrzBottomSheetScope's own doc for why this must be an
+                              // InheritedWidget discoverable from arbitrarily far down the
+                              // tree, rather than a flag stamped onto the builder's direct
+                              // return value.
                               child: widget.scrollable
                                   ? SingleChildScrollView(
                                       controller: scrollController,
-                                      child: widget.builder(context),
+                                      child: LayrzBottomSheetScope(child: widget.builder(context)),
                                     )
                                   // scrollable: false hands the caller the scrollController via
                                   // PrimaryScrollController instead of wrapping the content: a
@@ -911,7 +960,7 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                                   : PrimaryScrollController(
                                       controller: scrollController,
                                       automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
-                                      child: widget.builder(context),
+                                      child: LayrzBottomSheetScope(child: widget.builder(context)),
                                     ),
                             ),
                             // Actions -- deliberately a SECOND, non-expanded Column child, sibling

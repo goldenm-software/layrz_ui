@@ -70,7 +70,7 @@ Future<void> _pumpShell(
       items: items,
       searchable: searchable,
       footer: footer,
-      onDetailsBuild: (item) => Text("detail:${item.name}"),
+      onItemTap: (item) => controller.open(key: item.key, builder: (_) => Text("detail:${item.item.name}")),
       itemExtent: 56.0,
     ),
   );
@@ -140,7 +140,7 @@ void main() {
       );
 
       // Open an item
-      controller.open(const ValueKey("1"));
+      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       await tester.pump();
 
       // Both the list and detail should render
@@ -207,7 +207,7 @@ void main() {
         narrowWithNavigator: true,
       );
 
-      controller.open(const ValueKey("1"));
+      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       await tester.pump();
       await tester.pumpAndSettle();
 
@@ -271,7 +271,7 @@ void main() {
       );
 
       // Open programmatically
-      controller.open(const ValueKey("1"));
+      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       await tester.pump();
       expect(controller.isOpen, isTrue);
       expect(find.text("detail:Alpha"), findsOneWidget);
@@ -303,7 +303,7 @@ void main() {
         size: const Size(1500, 950),
       );
 
-      controller.open(const ValueKey("1"));
+      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       await tester.pump();
 
       // Wide layout should show both list and detail side-by-side
@@ -334,13 +334,12 @@ void main() {
           child: LayrzScaffoldShell<_TestItem>(
             controller: controller,
             items: items,
-            onDetailsBuild: (item) => Text("detail:${item.name}"),
             itemExtent: 56.0,
           ),
         ),
       );
 
-      controller.open(const ValueKey("1"));
+      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       await tester.pump();
       await tester.pumpAndSettle();
 
@@ -380,13 +379,12 @@ void main() {
           child: LayrzScaffoldShell<_TestItem>(
             controller: controller,
             items: items,
-            onDetailsBuild: (item) => Text("detail:${item.name}"),
             itemExtent: 56.0,
           ),
         ),
       );
 
-      controller.open(const ValueKey("1"));
+      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       await tester.pump();
 
       expect(controller.isOpen, isTrue);
@@ -428,7 +426,6 @@ void main() {
               child: LayrzScaffoldShell<_TestItem>(
                 controller: controller,
                 items: items,
-                onDetailsBuild: (item) => Text("detail:${item.name}"),
                 itemExtent: 56.0,
               ),
             );
@@ -436,7 +433,7 @@ void main() {
         ),
       );
 
-      controller.open(const ValueKey("1"));
+      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       await tester.pump();
       await tester.pumpAndSettle();
 
@@ -509,6 +506,104 @@ void main() {
       );
 
       controller.dispose();
+    });
+
+    group("NO KEY: opening a detail pane with no backing list item (create-new-item support)", () {
+      testWidgets("wide layout: a keyless open's builder renders in the detail pane, no row is highlighted", (
+        tester,
+      ) async {
+        final controller = LayrzScaffoldController();
+        final items = [
+          const LayrzScaffoldItem(
+            key: ValueKey("1"),
+            item: _TestItem("1", "Alpha"),
+            tile: SizedBox(child: Text("Alpha")),
+            searchableStrings: {"Alpha"},
+          ),
+          const LayrzScaffoldItem(
+            key: ValueKey("2"),
+            item: _TestItem("2", "Beta"),
+            tile: SizedBox(child: Text("Beta")),
+            searchableStrings: {"Beta"},
+          ),
+        ];
+
+        await _pumpShell(
+          tester,
+          items: items,
+          controller: controller,
+          size: const Size(1500, 950),
+        );
+
+        // Open with NO key at all -- exactly what a "New category" / create-item
+        // flow needs, since there is no domain object yet to key against.
+        controller.open(builder: (_) => const Text("new-form"));
+        await tester.pump();
+
+        // The builder's own content renders in the detail pane, and isOpen is
+        // true even though nothing is keyed.
+        expect(controller.isOpen, isTrue);
+        expect(controller.openedKey, isNull);
+        expect(find.text("new-form"), findsOneWidget);
+
+        // No row highlights: ScaffoldRow disables its LayrzTappable exactly when
+        // `isSelected` is true (see scaffold_row.dart's `_buildTappable`), so every
+        // row's tappable staying enabled is the externally-observable proxy for "no
+        // item's key equals the (null) opened key".
+        final tappables = tester.widgetList<LayrzTappable>(find.byType(LayrzTappable));
+        expect(tappables, isNotEmpty, reason: "the list rows must still render normally");
+        for (final tappable in tappables) {
+          expect(
+            tappable.disabled,
+            isFalse,
+            reason: "no row shares the synthetic create key, so none may render as selected/disabled",
+          );
+        }
+
+        // The list itself is untouched -- both rows still render.
+        expect(find.text("Alpha"), findsWidgets);
+        expect(find.text("Beta"), findsWidgets);
+
+        controller.dispose();
+      });
+
+      testWidgets("narrow layout: a keyless open's builder renders in the detail sheet, no row is highlighted", (
+        tester,
+      ) async {
+        final controller = LayrzScaffoldController();
+        final items = [
+          const LayrzScaffoldItem(
+            key: ValueKey("1"),
+            item: _TestItem("1", "Alpha"),
+            tile: SizedBox(child: Text("Alpha")),
+            searchableStrings: {"Alpha"},
+          ),
+        ];
+
+        await _pumpShell(
+          tester,
+          items: items,
+          controller: controller,
+          size: const Size(520, 900),
+          narrowWithNavigator: true,
+        );
+
+        controller.open(builder: (_) => const Text("new-form"));
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(controller.isOpen, isTrue);
+        expect(controller.openedKey, isNull);
+        expect(find.text("new-form"), findsOneWidget);
+
+        final tappables = tester.widgetList<LayrzTappable>(find.byType(LayrzTappable));
+        expect(tappables, isNotEmpty);
+        for (final tappable in tappables) {
+          expect(tappable.disabled, isFalse);
+        }
+
+        controller.dispose();
+      });
     });
   });
 }

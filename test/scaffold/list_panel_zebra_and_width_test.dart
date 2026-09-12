@@ -31,7 +31,6 @@ Future<void> _pumpShell(
       child: LayrzScaffoldShell<_TestItem>(
         controller: controller,
         items: items,
-        onDetailsBuild: (item) => Text("detail:${item.name}"),
         itemExtent: 56.0,
       ),
     ),
@@ -171,7 +170,6 @@ void main() {
                     child: LayrzScaffoldShell<_TestItem>(
                       controller: controller,
                       items: items,
-                      onDetailsBuild: (item) => Text("detail:${item.name}"),
                       itemExtent: 56.0,
                     ),
                   ),

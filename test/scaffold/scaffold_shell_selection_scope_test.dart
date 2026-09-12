@@ -94,9 +94,12 @@ void main() {
                             padding: EdgeInsets.all(8),
                             child: Text('Inputs Showcase'),
                           ),
-                          onDetailsBuild: (item) => Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Text('Field States for ${item.name}', style: const TextStyle(fontSize: 20)),
+                          onItemTap: (item) => controller.open(
+                            key: item.key,
+                            builder: (_) => Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text('Field States for ${item.item.name}', style: const TextStyle(fontSize: 20)),
+                            ),
                           ),
                         );
                       },

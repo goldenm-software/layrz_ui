@@ -80,7 +80,8 @@ void main() {
                 controller: controller,
                 items: items,
                 itemExtent: 56.0,
-                onDetailsBuild: (item) => Text('Detail for ${item.name}'),
+                onItemTap: (item) =>
+                    controller.open(key: item.key, builder: (_) => Text('Detail for ${item.item.name}')),
               ),
             ),
           ),
@@ -140,7 +141,8 @@ void main() {
                 controller: controller,
                 items: items,
                 itemExtent: 56.0,
-                onDetailsBuild: (item) => Text('Detail for ${item.name}'),
+                onItemTap: (item) =>
+                    controller.open(key: item.key, builder: (_) => Text('Detail for ${item.item.name}')),
               ),
             ),
           ),
@@ -240,7 +242,6 @@ void main() {
                       controller: controller,
                       items: items,
                       itemExtent: 56.0,
-                      onDetailsBuild: (item) => Text('Detail for ${item.name}'),
                     ),
                   ),
                 );

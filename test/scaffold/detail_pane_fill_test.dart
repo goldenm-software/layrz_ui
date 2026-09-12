@@ -48,19 +48,21 @@ void main() {
             controller: controller,
             items: items,
             itemExtent: 56.0,
-            onDetailsBuild: (item) => Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("detail:${item.name}", key: const Key("detail-text")),
-              ],
-            ),
           ),
         ),
       );
       await tester.pump();
 
-      controller.open(const ValueKey("1"));
+      controller.open(
+        key: const ValueKey("1"),
+        builder: (_) => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("detail:Alpha", key: Key("detail-text")),
+          ],
+        ),
+      );
       await tester.pump();
 
       expect(tester.takeException(), isNull);
@@ -98,7 +100,6 @@ void main() {
           controller: controller,
           items: items,
           itemExtent: 56.0,
-          onDetailsBuild: (item) => Text("detail:${item.name}", key: const Key("detail-text")),
         ),
       );
 
@@ -129,7 +130,10 @@ void main() {
       );
       await tester.pump();
 
-      controller.open(const ValueKey("1"));
+      controller.open(
+        key: const ValueKey("1"),
+        builder: (_) => const Text("detail:Alpha", key: Key("detail-text")),
+      );
       await tester.pump();
       await tester.pumpAndSettle();
 

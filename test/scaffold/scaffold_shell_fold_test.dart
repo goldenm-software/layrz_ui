@@ -87,7 +87,6 @@ Future<void> _pumpFoldableShell(
       child: LayrzScaffoldShell<_TestItem>(
         controller: controller,
         items: items,
-        onDetailsBuild: (item) => Text("detail:${item.name}"),
         itemExtent: 56.0,
       ),
     ),
@@ -127,7 +126,7 @@ void main() {
           size: const Size(520, 900), // narrow band, no features
         );
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
         await tester.pumpAndSettle();
 
@@ -154,7 +153,7 @@ void main() {
           displayFeatures: [_verticalFold(viewX: 260, height: 900)],
         );
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
 
         // Detail is visible INLINE (no post-frame sheet push needed) and no
@@ -221,7 +220,7 @@ void main() {
           displayFeatures: [_verticalFold(viewX: 392.85, height: 411.4)],
         );
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
         await tester.pumpAndSettle();
 
@@ -253,7 +252,7 @@ void main() {
           displayFeatures: [_horizontalFold(viewY: height / 2, width: width)],
         );
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
         await tester.pumpAndSettle();
 
@@ -278,7 +277,7 @@ void main() {
           size: const Size(520, 900),
         );
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
         await tester.pumpAndSettle();
         expect(find.byType(DraggableScrollableSheet), findsOneWidget);
@@ -323,7 +322,7 @@ void main() {
           displayFeatures: [_verticalFold(viewX: 452, height: 1000)],
         );
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
         expect(find.text("detail:Alpha"), findsOneWidget);
 
@@ -360,7 +359,7 @@ void main() {
           displayFeatures: [_verticalFold(viewX: width / 2, height: tallHeight)],
         );
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
 
         // Split is showing: detail inline, no sheet.
@@ -460,7 +459,6 @@ void main() {
               child: LayrzScaffoldShell<_TestItem>(
                 controller: controller,
                 items: _buildItems(),
-                onDetailsBuild: (item) => Text("detail:${item.name}"),
                 itemExtent: 56.0,
               ),
             ),
@@ -497,7 +495,7 @@ void main() {
         );
         expect(tester.takeException(), isNull);
 
-        controller.open(const ValueKey("1"));
+        controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         await tester.pump();
         expect(tester.takeException(), isNull);
         expect(find.text("detail:Alpha"), findsOneWidget);

@@ -319,9 +319,8 @@ void main() {
       Future<void> pumpDetailPane(WidgetTester tester) async {
         await pumpThemedApp(
           tester,
-          DetailPane<String>(
-            opened: 'item-1',
-            contentBuilder: (item) => Text('Detail content for $item'),
+          DetailPane(
+            builder: (context) => const Text('Detail content for item-1'),
           ),
         );
       }
@@ -443,9 +442,8 @@ void main() {
           // Site 4: DetailPane.
           await pumpThemedApp(
             tester,
-            DetailPane<String>(
-              opened: 'x',
-              contentBuilder: (item) => const Text('Detail body text'),
+            DetailPane(
+              builder: (context) => const Text('Detail body text'),
             ),
           );
           await tester.longPress(find.text('Detail body text'));
