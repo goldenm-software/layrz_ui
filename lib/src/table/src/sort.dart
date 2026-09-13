@@ -1,10 +1,15 @@
 import 'package:flutter/foundation.dart' show compute, kIsWeb;
 
-/// How many top-level merge passes run between yields in the web (chunked)
-/// sort path. After each pass the sort `await`s a microtask so the event loop
-/// can service a frame — keeping the UI responsive (and the table's "sorting"
-/// strip animating) during a large sort on web, where `compute` cannot move
-/// the work off the single main thread.
+/// How many merge runs execute between yields in the web (chunked) sort path.
+///
+/// After this many runs the sort yields with `Future.delayed(Duration.zero)` —
+/// a MACROTASK, not a microtask. This distinction is load-bearing: `await null`
+/// (or any already-completed future) resumes on the microtask queue, and Dart
+/// drains the *entire* microtask queue before the browser ever paints, so it
+/// does NOT let the UI render mid-sort. Only returning to the event loop via a
+/// macrotask lets the browser service a frame — keeping the UI responsive (and
+/// the table's "sorting" strip animating) during a large sort on web, where
+/// `compute` cannot move the work off the single main thread.
 const int _kYieldEveryRuns = 64;
 
 /// Payload sent across the isolate boundary to [sortByKeys] for the default
@@ -131,7 +136,10 @@ Future<List<int>> sortByKeysYielding(SortKeysParams params) async {
       }
       if (++runsSinceYield >= _kYieldEveryRuns) {
         runsSinceYield = 0;
-        await null; // yield to the event loop
+        // Macrotask yield: returns to the event loop so the browser can paint a
+        // frame. A microtask (`await null`) would not — Dart drains all
+        // microtasks before rendering. See [_kYieldEveryRuns].
+        await Future<void>.delayed(Duration.zero);
       }
     }
     final tmp = current;
@@ -152,9 +160,10 @@ Future<List<int>> sortByKeysYielding(SortKeysParams params) async {
 /// The common default path ([sortIndexesOffThread]) IS chunked on web.
 Future<List<T>> sortTableItemsOffThread<T>(SortParams<T> params) async {
   if (kIsWeb) {
-    // Yield once so the "sorting" indicator can paint before the (synchronous)
-    // custom-comparator sort runs.
-    await null;
+    // Macrotask yield so the "sorting" indicator actually paints before the
+    // (synchronous) custom-comparator sort runs; a microtask would not let the
+    // browser render first. See [_kYieldEveryRuns].
+    await Future<void>.delayed(Duration.zero);
     return sortTableItems(params);
   }
   return compute(sortTableItems, params);
