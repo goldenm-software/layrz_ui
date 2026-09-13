@@ -1,4 +1,11 @@
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, kIsWeb;
+
+/// How many top-level merge passes run between yields in the web (chunked)
+/// sort path. After each pass the sort `await`s a microtask so the event loop
+/// can service a frame — keeping the UI responsive (and the table's "sorting"
+/// strip animating) during a large sort on web, where `compute` cannot move
+/// the work off the single main thread.
+const int _kYieldEveryRuns = 64;
 
 /// Payload sent across the isolate boundary to [sortByKeys] for the default
 /// (no `LayrzColumn.customSort`) sort path.
@@ -83,17 +90,89 @@ List<int> sortByKeys(SortKeysParams params) {
   return indices;
 }
 
-/// Runs [sortTableItems] off the UI thread via `compute`, for the
-/// `LayrzColumn.customSort` path.
-Future<List<T>> sortTableItemsOffThread<T>(SortParams<T> params) => compute(sortTableItems, params);
+/// A bottom-up (iterative) merge sort of the index array `0..n`, ordered by
+/// [defaultSortCompare] over [SortKeysParams.sortKeys], that `await`s a
+/// microtask every [_kYieldEveryRuns] merge runs so the event loop can service
+/// frames.
+///
+/// Merge sort (not `List.sort`) is used because the work must be broken into
+/// resumable chunks: Dart's built-in `List.sort` is a single synchronous call
+/// with no yield point, so on web — where there is no isolate to move it to —
+/// it blocks the only thread for the whole sort. This yields cooperatively
+/// instead, trading a little raw speed for a responsive UI. It is stable and
+/// returns the sorted **index order**, matching [sortByKeys].
+Future<List<int>> sortByKeysYielding(SortKeysParams params) async {
+  final keys = params.sortKeys;
+  final n = keys.length;
+  var current = List<int>.generate(n, (i) => i);
+  var buffer = List<int>.filled(n, 0);
+  var runsSinceYield = 0;
 
-/// Runs [sortByKeys] off the UI thread via `compute`, for the default
-/// (no `LayrzColumn.customSort`) path.
+  for (var width = 1; width < n; width *= 2) {
+    for (var lo = 0; lo < n; lo += 2 * width) {
+      final mid = (lo + width < n) ? lo + width : n;
+      final hi = (lo + 2 * width < n) ? lo + 2 * width : n;
+      var i = lo;
+      var j = mid;
+      var k = lo;
+      while (i < mid && j < hi) {
+        // `<= 0` keeps equal keys in their original relative order (stable).
+        if (defaultSortCompare(keys[current[i]], keys[current[j]], ascending: params.ascending) <= 0) {
+          buffer[k++] = current[i++];
+        } else {
+          buffer[k++] = current[j++];
+        }
+      }
+      while (i < mid) {
+        buffer[k++] = current[i++];
+      }
+      while (j < hi) {
+        buffer[k++] = current[j++];
+      }
+      if (++runsSinceYield >= _kYieldEveryRuns) {
+        runsSinceYield = 0;
+        await null; // yield to the event loop
+      }
+    }
+    final tmp = current;
+    current = buffer;
+    buffer = tmp;
+  }
+  return current;
+}
+
+/// Runs [sortTableItems] off the UI thread via `compute` on native. On web,
+/// where `compute` has no isolate and would run synchronously on the single
+/// main thread (freezing the UI), falls back to [sortTableItems] but still
+/// returns a `Future`, so callers await the same shape on both platforms.
+///
+/// The web path here does not chunk the custom-comparator sort (the caller
+/// supplies an arbitrary `customSort`, so there is no stable key array to
+/// merge on); it accepts one synchronous sort but keeps the async signature.
+/// The common default path ([sortIndexesOffThread]) IS chunked on web.
+Future<List<T>> sortTableItemsOffThread<T>(SortParams<T> params) async {
+  if (kIsWeb) {
+    // Yield once so the "sorting" indicator can paint before the (synchronous)
+    // custom-comparator sort runs.
+    await null;
+    return sortTableItems(params);
+  }
+  return compute(sortTableItems, params);
+}
+
+/// Runs [sortByKeys] off the UI thread via `compute` on native. On web, uses
+/// the cooperative chunked [sortByKeysYielding] so a large sort does not
+/// freeze the single main thread.
 ///
 /// Returns the sorted index order into the original (pre-sort) list; the
 /// caller reorders its own items by these indices rather than sending them
 /// across the isolate boundary — see [SortKeysParams].
-Future<List<int>> sortIndexesOffThread(SortKeysParams params) => compute(sortByKeys, params);
+Future<List<int>> sortIndexesOffThread(SortKeysParams params) {
+  if (kIsWeb) {
+    return sortByKeysYielding(params);
+  }
+  return compute(sortByKeys, params);
+}
 
 /// Compares two precomputed sort key strings, [a] and [b], for the default
 /// (no `LayrzColumn.customSort`) comparator.

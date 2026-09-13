@@ -308,6 +308,18 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   int? _lastReportedCount;
   bool _isComputing = false;
 
+  /// Monotonic token identifying the most recently started [_recompute].
+  ///
+  /// [_recompute] is async and awaits the (possibly long, on web) off-thread
+  /// sort. If a newer recompute starts while an older one is still awaiting —
+  /// e.g. the user changes the sort column, then changes it again before the
+  /// first sort resolves — the older call must NOT apply its now-stale result.
+  /// Each [_recompute] captures the token at entry and, after every await,
+  /// bails if [_recomputeGeneration] has moved on. This matters far more with
+  /// the web yielding sort (which spans many event-loop turns) than with the
+  /// native isolate sort, but the guard is correct on both.
+  int _recomputeGeneration = 0;
+
   /// Per-row, per-column lowercased display-string cache, parallel to
   /// [LayrzTable.items] and [LayrzTable.columns] (outer list indexed by item,
   /// inner list indexed by column, in [LayrzTable.columns] order).
@@ -427,6 +439,7 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   /// neither does the row data), or via [sortTableItemsOffThread] when
   /// `LayrzColumn.customSort` is set (which must compare actual row objects).
   Future<void> _recompute() async {
+    final generation = ++_recomputeGeneration;
     final items = widget.items;
     final columns = widget.columns;
     final visibleKeys = _controller.visibleColumnKeys;
@@ -476,12 +489,18 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
             filtered = [for (final index in order) filtered[index]];
           }
         } finally {
-          if (mounted) setState(() => _isComputing = false);
+          // Only the current recompute owns the "computing" flag; a superseded
+          // one must not clear it out from under the newer sort still running.
+          if (mounted && generation == _recomputeGeneration) setState(() => _isComputing = false);
         }
       }
     }
 
     if (!mounted) return;
+    // A newer _recompute started (and possibly finished) while this one was
+    // awaiting its sort — its result is authoritative, so discard this stale
+    // one rather than clobbering the display with out-of-date order.
+    if (generation != _recomputeGeneration) return;
     setState(() => _displayedItems = filtered);
 
     // Push the filtered/total counts onto the controller's ValueListenables so
