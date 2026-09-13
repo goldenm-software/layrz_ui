@@ -5444,3 +5444,94 @@ Revisit this decision if either of the following becomes a real need:
 - **D73**: The foldable-hinge-aware side-by-side split this entry's detail pane still renders into
   unchanged — only what feeds the pane's content changed, not the pane's own layout selection logic.
 
+---
+
+## D80: Colorblind Mode (Beta) — Ported from layrz_theme, Enum Defined Locally, No `layrz_sdk` Dependency
+
+**Date**: 2026-09-12
+**Status**: Decided
+**Category**: Accessibility / Dependency Policy
+
+### Context
+
+layrz_theme shipped a colorblind-simulation feature: a `ColorblindMode` enum (protanopia,
+protanomaly, deuteranopia, deuteranomaly, tritanopia, tritanomaly, normal) plus per-mode
+`ColorFilter.matrix` transforms interpolated by a `strength` (0.0–1.0), applied once at the app root
+via a `ColorFiltered` wrapper. In layrz_theme the enum lives in `layrz_sdk`'s `a11y` module and the
+filter matrices live in layrz_theme's own `colorblindness` module; app-level state persisted the
+choice to `SharedPreferences`.
+
+This feature was never ported to layrz_ui. Porting it faithfully raised one hard blocker: the
+canonical `ColorblindMode` enum lives in `layrz_sdk`, but `layrz_sdk` imports
+`package:flutter/material` in several files (e.g. `time_of_day`, `inbound`). Depending on `layrz_sdk`
+purely to reuse the enum would pull Material into layrz_ui's transitive compile graph and break the
+package's foundational Material-free invariant.
+
+Note: an earlier session-time claim that colorblind support was "gated on the D2 audit (decisions
+D10/D11)" was incorrect — there are no D10/D11 entries, and D2 concerns `layrz_models` (model-bound
+components), a different package. There was no pre-existing decision gating colorblind mode; this
+entry is that decision.
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| (a) Depend on `layrz_sdk`, re-export its `ColorblindMode` | Single enum definition shared with the SDK/backend; faithful to layrz_theme's source | Pulls `package:flutter/material` into layrz_ui transitively — violates the core no-Material invariant |
+| (b) Define `ColorblindMode` locally in layrz_ui (chosen) | Keeps layrz_ui Material-free and dependency-free; filter matrices are pure math and port verbatim | Two definitions of the same conceptual enum (layrz_ui's vs the SDK's); consumers that exchange the value with the backend map between them |
+| (c) Defer colorblind mode entirely | No new surface area | Leaves a known layrz_theme feature unported; the ask was explicit |
+
+### Decision
+
+**Chose (b): define `ColorblindMode` locally in layrz_ui; do not depend on `layrz_sdk`.**
+
+### Rationale
+
+- The Material-free invariant is non-negotiable and is the reason layrz_ui exists; a transitive
+  Material import for the sake of one enum is not an acceptable trade.
+- The enum is trivial to own: seven values plus a hand-written `toJson`/`fromJson` (uppercase JSON
+  strings identical to the SDK's `@JsonValue`s), so backend interchange stays wire-compatible without
+  json_serializable/build_runner codegen.
+- The six filter matrices are pure `List<double>` color science with no framework coupling, copied
+  verbatim from layrz_theme so the simulation is identical.
+- Persistence is a consumer concern, not the design system's — mirroring how dark mode's `themeMode`
+  is a plain `LayrzApp` parameter the consumer persists.
+
+### What shipped
+
+- New module `lib/src/colorblindness/`:
+  - `colorblind_mode.dart` — `ColorblindMode` enum, hand-written `toJson`/`fromJson`, and the
+    `ColorblindFilter` extension resolving each mode to a `ColorFilter.matrix`.
+  - `filters.dart` — the identity matrix and the six filter functions (protan/deuteran/tritan,
+    -opia and -omaly), each interpolating identity→base by `strength`.
+  - `colorblindness.dart` — export-only per-module barrel; exported from the root barrel.
+- `LayrzApp` and `LayrzApp.router` gained `colorblindMode` (default `ColorblindMode.normal`) and
+  `colorblindStrength` (default `1.0`). `_LayrzAppState._wrapWithTheme` wraps the themed content
+  (including the snackbar messenger's own root overlay and the debug watermark) in a single
+  `ColorFiltered`; `normal` resolves to the identity matrix, so the wrapper is a no-op when
+  simulation is off.
+- File/symbol naming uses the correct spelling `protan*` (layrz_theme's source misspelled the
+  filenames `propan*`; the symbols there were already `protan*`).
+
+### Consequences
+
+- layrz_ui now simulates colour-vision deficiency app-wide with no consumer code beyond two
+  `LayrzApp` parameters, and stays Material-free and dependency-free.
+- `ColorblindMode` is a layrz_ui type distinct from `layrz_sdk`'s. A consumer syncing the value with
+  a Layrz user profile maps between the two by their identical JSON strings.
+- **Beta, matching dark mode's status.** The filter is a display-level colour transform over the
+  whole rendered surface (text, images, custom paint alike); it simulates deficiency rather than
+  remapping semantic colours to colourblind-safe palettes. A future decision may add semantic
+  remapping if simulation proves insufficient in practice.
+
+### Review Trigger
+
+Revisit if (a) layrz_sdk becomes Material-free (option (a) would then be reconsidered to collapse the
+duplicate enum), or (b) users report that whole-display simulation is the wrong model and semantic
+colour remapping is wanted instead.
+
+### Related Decisions
+
+- **D7 / D78**: Light-mode-only, then dark mode (beta) — colorblind mode follows the same
+  consumer-supplies-a-parameter wiring dark mode established (`themeMode` → `colorblindMode`).
+- **D2 / D3**: Dependency-policy decisions about keeping Material out of layrz_ui's transitive graph;
+  this entry applies the same principle to `layrz_sdk`.
