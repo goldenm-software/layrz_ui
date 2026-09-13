@@ -17,6 +17,17 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 /// currently is, verbatim. This is what lets a "create new item" detail pane exist
 /// with no backing list item at all: the caller supplies [builder] directly via
 /// `LayrzScaffoldController.open`, and this pane has no opinion on what it builds.
+///
+/// **[DetailPane] paints no surface fill of its own.** It used to draw an opaque
+/// `Container(color: tokens.colors.sf1)` behind its content, but every place this
+/// pane is actually composed already owns a surface: `LayrzScaffoldShell`'s wide
+/// and folded-creaseless layouts wrap it in a [LayrzCard] (whose own background
+/// resolves per-theme, including the darker `sf3` it uses in dark mode -- see
+/// `LayrzCard.build`), and the narrow layout's `LayrzBottomSheet` already paints
+/// its own `sf1`-colored `DecoratedBox` behind its content. A flat `sf1` fill
+/// painted here on top of either would have silently mismatched the card's
+/// dark-mode surface color and painted over corner rounding for no reason --
+/// letting each caller own its own surface avoids that double-paint entirely.
 class DetailPane extends StatelessWidget {
   /// Builds the detail pane's content, or null to show the empty state.
   ///
@@ -45,10 +56,7 @@ class DetailPane extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return Container(
-      color: tokens.colors.sf1,
-      child: builder == null ? _buildEmptyState(tokens) : _buildSelectableContent(context, builder!),
-    );
+    return builder == null ? _buildEmptyState(tokens) : _buildSelectableContent(context, builder!);
   }
 
   Widget _buildSelectableContent(BuildContext context, WidgetBuilder builder) {
