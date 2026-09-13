@@ -241,4 +241,62 @@ void main() {
       expect(result, [3, 2, 1]);
     });
   });
+
+  // The web sort path uses [sortByKeysYielding] (a cooperative chunked merge
+  // sort) instead of `compute`, since Flutter web has no isolate. It must
+  // return the exact same index order as the synchronous [sortByKeys] and be
+  // stable. `kIsWeb` is false under `flutter test`, so the production dispatch
+  // (`sortIndexesOffThread`) would not reach it here — these tests call
+  // [sortByKeysYielding] directly, which is why it is library-visible.
+  group('sortByKeysYielding matches sortByKeys', () {
+    Future<void> expectSameOrder(List<String> keys, {required bool ascending}) async {
+      final params = SortKeysParams(sortKeys: keys, ascending: ascending);
+      final sync = sortByKeys(params);
+      final chunked = await sortByKeysYielding(params);
+      expect(chunked, sync, reason: 'keys=$keys ascending=$ascending');
+    }
+
+    test('empty list', () async {
+      await expectSameOrder(const [], ascending: true);
+    });
+
+    test('single element', () async {
+      await expectSameOrder(const ['x'], ascending: true);
+    });
+
+    test('numeric keys, ascending and descending', () async {
+      const keys = ['10', '2', '33', '4', '2', '100', '7'];
+      await expectSameOrder(keys, ascending: true);
+      await expectSameOrder(keys, ascending: false);
+    });
+
+    test('string keys, ascending and descending', () async {
+      const keys = ['banana', 'Apple', 'cherry', 'apple', 'Banana', 'date'];
+      await expectSameOrder(keys, ascending: true);
+      await expectSameOrder(keys, ascending: false);
+    });
+
+    test('date and duration keys', () async {
+      await expectSameOrder(
+        const ['2026-01-02', '2025-12-31', '2026-01-01', '2024-06-15'],
+        ascending: true,
+      );
+      await expectSameOrder(const ['1:30:00', '0:45:00', '2:00:00', '0:05:00'], ascending: true);
+    });
+
+    test('is stable: equal keys keep their original relative order', () async {
+      // Distinct index positions with identical keys must come back in
+      // ascending index order (0,1,2,...) since the merge is stable.
+      const keys = ['a', 'a', 'a', 'a', 'a'];
+      final chunked = await sortByKeysYielding(const SortKeysParams(sortKeys: keys, ascending: true));
+      expect(chunked, [0, 1, 2, 3, 4]);
+    });
+
+    test('large list crossing several yield boundaries stays correct', () async {
+      // Reversed numeric keys, enough elements to cross _kYieldEveryRuns.
+      final keys = [for (var i = 500; i > 0; i--) '$i'];
+      await expectSameOrder(keys, ascending: true);
+      await expectSameOrder(keys, ascending: false);
+    });
+  });
 }

@@ -55,39 +55,48 @@ class ScaffoldShellSection extends StatefulWidget {
 class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
   late LayrzScaffoldController _controller;
 
+  /// Drives the demo shell's footer refresh control, so the "last refreshed"
+  /// caption below can be updated in lockstep with the same control a user
+  /// would actually press.
+  late LayrzRefreshController _refreshController;
+
   /// The fake rows rendered by the demo shell.
-  static const List<_DemoShellItem> _items = [
-    _DemoShellItem(
+  ///
+  /// Mutable (unlike the fixed catalog it started from) because [_onRefresh]
+  /// prepends a new row on every refresh, so the demo visibly changes
+  /// something a user can see rather than just spinning and stopping.
+  final List<_DemoShellItem> _items = [
+    const _DemoShellItem(
       id: 'overview',
       title: 'Overview',
       description: 'A summary dashboard showing the current state of the workspace at a glance.',
       icon: MdiIcons.viewDashboardOutline,
     ),
-    _DemoShellItem(
+    const _DemoShellItem(
       id: 'settings',
       title: 'Settings',
       description: 'General configuration for the workspace, including preferences and defaults.',
       icon: MdiIcons.cogOutline,
     ),
-    _DemoShellItem(
+    const _DemoShellItem(
       id: 'members',
       title: 'Members',
       description: 'The people who have access to this workspace and their assigned roles.',
       icon: MdiIcons.accountGroupOutline,
     ),
-    _DemoShellItem(
+    const _DemoShellItem(
       id: 'billing',
       title: 'Billing',
       description: 'Invoices, payment methods, and the current subscription plan.',
       icon: MdiIcons.creditCardOutline,
     ),
-    _DemoShellItem(
+    const _DemoShellItem(
       id: 'integrations',
       title: 'Integrations',
       description: 'Third-party services connected to this workspace.',
       icon: MdiIcons.puzzleOutline,
     ),
-    _DemoShellItem(
+    const _DemoShellItem(
       id: 'audit-log',
       title: 'Audit Log',
       description: 'A chronological record of changes made across the workspace.',
@@ -95,16 +104,50 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
     ),
   ];
 
+  /// How many refresh cycles have completed, used to give each prepended demo
+  /// row a stable, unique key.
+  int _refreshCount = 0;
+
+  /// The time the last refresh completed, or null before the first one, shown
+  /// in the list panel's footer alongside the refresh control.
+  DateTime? _lastRefreshedAt;
+
   @override
   void initState() {
     super.initState();
     _controller = LayrzScaffoldController();
+    _refreshController = LayrzRefreshController();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _refreshController.dispose();
     super.dispose();
+  }
+
+  /// Simulates a network round-trip and then mutates the demo data so the
+  /// refresh is visibly obvious: a new row is prepended to the list and the
+  /// footer's "last refreshed" timestamp advances.
+  Future<void> _onRefresh() async {
+    await Future<void>.delayed(const Duration(seconds: 1));
+    _refreshCount++;
+    if (mounted) {
+      setState(() {
+        _items.insert(
+          0,
+          _DemoShellItem(
+            id: 'refreshed-$_refreshCount',
+            title: 'Refreshed item #$_refreshCount',
+            description:
+                'This row was added by the simulated refresh — pull down, or use the footer '
+                'control, to add another.',
+            icon: MdiIcons.refresh,
+          ),
+        );
+        _lastRefreshedAt = DateTime.now();
+      });
+    }
   }
 
   @override
@@ -113,7 +156,10 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
 
     return ShowroomSection(
       title: 'Scaffold Shell',
-      description: 'LayrzScaffoldShell — an adaptive list-detail container with search and row actions.',
+      description:
+          'LayrzScaffoldShell — an adaptive list-detail container with search, row actions, and '
+          'a list-level refresh affordance (drag-to-refresh on touch, and an always-available footer '
+          'control alongside the timestamp below).',
       child: SizedBox(
         height: 400,
         child: LayrzScaffoldShell<_DemoShellItem>(
@@ -133,7 +179,29 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
             key: item.key,
             builder: (context) => _buildDetails(item.item),
           ),
+          onRefresh: _onRefresh,
+          refreshController: _refreshController,
+          footer: _buildFooter(tokens),
         ),
+      ),
+    );
+  }
+
+  /// Builds the list panel's footer, shown alongside the built-in refresh
+  /// control to demonstrate that a consumer-supplied [LayrzScaffoldShell.footer]
+  /// coexists with the refresh affordance rather than being replaced by it.
+  Widget _buildFooter(LayrzTokens tokens) {
+    final label = _lastRefreshedAt == null
+        ? 'Not refreshed yet'
+        : 'Last refreshed at ${_lastRefreshedAt!.hour.toString().padLeft(2, '0')}:'
+              '${_lastRefreshedAt!.minute.toString().padLeft(2, '0')}:'
+              '${_lastRefreshedAt!.second.toString().padLeft(2, '0')}';
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
+      child: Text(
+        label,
+        style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
       ),
     );
   }

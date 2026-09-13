@@ -132,6 +132,7 @@ class _TreeViewSectionState extends State<TreeViewSection> {
 
     return ShowroomSection(
       title: 'Tree View',
+      excludeCard: true,
       description:
           'Expand/collapse and multi-node selection built on the SDK\'s TreeSliver. Compare '
           'independent selection (left) against cascading selection with a partial state (right).',

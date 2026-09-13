@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/colorblindness/colorblindness.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/find_in_page/find_in_page.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
@@ -94,6 +95,26 @@ class LayrzApp extends StatefulWidget {
   /// Which of [theme] and [darkTheme] is active. Defaults to [LayrzThemeMode.system],
   /// which follows the operating system's brightness setting.
   final LayrzThemeMode themeMode;
+
+  // ── Colorblindness (BETA) ───────────────────────────────────────────
+
+  /// The color-vision deficiency simulation applied to the whole app.
+  /// Defaults to [ColorblindMode.normal] (no simulation).
+  ///
+  /// [_LayrzAppState._wrapWithTheme] wraps the entire themed app content in a
+  /// single [ColorFiltered] using [ColorblindMode.filter] resolved from this
+  /// value and [colorblindStrength]. This is a simulation aid for previewing
+  /// how the app's colors read under a given color vision deficiency — it is
+  /// not a corrective/accessibility filter, and it is not persisted:
+  /// **persistence across app launches is the consumer's responsibility**,
+  /// the same as [themeMode].
+  final ColorblindMode colorblindMode;
+
+  /// How strongly [colorblindMode]'s simulation is applied, from `0.0` (no
+  /// effect — identical to [ColorblindMode.normal]) to `1.0` (full
+  /// simulation). Defaults to `1.0`. Values interpolate linearly between
+  /// identity and the full simulation matrix; see [ColorblindFilter.filter].
+  final double colorblindStrength;
 
   // ── App metadata ────────────────────────────────────────────────────
 
@@ -240,6 +261,51 @@ class LayrzApp extends StatefulWidget {
   /// specific customer build) out entirely.
   final bool enableFindInPage;
 
+  /// ## Required web setup: disable the browser's native context menu
+  ///
+  /// **On web, if you use page-wide text selection (the default
+  /// [LayrzLayout.selectableContent]), you MUST disable the browser's native
+  /// right-click context menu yourself, in `main()`, before `runApp`:**
+  ///
+  /// ```dart
+  /// import 'package:flutter/foundation.dart' show kIsWeb;
+  /// import 'package:flutter/services.dart' show BrowserContextMenu;
+  ///
+  /// Future<void> main() async {
+  ///   WidgetsFlutterBinding.ensureInitialized();
+  ///   if (kIsWeb) {
+  ///     await BrowserContextMenu.disableContextMenu();
+  ///   }
+  ///   runApp(const MyApp());
+  /// }
+  /// ```
+  ///
+  /// **This is the browser/OS context menu (Back, Reload, Save image, Inspect…),
+  /// not [LayrzContextMenu]** — your in-app context menus are unaffected.
+  ///
+  /// **Why the library does not do this for you:** the correct call,
+  /// [BrowserContextMenu.disableContextMenu], is asynchronous — its `enabled`
+  /// flag only flips once a platform-channel round-trip resolves. Doing it
+  /// inside [LayrzApp] would either lose the race (the flag would still be
+  /// enabled during the first builds) or force [LayrzApp] to block/await during
+  /// widget construction, slowing every app's startup for a concern that belongs
+  /// in `main()`. Awaiting it once in `main()` is cheap and settles the flag
+  /// before the first frame.
+  ///
+  /// **Why it matters:** Flutter's [SelectableRegion] reads
+  /// `BrowserContextMenu.enabled` on every build to decide whether to wrap its
+  /// child in a `PlatformSelectableRegionContextMenu`. If that flag *changes
+  /// value* while a route transition is rebuilding the region's subtree, the
+  /// region's internal `SelectionContainer` element is re-inflated and
+  /// re-registers before the old one is removed, tripping
+  /// `SelectableRegionState`'s single-slot `assert(_selectable == null)`
+  /// (web-only, on navigation). Disabling it once and never toggling it keeps
+  /// the flag constant, so page-wide selection is safe across navigation.
+  ///
+  /// [LayrzLayout] carries a debug-only assert that fires if you forget this
+  /// step (selection on + browser menu still enabled on web) — a reminder, not
+  /// the fix. The fix is the `main()` call above.
+
   /// Imperative-routing constructor.
   const LayrzApp({
     super.key,
@@ -252,6 +318,8 @@ class LayrzApp extends StatefulWidget {
     this.theme,
     this.darkTheme,
     this.themeMode = LayrzThemeMode.system,
+    this.colorblindMode = ColorblindMode.normal,
+    this.colorblindStrength = 1.0,
     this.title = '',
     this.onGenerateTitle,
     this.color,
@@ -288,6 +356,8 @@ class LayrzApp extends StatefulWidget {
     this.theme,
     this.darkTheme,
     this.themeMode = LayrzThemeMode.system,
+    this.colorblindMode = ColorblindMode.normal,
+    this.colorblindStrength = 1.0,
     this.title = '',
     this.onGenerateTitle,
     this.color,
@@ -486,11 +556,20 @@ class _LayrzAppState extends State<LayrzApp> with WidgetsBindingObserver {
     // Use the provided scrollBehavior, or fall back to LayrzScrollBehavior
     final scrollBehavior = widget.scrollBehavior ?? const LayrzScrollBehavior();
 
-    return _LayrzAppScope(
-      pageTransitionType: widget.pageTransitionType,
-      child: ScrollConfiguration(
-        behavior: scrollBehavior,
-        child: innerChild,
+    // Colorblindness simulation (BETA) is applied last, as the outermost
+    // wrapper, so the single ColorFiltered covers everything built above —
+    // themed content, the debug watermark, and scroll configuration alike —
+    // mirroring how a global display filter would sit over the whole app.
+    // `ColorblindMode.normal.filter(_)` already returns the identity matrix,
+    // so this is a harmless no-op wrapper when colorblind simulation is off.
+    return ColorFiltered(
+      colorFilter: widget.colorblindMode.filter(widget.colorblindStrength),
+      child: _LayrzAppScope(
+        pageTransitionType: widget.pageTransitionType,
+        child: ScrollConfiguration(
+          behavior: scrollBehavior,
+          child: innerChild,
+        ),
       ),
     );
   }

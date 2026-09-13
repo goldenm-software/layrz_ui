@@ -1,9 +1,8 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/extensions/extensions.dart';
 
+import 'browser_context_menu_suppressor.dart';
 import 'context_menu_item.dart';
 import 'context_menu_layout_delegate.dart';
 import 'context_menu_panel_items.dart';
@@ -29,9 +28,9 @@ import 'context_menu_panel_items.dart';
 /// because a touch-only device simply never emits `onSecondaryTapDown` and a
 /// mouse-only device rarely triggers a long-press by accident. Suppressing
 /// the browser's own native context menu on web (see
-/// [_maybeSuppressBrowserContextMenu]) is the only platform-conditional
-/// behavior this widget has, and it is handled by [BrowserContextMenu]
-/// itself, which is a no-op on every non-web target.
+/// [_maybeSuppressBrowserContextMenu] and [LayrzBrowserContextMenuSuppressor])
+/// is the only platform-conditional behavior this widget has, and it is a
+/// no-op on every non-web target.
 ///
 /// **Self-contained:** this widget ships its own entry model
 /// ([LayrzContextMenuEntry], [LayrzContextMenuLabel], [LayrzContextMenuDivider])
@@ -141,30 +140,48 @@ class _LayrzContextMenuState extends State<LayrzContextMenu> with SingleTickerPr
     }
   }
 
-  /// Suppresses the browser's native context menu on web.
+  /// Whether this instance currently holds a live
+  /// [LayrzBrowserContextMenuSuppressor] acquisition.
   ///
-  /// [BrowserContextMenu] (from `package:flutter/services.dart`, itself
-  /// re-exported by `package:flutter/widgets.dart` — no Material/Cupertino
-  /// import needed) documents itself as a no-op on non-web targets, but its
-  /// own `disableContextMenu`/`enableContextMenu` methods carry a hard
-  /// `assert(kIsWeb, ...)` rather than silently returning — calling either
-  /// one on a native target trips that assertion in debug/test builds. The
-  /// explicit [kIsWeb] guard here is therefore load-bearing, not defensive
-  /// styling: without it every widget test for this widget would fail with
-  /// that assertion the moment [initState] ran. Without suppression, a
-  /// right-click on web shows both the browser's own native menu and this
-  /// widget's panel at once.
+  /// [LayrzContextMenu.suppressBrowserContextMenu] is only ever consulted
+  /// once, in [initState] (matching the original behavior of this widget,
+  /// before this suppression was refcounted) -- there is no
+  /// `didUpdateWidget` override, so changing that field on an already-built
+  /// [LayrzContextMenu] has no runtime effect, same as before. This flag is
+  /// tracked so [dispose] releases the shared count exactly once, and only
+  /// when [_maybeSuppressBrowserContextMenu] actually acquired it.
+  bool _holdsSuppression = false;
+
+  /// Requests browser context-menu suppression for this instance, via the
+  /// shared [LayrzBrowserContextMenuSuppressor] refcount rather than calling
+  /// `BrowserContextMenu.disableContextMenu()` directly.
+  ///
+  /// **Why not call `BrowserContextMenu` directly:** `LayrzTable`'s header
+  /// mounts one [LayrzContextMenu] per visible column, so every table page
+  /// navigation mounts and disposes several independent instances in the
+  /// same frame. `BrowserContextMenu.enabled` is one process-wide flag, and
+  /// disabling/enabling it is asynchronous, so per-instance direct calls
+  /// made the flag flip on nearly every navigation -- which
+  /// `SelectableRegionState` (an app-shell-level [LayrzLayout] wraps its
+  /// body in one) reads on every rebuild, tripping a confirmed Flutter
+  /// framework assertion when the flip landed mid page-transition (see
+  /// [LayrzBrowserContextMenuSuppressor]'s doc for the full mechanism and
+  /// the upstream issue link). Routing every suppression request through
+  /// the shared refcount means the flag only actually changes value when
+  /// the last suppressing widget anywhere in the app unmounts, which
+  /// ordinary navigation between two pages that each have suppressing
+  /// widgets does not trigger.
   void _maybeSuppressBrowserContextMenu() {
-    if (!widget.suppressBrowserContextMenu || !kIsWeb) return;
-    BrowserContextMenu.disableContextMenu();
+    if (!widget.suppressBrowserContextMenu) return;
+    LayrzBrowserContextMenuSuppressor.acquire();
+    _holdsSuppression = true;
   }
 
   @override
   void dispose() {
-    if (widget.suppressBrowserContextMenu && kIsWeb) {
-      // Restore the browser's native context menu so other widgets on the
-      // page (or a future page) are not left with it permanently disabled.
-      BrowserContextMenu.enableContextMenu();
+    if (_holdsSuppression) {
+      LayrzBrowserContextMenuSuppressor.release();
+      _holdsSuppression = false;
     }
     _animationController.dispose();
     _curvedAnimation.dispose();

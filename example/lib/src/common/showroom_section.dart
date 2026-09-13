@@ -12,7 +12,13 @@ class ShowroomSection extends StatelessWidget {
   /// The [title] is rendered with [TextTheme.headline], the optional [description]
   /// with [TextTheme.body], and the [child] content area is displayed inside
   /// a [LayrzCard] for consistent elevation and surface styling.
-  const ShowroomSection({required this.title, required this.child, this.description, super.key});
+  const ShowroomSection({
+    super.key,
+    required this.title,
+    required this.child,
+    this.description,
+    this.excludeCard = false,
+  });
 
   /// The section title, rendered prominently at the top.
   final String title;
@@ -22,6 +28,9 @@ class ShowroomSection extends StatelessWidget {
 
   /// The content widget displayed inside the section's surface area.
   final Widget child;
+
+  /// removes the card around the content area, useful for sections that already have their own surface styling or elevation.
+  final bool excludeCard;
 
   @override
   Widget build(BuildContext context) {
@@ -52,10 +61,13 @@ class ShowroomSection extends StatelessWidget {
 
               // Content area with LayrzCard for elevation and surface styling
               SizedBox(height: tokens.spacing.sp3),
-              LayrzCard(
-                elevation: 1,
-                child: child,
-              ),
+              if (!excludeCard)
+                LayrzCard(
+                  elevation: 1,
+                  child: child,
+                )
+              else
+                child,
             ],
           ),
         ),

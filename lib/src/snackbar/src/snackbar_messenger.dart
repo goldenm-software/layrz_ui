@@ -101,32 +101,84 @@ const double _kMinDragOpacity = 0.15;
 /// This is intentionally private and mutable — it is bookkeeping for
 /// [LayrzSnackbarMessengerState], never exposed to callers. Everything the
 /// public API exposes is the immutable [LayrzSnackbar] itself.
+///
+/// **Reduce-motion (DESIGN-60 hardening, revised):** the countdown hairline
+/// is *functional* progress indication — it is the only cue a user has for
+/// "how much longer until this disappears" — not decorative motion, so it
+/// must keep draining at the snackbar's real, configured speed even when
+/// `MediaQuery.disableAnimationsOf` is `true`. `disableAnimations` asks
+/// Flutter to cut *gratuitous* motion, not to blank out a determinate
+/// progress indicator the user still needs to read.
+///
+/// The reason a plain [AnimationController] used to break under reduce-motion
+/// isn't that it can't be driven at all — it's that [AnimationController.forward]/
+/// [AnimationController.reverse] scale the requested duration down to about 5%
+/// of its real value whenever [AnimationController.animationBehavior] is
+/// [AnimationBehavior.normal] (the default) and
+/// `SemanticsBinding.instance.disableAnimations` is `true` — see
+/// `_animateToInternal`'s `scale = animationBehavior._enableAnimations ? 1.0 :
+/// 0.05` in the SDK's `animation_controller.dart`. [AnimationBehavior.preserve]
+/// is Flutter's own sanctioned escape hatch from exactly that scaling — its
+/// doc comment cites this same kind of case (a controller that must keep real
+/// timing under reduce-motion, e.g. a scrollable's fling physics) as the
+/// reason it exists. [drainController] is therefore always constructed with
+/// `animationBehavior: AnimationBehavior.preserve`, so [reduceMotion] no
+/// longer changes which mechanism drives dismissal — there is only ever one
+/// path, controller-driven, in both motion modes:
+/// [drainController] animates from `1.0` to `0.0` over `snackbar.duration` at
+/// the real, un-scaled speed, [LayrzSnackbarView.progress] reads its `value`
+/// every tick exactly as before, and its own [AnimationStatus.dismissed]
+/// callback fires [onExpired] once it reaches `0.0`. No `Timer` is used
+/// anywhere in this class any more — [pauseDrain]/[resumeDrain] simply
+/// [AnimationController.stop]/[AnimationController.reverse] the controller,
+/// identically for both motion modes.
 class _SnackbarEntry {
   /// Creates a [_SnackbarEntry] for [snackbar], wiring its lifecycle
   /// callbacks and starting its entry animation immediately.
   ///
   /// A [drainController] is only constructed when `snackbar.duration` is
   /// non-null (auto-dismiss). Persistent snackbars (`duration == null`) get
-  /// no drain controller at all — [drainController] stays `null`, no timer
-  /// runs, and no auto-dismiss is ever scheduled for them.
+  /// no drain controller at all — [drainController] stays `null` and no
+  /// auto-dismiss is ever scheduled for them.
+  ///
+  /// [reduceMotion] is read once, here, from `MediaQuery.disableAnimationsOf`
+  /// by the owning [LayrzSnackbarMessengerState] (which has a [BuildContext]
+  /// this entry itself does not). It no longer changes the drain mechanism
+  /// itself (see the class doc — [drainController] always uses
+  /// [AnimationBehavior.preserve] and always drives both the visible progress
+  /// and dismissal, in both motion modes); it is retained only as a
+  /// documented, inspectable record of the mode this entry was shown under.
   _SnackbarEntry({
     required this.snackbar,
     required TickerProvider vsync,
+    required this.reduceMotion,
   }) : entryController = AnimationController(vsync: vsync, duration: _kEntryDuration),
        dragController = AnimationController(vsync: vsync, duration: _kDragSettleDuration),
        drainController = snackbar.duration != null
-           ? AnimationController(vsync: vsync, duration: snackbar.duration)
+           ? AnimationController(
+               vsync: vsync,
+               duration: snackbar.duration,
+               // Keeps the drain at its real, configured speed even under
+               // MediaQuery.disableAnimationsOf — see the class doc.
+               animationBehavior: AnimationBehavior.preserve,
+             )
            : null {
     entryController.forward();
     final drain = drainController;
-    if (drain != null) {
-      drain.reverse(from: 1.0);
-      drain.addStatusListener(_handleDrainStatus);
-    }
+    if (drain == null) return;
+
+    drain.reverse(from: 1.0);
+    drain.addStatusListener(_handleDrainStatus);
   }
 
   /// The caller-supplied payload this entry presents.
   final LayrzSnackbar snackbar;
+
+  /// Whether reduce-motion was active (`MediaQuery.disableAnimationsOf`) at
+  /// the moment this entry was shown — captured once, since a
+  /// [_SnackbarEntry] is plain bookkeeping with no [BuildContext] of its own
+  /// to re-read it from later. See the class doc for what this changes.
+  final bool reduceMotion;
 
   /// Key attached to this entry's rendered card, used to measure its actual
   /// height after layout so the hover fan-out can offset later cards by
@@ -146,7 +198,12 @@ class _SnackbarEntry {
   /// `drainController.value` directly.
   ///
   /// `null` for persistent snackbars (`snackbar.duration == null`) — there is
-  /// no timer to drive, so no controller is ever created for them.
+  /// nothing to drain, so no controller is ever created for them.
+  ///
+  /// Always constructed with `animationBehavior: AnimationBehavior.preserve`
+  /// (see the class doc), so it drains at its real, configured speed and
+  /// fires [onExpired] on schedule in both motion modes — [reduceMotion] does
+  /// not change how this controller behaves.
   final AnimationController? drainController;
 
   /// Drives the drag-follow settle animation — the spring-back-to-center or
@@ -189,7 +246,9 @@ class _SnackbarEntry {
   /// (gesture-only expand/collapse applies, no card-follow).
   bool? isHorizontalDrag;
 
-  /// Called when [drainController] reaches `0.0` unpaused — the auto-dismiss path.
+  /// Called when the drain completes unpaused — the auto-dismiss path.
+  /// Fired by [_handleDrainStatus] once [drainController] reaches
+  /// [AnimationStatus.dismissed], in both motion modes.
   ///
   /// Mutable (not `final`) because the handler needs to close over this very
   /// entry, which does not exist yet at construction time — the owning
@@ -213,22 +272,29 @@ class _SnackbarEntry {
     }
   }
 
-  /// Pauses the draining timer (hover-pause, DESIGN-60 §16.3/§Motion).
+  /// Pauses the draining hairline (hover-pause, DESIGN-60 §16.3/§Motion).
   ///
   /// A no-op for persistent snackbars, which have no [drainController].
+  /// Freezes [drainController] in place via [AnimationController.stop] —
+  /// identical in both motion modes, since [drainController] is always
+  /// driven by the controller now (see the class doc).
   void pauseDrain() {
     final drain = drainController;
-    if (drain != null && drain.isAnimating) {
+    if (drain == null) return;
+    if (drain.isAnimating) {
       drain.stop();
     }
   }
 
-  /// Resumes the draining timer from wherever it was paused.
+  /// Resumes the draining hairline from wherever [pauseDrain] left it.
   ///
   /// A no-op for persistent snackbars, which have no [drainController].
+  /// Continues [drainController] from its current `value` toward `0.0` via
+  /// [AnimationController.reverse] — identical in both motion modes.
   void resumeDrain() {
     final drain = drainController;
-    if (drain != null && !drain.isAnimating && drain.value > 0) {
+    if (drain == null) return;
+    if (!drain.isAnimating && drain.value > 0) {
       drain.reverse(from: drain.value);
     }
   }
@@ -428,12 +494,32 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
   /// holds [LayrzSnackbarMessenger.maxVisible] visible entries, the oldest
   /// visible one is pushed into the collapsed "+N" overflow rather than being
   /// evicted — nothing is dropped silently.
+  ///
+  /// Reads `MediaQuery.disableAnimationsOf(context)` once, here, and passes it
+  /// to the new [_SnackbarEntry] as [_SnackbarEntry.reduceMotion] — this is
+  /// the only place in the entry's lifecycle with a [BuildContext] available,
+  /// since [_SnackbarEntry] itself is plain bookkeeping, not a widget.
+  ///
+  /// **Stale-hover hardening:** [_isHovered] is only honored here when the
+  /// queue already held a visible card the pointer could genuinely be
+  /// hovering *before* this insert. If the queue was empty, nothing on
+  /// screen could be under the pointer, so [_isHovered] — if still `true` —
+  /// is necessarily stale (see [_dismiss] for how that staleness happens)
+  /// and is reset to `false` here to match reality, and the new entry always
+  /// starts draining regardless. This is the true invariant: "empty stack
+  /// implies not hovered."
   void show(LayrzSnackbar snackbar) {
-    final entry = _SnackbarEntry(snackbar: snackbar, vsync: this);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final entry = _SnackbarEntry(snackbar: snackbar, vsync: this, reduceMotion: reduceMotion);
     entry.onExpired = () => _dismiss(entry);
-    if (_isHovered) {
+
+    final stackWasEmpty = _queue.isEmpty;
+    if (stackWasEmpty) {
+      _isHovered = false;
+    } else if (_isHovered) {
       entry.pauseDrain();
     }
+
     setState(() {
       _queue.insert(0, entry);
     });
@@ -447,6 +533,20 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
   /// controllers. Safe to call more than once for the same entry (guarded by
   /// [_SnackbarEntry.isClosing]); a race between, say, an auto-expiry and a
   /// close-tap firing in the same frame is a no-op on the second call.
+  ///
+  /// **Stale-hover hardening:** removing [entry] can leave [_queue] empty
+  /// while [_isHovered] is still `true`. This happens when a card is
+  /// dismissed (e.g. via its close button) while the pointer sits over it —
+  /// [MouseRegion.onExit] is not guaranteed to fire when the hovered widget
+  /// is removed from the tree out from under the pointer, rather than the
+  /// pointer actually leaving its bounds, so [_handleStackExit] never runs
+  /// and [_isHovered] leaks `true` with nothing left on screen to be hovered.
+  /// Since the stack is empty once this removal completes, the pointer
+  /// cannot genuinely be over any live card any more, so [_isHovered] is
+  /// reset to `false` here to match reality — this is the only place besides
+  /// [_handleStackExit] that clears it, and it closes the gap `onExit` left
+  /// open. (See [show] for the matching half of this invariant on the
+  /// insert side.)
   void _dismiss(_SnackbarEntry entry) {
     if (entry.isClosing) return;
     entry.isClosing = true;
@@ -456,6 +556,9 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
     }
     setState(() {
       _queue.remove(entry);
+      if (_queue.isEmpty) {
+        _isHovered = false;
+      }
     });
     _measuredHeights.remove(entry);
     entry.dispose();

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0-rc.1
+
+- Added colorblind simulation (BETA): a `ColorblindMode` enum (protanopia/protanomaly/deuteranopia/deuteranomaly/tritanopia/tritanomaly/normal) with `LayrzApp.colorblindMode` and `LayrzApp.colorblindStrength`, applied app-wide via a single `ColorFiltered`.
+- `LayrzScaffoldShell` detail pane now renders as a `LayrzCard` (the list/detail divider is dropped on wide and folded-creaseless layouts), which also corrects a dark-mode surface mismatch.
+- `LayrzScaffoldShell` gained optional `onRefresh` and `refreshController`: a list-level refresh affordance rendered in the list footer alongside any consumer `footer`, scoped to the internal list (no floating button on desktop). No change when `onRefresh` is null.
+- **Web setup change:** on web, page-wide text selection (`LayrzLayout.selectableContent`, on by default) now requires calling `BrowserContextMenu.disableContextMenu()` once in `main()` before `runApp`; otherwise `SelectableRegion` crashes on navigation. `LayrzLayout` asserts in debug builds if this step is missed. See `LayrzApp` docs / the wiki Getting Started.
+- `LayrzTable` reworked to a column-major layout with a fixed number of scroll controllers regardless of row count, removing the per-row horizontal scroll-sync that made large tables janky; row height is controllable via `height`, and the table now shows one vertical scrollbar plus a hover-reveal horizontal scrollbar.
+- `LayrzTable` sorting no longer freezes the web UI on large datasets: the sort yields cooperatively on web (native keeps the background isolate) and sort keys are parsed once, cutting sort time dramatically; a stale in-flight sort result can no longer overwrite a newer one.
+- Fixed the `LayrzSnackbar` auto-dismiss progress bar under reduced motion (it now drains at the real duration instead of racing), and fixed a stale hover-pause that left the next snackbar's progress bar frozen after a manual close.
+- Fixed the `LayrzTreeView` expand/collapse chevron being nearly invisible in dark mode (now uses `fg1`).
+
 ## 1.0.0-prerelease.5
 
 - Fixed the skill manifests `layrz-ui-file-input`, `layrz-ui-find-in-page-host`, and `layrz-ui-tab-view` failing to load — their `description:` frontmatter contained an unquoted inline colon (e.g. `` `maxFiles: 1` ``, `` `enableFindInPage: false` ``, `isScrollable: false`) that broke YAML parsing. The descriptions are now quoted.

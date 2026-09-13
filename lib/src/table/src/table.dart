@@ -6,14 +6,15 @@ import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/progress/progress.dart';
+import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
 import 'package:layrz_ui/src/table/src/column.dart';
 import 'package:layrz_ui/src/table/src/column_menu.dart';
 import 'package:layrz_ui/src/table/src/controller.dart';
-import 'package:layrz_ui/src/table/src/row_scroll_sync.dart';
 import 'package:layrz_ui/src/table/src/sort.dart';
 import 'package:layrz_ui/src/table/src/table_action.dart';
+import 'package:layrz_ui/src/table/src/table_cells.dart';
 import 'package:layrz_ui/src/table/src/table_header.dart';
-import 'package:layrz_ui/src/table/src/table_row.dart';
+import 'package:sync_scroll_controller/sync_scroll_controller.dart';
 
 /// The fixed height, in logical pixels, of the loading-indicator strip
 /// pinned above [LayrzTable]'s header.
@@ -273,11 +274,51 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   late LayrzTableController<T> _controller;
   bool _ownsController = false;
 
-  final LayrzTableRowScrollSync _scrollSync = LayrzTableRowScrollSync();
+  /// Vertical scroll-sync group: the three column regions (pinned-left
+  /// multiselect, scrollable-middle data columns, pinned-right actions) each
+  /// own ONE vertical [ScrollController] joined here, so they scroll together
+  /// vertically and their rows stay aligned. A fixed THREE controllers total,
+  /// independent of row count — this is the column-major design ported from
+  /// `layrz_theme`'s battle-tested `ThemedTable2`, replacing the previous
+  /// row-major design that created one horizontal controller per row (O(N)).
+  late final SyncScrollControllerGroup _verticalGroup;
+
+  /// Vertical controller for the pinned-left multiselect column's list.
+  late final ScrollController _leftVController;
+
+  /// Vertical controller for the scrollable-middle data columns' list.
+  late final ScrollController _middleVController;
+
+  /// Vertical controller for the pinned-right actions column's list.
+  late final ScrollController _rightVController;
+
+  /// Horizontal scroll-sync group: the header's data-columns strip and the
+  /// content's data-columns viewport scroll together horizontally, so column
+  /// boundaries stay aligned as the user scrolls sideways. A fixed TWO
+  /// controllers total, independent of row count.
+  late final SyncScrollControllerGroup _horizontalGroup;
+
+  /// Horizontal controller for the header's data-columns strip.
+  late final ScrollController _headerHController;
+
+  /// Horizontal controller for the content's data-columns viewport.
+  late final ScrollController _contentHController;
 
   List<T> _displayedItems = const [];
   int? _lastReportedCount;
   bool _isComputing = false;
+
+  /// Monotonic token identifying the most recently started [_recompute].
+  ///
+  /// [_recompute] is async and awaits the (possibly long, on web) off-thread
+  /// sort. If a newer recompute starts while an older one is still awaiting —
+  /// e.g. the user changes the sort column, then changes it again before the
+  /// first sort resolves — the older call must NOT apply its now-stale result.
+  /// Each [_recompute] captures the token at entry and, after every await,
+  /// bails if [_recomputeGeneration] has moved on. This matters far more with
+  /// the web yielding sort (which spans many event-loop turns) than with the
+  /// native isolate sort, but the guard is correct on both.
+  int _recomputeGeneration = 0;
 
   /// Per-row, per-column lowercased display-string cache, parallel to
   /// [LayrzTable.items] and [LayrzTable.columns] (outer list indexed by item,
@@ -319,6 +360,13 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   @override
   void initState() {
     super.initState();
+    _verticalGroup = SyncScrollControllerGroup();
+    _leftVController = _verticalGroup.addAndGet();
+    _middleVController = _verticalGroup.addAndGet();
+    _rightVController = _verticalGroup.addAndGet();
+    _horizontalGroup = SyncScrollControllerGroup();
+    _headerHController = _horizontalGroup.addAndGet();
+    _contentHController = _horizontalGroup.addAndGet();
     _attachController(widget.controller);
     _recompute();
   }
@@ -391,6 +439,7 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   /// neither does the row data), or via [sortTableItemsOffThread] when
   /// `LayrzColumn.customSort` is set (which must compare actual row objects).
   Future<void> _recompute() async {
+    final generation = ++_recomputeGeneration;
     final items = widget.items;
     final columns = widget.columns;
     final visibleKeys = _controller.visibleColumnKeys;
@@ -440,12 +489,18 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
             filtered = [for (final index in order) filtered[index]];
           }
         } finally {
-          if (mounted) setState(() => _isComputing = false);
+          // Only the current recompute owns the "computing" flag; a superseded
+          // one must not clear it out from under the newer sort still running.
+          if (mounted && generation == _recomputeGeneration) setState(() => _isComputing = false);
         }
       }
     }
 
     if (!mounted) return;
+    // A newer _recompute started (and possibly finished) while this one was
+    // awaiting its sort — its result is authoritative, so discard this stale
+    // one rather than clobbering the display with out-of-date order.
+    if (generation != _recomputeGeneration) return;
     setState(() => _displayedItems = filtered);
 
     // Push the filtered/total counts onto the controller's ValueListenables so
@@ -522,6 +577,11 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
 
   @override
   void dispose() {
+    _leftVController.dispose();
+    _middleVController.dispose();
+    _rightVController.dispose();
+    _headerHController.dispose();
+    _contentHController.dispose();
     _detachController();
     super.dispose();
   }
@@ -691,6 +751,9 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
               final isSearchMiss = isEmpty && widget.items.isNotEmpty;
               final actionsColumnWidth = _computeActionsColumnWidth(context);
 
+              final totalColumnsWidth = widths.fold<double>(0, (sum, w) => sum + w);
+              final hasActionsColumn = actionsColumnWidth != null && actionsColumnWidth > 0;
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -699,7 +762,7 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
                     columns: widget.columns,
                     controller: _controller,
                     columnWidths: columnWidths,
-                    scrollSync: _scrollSync,
+                    horizontalController: _headerHController,
                     height: widget.headerHeight,
                     fallbackColumnWidth: widget.minColumnWidth,
                     hasMultiselect: widget.hasMultiselect,
@@ -727,31 +790,117 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
                         : ListenableBuilder(
                             listenable: _controller,
                             builder: (context, _) {
-                              return ListView.builder(
-                                itemCount: items.length,
-                                itemExtent: widget.height,
-                                itemBuilder: (context, index) {
-                                  final item = items[index];
-                                  return LayrzTableRow<T>(
-                                    key: ValueKey('layrz-table-row-$index-${item.hashCode}'),
-                                    item: item,
-                                    rowIndex: index,
-                                    visibleColumns: visibleColumns,
-                                    columnWidths: widths,
-                                    height: widget.height,
-                                    scrollSync: _scrollSync,
-                                    hasMultiselect: widget.hasMultiselect,
-                                    isSelected: _controller.selection.contains(item),
-                                    onSelectedChanged: widget.hasMultiselect
-                                        ? (_) => _controller.toggleSelection(item)
-                                        : null,
-                                    actions: widget.actionsCount > 0
-                                        ? (widget.actionsBuilder?.call(item) ?? const [])
-                                        : const [],
-                                    actionsColumnWidth: actionsColumnWidth,
-                                    copyToClipboardText: widget.copyToClipboardText,
-                                  );
-                                },
+                              // Column-major body: three vertical lists (one per
+                              // column region) synced by [_verticalGroup] so
+                              // their rows stay aligned; the middle region's list
+                              // lives inside one horizontal viewport synced with
+                              // the header by [_horizontalGroup]. A fixed 5
+                              // controllers, independent of row count.
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (widget.hasMultiselect)
+                                    SizedBox(
+                                      width: widget.height,
+                                      // No scrollbar on the pinned-left list; the
+                                      // single vertical scrollbar lives on the
+                                      // middle list (all three share one vertical
+                                      // offset via [_verticalGroup]).
+                                      child: ScrollConfiguration(
+                                        behavior: const ScrollBehavior().copyWith(scrollbars: false),
+                                        child: ListView.builder(
+                                          controller: _leftVController,
+                                          itemCount: items.length,
+                                          itemExtent: widget.height,
+                                          itemBuilder: (context, index) {
+                                            final item = items[index];
+                                            return LayrzTableCheckboxCell(
+                                              rowIndex: index,
+                                              height: widget.height,
+                                              isSelected: _controller.selection.contains(item),
+                                              onSelectedChanged: (_) => _controller.toggleSelection(item),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  Expanded(
+                                    // Scrollbars are layered OUTSIDE the
+                                    // horizontal scroll so each paints at the
+                                    // viewport edge, not on the scrolled content:
+                                    // the vertical bar (on the middle list's
+                                    // shared vertical controller) is outermost so
+                                    // it stays pinned to the right edge; the
+                                    // horizontal bar sits just inside it. The
+                                    // pinned-left and pinned-right lists suppress
+                                    // their own bars and follow via the sync
+                                    // groups, so exactly one bar shows per axis.
+                                    child: LayrzScrollbar(
+                                      controller: _middleVController,
+                                      // The vertical list is nested inside the
+                                      // horizontal scroll below, so this outer
+                                      // scrollbar must react to the VERTICAL-axis
+                                      // notification (the deeper list), not the
+                                      // horizontal scrollable's depth-0 one.
+                                      notificationPredicate: (notification) => notification.metrics.axis == Axis.vertical,
+                                      child: LayrzScrollbar(
+                                        controller: _contentHController,
+                                        notificationPredicate: (notification) =>
+                                            notification.metrics.axis == Axis.horizontal,
+                                        child: ScrollConfiguration(
+                                          behavior: const ScrollBehavior().copyWith(scrollbars: false),
+                                          child: SingleChildScrollView(
+                                            controller: _contentHController,
+                                            scrollDirection: Axis.horizontal,
+                                            child: SizedBox(
+                                              width: totalColumnsWidth,
+                                              child: ListView.builder(
+                                                controller: _middleVController,
+                                                itemCount: items.length,
+                                                itemExtent: widget.height,
+                                                itemBuilder: (context, index) {
+                                                  return LayrzTableDataRowCell<T>(
+                                                    item: items[index],
+                                                    rowIndex: index,
+                                                    visibleColumns: visibleColumns,
+                                                    columnWidths: widths,
+                                                    height: widget.height,
+                                                    copyToClipboardText: widget.copyToClipboardText,
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  if (hasActionsColumn)
+                                    SizedBox(
+                                      width: actionsColumnWidth,
+                                      // No scrollbar on the pinned-right list; it
+                                      // follows the middle list's vertical offset.
+                                      child: ScrollConfiguration(
+                                        behavior: const ScrollBehavior().copyWith(scrollbars: false),
+                                        child: ListView.builder(
+                                          controller: _rightVController,
+                                          itemCount: items.length,
+                                          itemExtent: widget.height,
+                                          itemBuilder: (context, index) {
+                                            final item = items[index];
+                                            return LayrzTableActionsCell<T>(
+                                              rowIndex: index,
+                                              height: widget.height,
+                                              width: actionsColumnWidth,
+                                              actions: widget.actionsCount > 0
+                                                  ? (widget.actionsBuilder?.call(item) ?? const [])
+                                                  : const [],
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               );
                             },
                           ),

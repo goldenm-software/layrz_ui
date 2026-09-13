@@ -2,8 +2,10 @@ import "package:flutter/widgets.dart";
 import "package:layrz_ui/src/constants/constants.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
 import "package:layrz_ui/src/inputs/inputs.dart";
+import "package:layrz_ui/src/refresh/refresh.dart";
 import "package:layrz_ui/src/tokens/src/tokens.dart";
 
+import "list_panel_refresh_footer.dart";
 import "scaffold_controller.dart";
 import "scaffold_item.dart";
 import "scaffold_row.dart";
@@ -53,6 +55,32 @@ class ListPanel<T> extends StatefulWidget {
   /// up to the crease rather than its usual fixed width.
   final double? width;
 
+  /// Called to refresh the list's data, or null to disable the refresh affordance.
+  ///
+  /// When non-null:
+  /// - The list's own scrollable is wrapped in a [LayrzRefreshIndicator] (drag
+  ///   gesture and pull visual only — its built-in fallback button is disabled,
+  ///   since this panel supplies its own always-visible affordance instead; see
+  ///   [ListPanelRefreshFooter]).
+  /// - A [ListPanelRefreshFooter] renders in the footer region, alongside
+  ///   [footer] rather than replacing it, giving every platform (not just
+  ///   touch) a reachable refresh control.
+  ///
+  /// When null (the default), neither the indicator nor the footer affordance
+  /// is built at all — fully backward compatible with existing callers.
+  final Future<void> Function()? onRefresh;
+
+  /// Optional controller driving the [LayrzRefreshIndicator] wrapping the
+  /// list's scrollable, and the [ListPanelRefreshFooter]'s busy state.
+  ///
+  /// Ignored when [onRefresh] is null. If null while [onRefresh] is non-null,
+  /// [LayrzRefreshIndicator] creates and owns its own internal controller —
+  /// see [LayrzRefreshIndicator.controller]. Pass an explicit controller to
+  /// also trigger a refresh programmatically from outside this panel (e.g. a
+  /// keyboard shortcut or another part of the app), via
+  /// [LayrzRefreshController.refresh].
+  final LayrzRefreshController? refreshController;
+
   /// Creates a new [ListPanel].
   ///
   /// - [items]: The items to display in the list. Required.
@@ -67,6 +95,10 @@ class ListPanel<T> extends StatefulWidget {
   /// - [emptyState]: Optional widget to display when the list is empty. Defaults to null.
   /// - [width]: The panel's fixed width, in logical pixels. Defaults to null, which
   ///   keeps the panel's default width of [kLayrzScaffoldListWidth].
+  /// - [onRefresh]: Called to refresh the list's data, or null (the default) to
+  ///   disable the refresh affordance entirely.
+  /// - [refreshController]: Optional controller for the refresh lifecycle. Defaults
+  ///   to null, ignored unless [onRefresh] is also non-null.
   const ListPanel({
     super.key,
     required this.items,
@@ -79,6 +111,8 @@ class ListPanel<T> extends StatefulWidget {
     required this.itemExtent,
     this.emptyState,
     this.width,
+    this.onRefresh,
+    this.refreshController,
   });
 
   @override
@@ -90,6 +124,32 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
 
   /// Filtered items based on the current search query.
   List<LayrzScaffoldItem<T>> _filteredItems = [];
+
+  /// This panel's own [LayrzRefreshController], created only when
+  /// [ListPanel.onRefresh] is non-null AND [ListPanel.refreshController] was
+  /// left null.
+  ///
+  /// **Why this panel owns it instead of leaving [LayrzRefreshIndicator] to
+  /// create its own internal one** (which is what passing `controller: null`
+  /// to it would normally do): the SAME controller instance must drive both
+  /// the [LayrzRefreshIndicator] wrapping the list (drag gesture + pull
+  /// visual) and the [ListPanelRefreshFooter] in the footer region (the
+  /// always-available tap affordance) — otherwise a drag-triggered refresh
+  /// would never animate the footer button's spinner, and a footer-triggered
+  /// refresh would never animate the pull visual. Owning one shared instance
+  /// here, rather than each child creating its own, is what keeps both in
+  /// lockstep.
+  LayrzRefreshController? _ownedRefreshController;
+
+  /// The controller actually passed to both [LayrzRefreshIndicator] and
+  /// [ListPanelRefreshFooter]: [ListPanel.refreshController] if the caller
+  /// supplied one, otherwise [_ownedRefreshController], created lazily on
+  /// first use and disposed by this state.
+  LayrzRefreshController get _effectiveRefreshController {
+    final supplied = widget.refreshController;
+    if (supplied != null) return supplied;
+    return _ownedRefreshController ??= LayrzRefreshController();
+  }
 
   @override
   void initState() {
@@ -115,6 +175,10 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
   @override
   void dispose() {
     _searchController.dispose();
+    // Only disposed when this panel created it itself — a caller-supplied
+    // widget.refreshController is caller-owned, mirroring
+    // LayrzRefreshIndicator's own controller-disposal contract.
+    _ownedRefreshController?.dispose();
     super.dispose();
   }
 
@@ -179,49 +243,122 @@ class _ListPanelState<T> extends State<ListPanel<T>> {
               mode: LayrzSearchInputMode.field,
             ),
           Expanded(
-            child: _filteredItems.isEmpty
-                ? _buildEmptyState(tokens)
-                : ListView.builder(
-                    // Reserves the vertical scrollbar's gutter (LayrzScrollBehavior
-                    // installs one globally on pointer platforms — see
-                    // kLayrzScrollbarThickness) so its thumb paints clear of the
-                    // rows' own content, most visibly the trailing-edge action
-                    // reveal in ScaffoldRow.
-                    //
-                    // This padding MUST live on the ListView itself, not on a
-                    // Padding wrapped around it. LayrzScrollBehavior installs the
-                    // RawScrollbar inside the Scrollable (via ScrollConfiguration),
-                    // so the thumb paints flush against the ListView's own render
-                    // box, at whatever width that box ends up being. A Padding
-                    // wrapping the ListView shrinks the Scrollable's box by the
-                    // same amount it insets the content, so the thumb and the
-                    // rows' right edge still land on the same X — no gutter is
-                    // actually created. Passing the padding to ListView.padding
-                    // keeps the Scrollable/Viewport at the panel's full content
-                    // width (so the thumb paints at that outer edge) while only
-                    // the sliver content is inset, leaving a real gap between the
-                    // rows and the thumb. Mirrors how the calendar's day/week hour
-                    // grid reserves kLayrzCalendarHourGridEndPadding *inside* its
-                    // SingleChildScrollView's child instead of around the
-                    // scrollable — see calendar_day_surface.dart.
-                    padding: const EdgeInsets.only(right: kLayrzScrollbarThickness),
-                    itemCount: _filteredItems.length,
-                    itemExtent: widget.itemExtent,
-                    itemBuilder: (context, index) {
-                      return _buildListItem(context, tokens, _filteredItems[index], index);
-                    },
-                  ),
+            child: _buildListArea(context, tokens),
           ),
-          if (widget.footer != null) ...[
+          if (_hasFooterRegion) ...[
             Container(height: 1, color: tokens.colors.divider),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: widget.footer!,
+              child: _buildFooterRegion(context),
             ),
           ],
         ],
       ),
     );
+  }
+
+  /// Whether the footer region (the hairline plus its padded content) should
+  /// render at all — true when either the consumer's own [ListPanel.footer]
+  /// or the built-in refresh affordance ([ListPanel.onRefresh] non-null) has
+  /// something to show.
+  bool get _hasFooterRegion => widget.footer != null || widget.onRefresh != null;
+
+  /// Builds the list's scrollable content, optionally wrapped in a
+  /// [LayrzRefreshIndicator] when [ListPanel.onRefresh] is non-null.
+  ///
+  /// The indicator wraps ONLY this scrollable — not the search field, title,
+  /// or footer region above/below it, and never the shell's detail pane —
+  /// which is the entire point of a list-level (rather than shell-level)
+  /// refresh: nothing floats over content outside the list itself. Its
+  /// built-in fallback button is explicitly disabled
+  /// ([LayrzRefreshFallbackButtonMode.disabled]): this panel's own
+  /// [ListPanelRefreshFooter], rendered in the footer region below, is the
+  /// always-available affordance instead — see [ListPanelRefreshFooter]'s own
+  /// class doc for why.
+  Widget _buildListArea(BuildContext context, LayrzTokens tokens) {
+    final list = _filteredItems.isEmpty ? _buildEmptyState(tokens) : _buildListView(context, tokens);
+
+    final onRefresh = widget.onRefresh;
+    if (onRefresh == null) {
+      return list;
+    }
+
+    return LayrzRefreshIndicator(
+      onRefresh: onRefresh,
+      controller: _effectiveRefreshController,
+      fallbackButtonMode: LayrzRefreshFallbackButtonMode.disabled,
+      child: list,
+    );
+  }
+
+  /// Builds the virtualized [ListView] of filtered rows.
+  Widget _buildListView(BuildContext context, LayrzTokens tokens) {
+    return ListView.builder(
+      // Reserves the vertical scrollbar's gutter (LayrzScrollBehavior
+      // installs one globally on pointer platforms — see
+      // kLayrzScrollbarThickness) so its thumb paints clear of the
+      // rows' own content, most visibly the trailing-edge action
+      // reveal in ScaffoldRow.
+      //
+      // This padding MUST live on the ListView itself, not on a
+      // Padding wrapped around it. LayrzScrollBehavior installs the
+      // RawScrollbar inside the Scrollable (via ScrollConfiguration),
+      // so the thumb paints flush against the ListView's own render
+      // box, at whatever width that box ends up being. A Padding
+      // wrapping the ListView shrinks the Scrollable's box by the
+      // same amount it insets the content, so the thumb and the
+      // rows' right edge still land on the same X — no gutter is
+      // actually created. Passing the padding to ListView.padding
+      // keeps the Scrollable/Viewport at the panel's full content
+      // width (so the thumb paints at that outer edge) while only
+      // the sliver content is inset, leaving a real gap between the
+      // rows and the thumb. Mirrors how the calendar's day/week hour
+      // grid reserves kLayrzCalendarHourGridEndPadding *inside* its
+      // SingleChildScrollView's child instead of around the
+      // scrollable — see calendar_day_surface.dart.
+      padding: const EdgeInsets.only(right: kLayrzScrollbarThickness),
+      itemCount: _filteredItems.length,
+      itemExtent: widget.itemExtent,
+      itemBuilder: (context, index) {
+        return _buildListItem(context, tokens, _filteredItems[index], index);
+      },
+    );
+  }
+
+  /// Builds the footer region's content: the consumer's own [ListPanel.footer]
+  /// (if any) alongside the built-in [ListPanelRefreshFooter] (if
+  /// [ListPanel.onRefresh] is non-null) — coexisting as siblings in a [Row],
+  /// never one replacing the other. When only one of the two is present, that
+  /// one alone fills the row (the footer expands to take the remaining
+  /// space so its own internal layout, e.g. a results label, is unaffected).
+  Widget _buildFooterRegion(BuildContext context) {
+    final footer = widget.footer;
+    final onRefresh = widget.onRefresh;
+
+    if (footer != null && onRefresh != null) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: footer),
+          ListPanelRefreshFooter(
+            controller: _effectiveRefreshController,
+            onRefresh: onRefresh,
+          ),
+        ],
+      );
+    }
+
+    if (onRefresh != null) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: ListPanelRefreshFooter(
+          controller: _effectiveRefreshController,
+          onRefresh: onRefresh,
+        ),
+      );
+    }
+
+    return footer!;
   }
 
   /// Builds the [ScaffoldRow] for [item] at its position ([index]) within the

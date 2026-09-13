@@ -1,5 +1,7 @@
 import "package:flutter/widgets.dart";
+import "package:layrz_ui/src/cards/cards.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
+import "package:layrz_ui/src/refresh/refresh.dart";
 import "package:layrz_ui/src/scaffold/src/scaffold_item.dart";
 import "package:layrz_ui/src/sheets/sheets.dart";
 import "package:layrz_ui/src/tokens/tokens.dart";
@@ -83,6 +85,41 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// If null, a localized default message is displayed.
   final Widget? emptyState;
 
+  /// Called to refresh the list's data, or null to disable the refresh affordance
+  /// entirely.
+  ///
+  /// The shell's refresh affordance is scoped to the LIST PANEL only, never the
+  /// whole shell: internally, [ListPanel] wraps just its own scrollable in a
+  /// [LayrzRefreshIndicator] (drag gesture + pull visual) and renders a small,
+  /// always-available refresh control in its footer region, alongside
+  /// [footer] rather than replacing it — this is what lets a consumer stop
+  /// wrapping the entire [LayrzScaffoldShell] in their own
+  /// [LayrzRefreshIndicator], which previously floated its fallback button
+  /// over BOTH panes (list and detail) instead of just the list.
+  ///
+  /// There is deliberately no floating fallback button and no header/toolbar
+  /// button at the shell level — desktop's always-available affordance is the
+  /// footer control described above. Touch platforms additionally keep the
+  /// drag-to-refresh gesture on the list's scrollable.
+  ///
+  /// Defaults to null, which is fully backward compatible: no indicator is
+  /// built around the list, and no refresh control appears in the footer
+  /// region — [footer] renders exactly as it did before this parameter
+  /// existed.
+  final Future<void> Function()? onRefresh;
+
+  /// Optional controller for the list panel's refresh lifecycle.
+  ///
+  /// Ignored when [onRefresh] is null. When [onRefresh] is non-null and this
+  /// is left null, the shell creates and owns its own internal controller.
+  /// Pass an explicit [LayrzRefreshController] to also trigger a refresh
+  /// programmatically from outside the shell (e.g. a keyboard shortcut, a
+  /// toolbar action elsewhere in the app) via [LayrzRefreshController.refresh] —
+  /// the same controller instance drives both the drag gesture/pull visual
+  /// and the footer refresh control, so every trigger path animates in
+  /// lockstep.
+  final LayrzRefreshController? refreshController;
+
   /// Creates a new [LayrzScaffoldShell].
   ///
   /// - [items]: The items to display in the list. Required.
@@ -94,6 +131,10 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// - [title]: Optional title widget rendered above the search field. Defaults to null.
   /// - [itemExtent]: The height of each list item. Required.
   /// - [emptyState]: Optional widget to display when the list is empty. Defaults to null.
+  /// - [onRefresh]: Called to refresh the list's data. Defaults to null, which disables
+  ///   the refresh affordance entirely (no indicator, no footer control).
+  /// - [refreshController]: Optional controller for the refresh lifecycle. Defaults to
+  ///   null, ignored unless [onRefresh] is also non-null.
   const LayrzScaffoldShell({
     super.key,
     required this.items,
@@ -104,6 +145,8 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
     this.title,
     required this.itemExtent,
     this.emptyState,
+    this.onRefresh,
+    this.refreshController,
   });
 
   @override
@@ -362,8 +405,17 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     return resolveFoldSplit(features: features, shellRect: shellRect);
   }
 
+  /// Builds the wide (side-by-side) layout used at `md`+ breakpoints.
+  ///
+  /// The detail pane is wrapped in a [LayrzCard] rather than separated from
+  /// the list panel by a hairline divider — a card reads as its own object
+  /// (echoing the narrow layout's floating bottom sheet) instead of a bare
+  /// rule down the middle. A [LayrzSpacingTokens.sp3] gutter surrounds the
+  /// card on every side, giving it room to read as a distinct surface without
+  /// a hard line against the list panel or the shell's own edges.
   Widget _buildWideLayout(BuildContext context, LayrzTokens tokens) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         ListPanel<T>(
           items: widget.items,
@@ -375,14 +427,18 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
           title: widget.title,
           itemExtent: _itemExtent,
           emptyState: widget.emptyState,
-        ),
-        Container(
-          width: 1,
-          color: tokens.colors.divider,
+          onRefresh: widget.onRefresh,
+          refreshController: widget.refreshController,
         ),
         Expanded(
-          child: DetailPane(
-            builder: widget.controller.openedBuilder,
+          child: Padding(
+            padding: EdgeInsets.all(tokens.spacing.sp3),
+            child: LayrzCard(
+              elevation: 1,
+              child: DetailPane(
+                builder: widget.controller.openedBuilder,
+              ),
+            ),
           ),
         ),
       ],
@@ -391,29 +447,68 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
 
   /// Builds the side-by-side split forced by a vertical physical seam.
   ///
-  /// Structurally identical to [_buildWideLayout] -- same [ListPanel]/[DetailPane]
+  /// Structurally close to [_buildWideLayout] -- same [ListPanel]/[DetailPane]
   /// wiring, same `onTap` -> [LayrzScaffoldController.open] -- except the list
   /// panel takes [split]'s mapped [LayrzFoldSplit.leadingExtent] instead of its
-  /// usual fixed width, and the divider is a hairline when the seam is
-  /// creaseless ([LayrzFoldSplit.gap] `== 0`) or a spacer sized to the seam's
-  /// actual occlusion otherwise. The two panes are deliberately asymmetric,
-  /// matching the physical seam -- they are never equalised to 50/50.
+  /// usual fixed width. What sits between the two panes depends on
+  /// [LayrzFoldSplit.gap]:
+  ///
+  /// - **`gap == 0`** (a creaseless `fold`, no physical thickness): there is no
+  ///   real occlusion to preserve, so this case gets the same [LayrzCard]
+  ///   treatment as [_buildWideLayout] -- a padded card wrapping the detail
+  ///   pane, in place of the old hairline divider.
+  /// - **`gap > 0`** (a `hinge` with genuine physical thickness, decision
+  ///   D73): the gap is preserved EXACTLY as a bare [SizedBox] spacer sized to
+  ///   the seam's own measured occlusion -- it maps to real, physically
+  ///   unusable screen space, not a design choice, so it must never be
+  ///   replaced by card padding or a gutter of the design system's own
+  ///   choosing.
+  ///
+  /// The two panes are deliberately asymmetric, matching the physical seam --
+  /// they are never equalised to 50/50.
   Widget _buildFoldedSideBySideLayout(BuildContext context, LayrzTokens tokens, LayrzFoldSplit split) {
+    final listPanel = ListPanel<T>(
+      items: widget.items,
+      openedKey: widget.controller.openedKey,
+      controller: widget.controller,
+      onTap: widget.onItemTap,
+      searchable: widget.searchable,
+      footer: widget.footer,
+      title: widget.title,
+      itemExtent: _itemExtent,
+      emptyState: widget.emptyState,
+      width: split.leadingExtent,
+      onRefresh: widget.onRefresh,
+      refreshController: widget.refreshController,
+    );
+
+    if (split.gap == 0) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          listPanel,
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(tokens.spacing.sp3),
+              child: LayrzCard(
+                elevation: 1,
+                child: DetailPane(
+                  builder: widget.controller.openedBuilder,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Row(
       children: [
-        ListPanel<T>(
-          items: widget.items,
-          openedKey: widget.controller.openedKey,
-          controller: widget.controller,
-          onTap: widget.onItemTap,
-          searchable: widget.searchable,
-          footer: widget.footer,
-          title: widget.title,
-          itemExtent: _itemExtent,
-          emptyState: widget.emptyState,
-          width: split.leadingExtent,
-        ),
-        split.gap == 0 ? Container(width: 1, color: tokens.colors.divider) : SizedBox(width: split.gap),
+        listPanel,
+        // Physical-seam spacer (decision D73): sized to the hinge's real
+        // occlusion, never a design-system gutter -- see this method's own
+        // doc comment.
+        SizedBox(width: split.gap),
         Expanded(
           child: DetailPane(
             builder: widget.controller.openedBuilder,
@@ -435,6 +530,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
       title: widget.title,
       itemExtent: _itemExtent,
       emptyState: widget.emptyState,
+      onRefresh: widget.onRefresh,
+      refreshController: widget.refreshController,
     );
 
     // Schedule the sheet presentation in a post-frame callback to avoid building during build.

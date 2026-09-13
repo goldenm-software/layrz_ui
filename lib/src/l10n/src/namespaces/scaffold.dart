@@ -3,6 +3,13 @@ mixin LayrzUiL10nScaffoldMixin {
   /// Localized empty state message when the list has no items.
   String get scaffoldEmpty => 'No items';
 
+  /// Localized label (and tooltip hint) for `LayrzScaffoldShell`'s built-in
+  /// list-panel footer refresh affordance, shown only when
+  /// `LayrzScaffoldShell.onRefresh` is non-null.
+  ///
+  /// English default: "Refresh"
+  String get scaffoldRefresh => 'Refresh';
+
   /// Localized label for `LayrzApp`'s automatic debug-mode watermark.
   ///
   /// Used as the default `LayrzAppBanner.labelText` that `LayrzApp` installs

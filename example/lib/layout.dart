@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
+import 'src/providers/colorblind_provider.dart';
 import 'src/providers/theme_mode_provider.dart';
 
 /// The showroom logo, light-background variant.
@@ -12,6 +13,19 @@ const _kLightLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo.png?5';
 
 /// The showroom logo, dark-background variant.
 const _kDarkLogo = 'https://cdn.layrz.com/resources/com.layrz.ui/logo-white.png?5';
+
+/// Human-readable labels for every [ColorblindMode], used by the
+/// "Accessibility" section of the user-chrome dropdown. Kept in the same
+/// declaration order as the enum so the menu lists them normal-first.
+const Map<ColorblindMode, String> _kColorblindLabels = {
+  ColorblindMode.normal: 'Typical vision',
+  ColorblindMode.protanopia: 'Protanopia (red-blind)',
+  ColorblindMode.protanomaly: 'Protanomaly (red-weak)',
+  ColorblindMode.deuteranopia: 'Deuteranopia (green-blind)',
+  ColorblindMode.deuteranomaly: 'Deuteranomaly (green-weak)',
+  ColorblindMode.tritanopia: 'Tritanopia (blue-blind)',
+  ColorblindMode.tritanomaly: 'Tritanomaly (blue-weak)',
+};
 
 /// Wraps a showroom page in the application shell.
 ///
@@ -72,6 +86,7 @@ class _ShowroomLayoutState extends ConsumerState<ShowroomLayout> {
       LayrzThemeMode.system => MediaQuery.platformBrightnessOf(context) == Brightness.dark,
     };
     final accent = context.theme.primaryColor;
+    final colorblindMode = ref.watch(colorblindModeProvider);
 
     return LayrzLayout(
       controller: _layoutController,
@@ -119,6 +134,14 @@ class _ShowroomLayoutState extends ConsumerState<ShowroomLayout> {
           color: mode == LayrzThemeMode.system ? accent : null,
           onTap: () => ref.read(themeModeProvider.notifier).state = LayrzThemeMode.system,
         ),
+        LayrzDropdownLabel(labelText: 'Accessibility'),
+        for (final entry in _kColorblindLabels.entries)
+          LayrzDropdownEntry(
+            labelText: entry.value,
+            icon: MdiIcons.eyeOutline,
+            color: colorblindMode == entry.key ? accent : null,
+            onTap: () => ref.read(colorblindModeProvider.notifier).state = entry.key,
+          ),
       ],
       notifications: [
         LayrzNotificationItem(
@@ -177,6 +200,13 @@ class _ShowroomLayoutState extends ConsumerState<ShowroomLayout> {
         icon: MdiIcons.palette,
         isSelected: currentRoute == '/colors',
         onTap: () => _navigateTo(context, '/colors'),
+      ),
+      LayrzNavigatorPage(
+        id: '/colorblind',
+        labelText: 'Colorblind (beta)',
+        icon: MdiIcons.eyeOutline,
+        isSelected: currentRoute == '/colorblind',
+        onTap: () => _navigateTo(context, '/colorblind'),
       ),
       LayrzNavigatorPage(
         id: '/elevation',

@@ -77,9 +77,10 @@ class _SpacingRuler extends StatelessWidget {
                 children: [
                   // Label
                   SizedBox(
-                    width: tokens.spacing.sp4,
+                    width: 20,
                     child: Text(item.$1, style: tokens.typography.label.copyWith(color: tokens.colors.fg3)),
                   ),
+                  tokens.spacing.sb2,
 
                   // Track (background strip) with bar on top showing true width
                   Expanded(
@@ -108,16 +109,13 @@ class _SpacingRuler extends StatelessWidget {
                     ),
                   ),
 
+                  tokens.spacing.sb2,
                   // Value label
-                  SizedBox(width: tokens.spacing.sp2),
                   SizedBox(
-                    width: tokens.spacing.sp4,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: UnitDisplay(
-                        value: item.$2,
-                        textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg3),
-                      ),
+                    width: 30,
+                    child: UnitDisplay(
+                      value: item.$2,
+                      textStyle: tokens.typography.label.copyWith(color: tokens.colors.fg3),
                     ),
                   ),
                 ],

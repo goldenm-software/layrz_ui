@@ -92,7 +92,7 @@ class LayrzTreeRowStyleSpec {
       backgroundColor: backgroundColor,
       foregroundColor: tokens.colors.fg1,
       indentGuideColor: tokens.colors.divider,
-      chevronColor: tokens.colors.fg2,
+      chevronColor: tokens.brightness == Brightness.dark ? tokens.colors.fg1 : tokens.colors.fg2,
       checkboxBorderColor: isSelected || isPartiallySelected ? tokens.colors.primary : tokens.colors.fg3,
       checkboxFillColor: tokens.colors.primary,
       checkboxGlyphColor: tokens.colors.sf1,
@@ -110,6 +110,13 @@ class LayrzTreeRowStyleSpec {
   final Color indentGuideColor;
 
   /// The colour of the expand/collapse chevron glyph.
+  ///
+  /// Resolves to [LayrzColorTokens.fg1] in dark mode and [LayrzColorTokens.fg2]
+  /// in light mode. `fg2` alone is a dim gray in the dark palette
+  /// (`0xFFB8BDCB`) that sits next to the near-white `fg1` label text
+  /// (`0xFFECEEF3`) and reads as effectively invisible against it; brightening
+  /// the chevron to `fg1` on dark keeps it as legible as the label it sits
+  /// beside, while light mode is unaffected.
   final Color chevronColor;
 
   /// The border colour of the selection checkbox affordance when unfilled.
