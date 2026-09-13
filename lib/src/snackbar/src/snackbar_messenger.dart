@@ -499,13 +499,27 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
   /// to the new [_SnackbarEntry] as [_SnackbarEntry.reduceMotion] — this is
   /// the only place in the entry's lifecycle with a [BuildContext] available,
   /// since [_SnackbarEntry] itself is plain bookkeeping, not a widget.
+  ///
+  /// **Stale-hover hardening:** [_isHovered] is only honored here when the
+  /// queue already held a visible card the pointer could genuinely be
+  /// hovering *before* this insert. If the queue was empty, nothing on
+  /// screen could be under the pointer, so [_isHovered] — if still `true` —
+  /// is necessarily stale (see [_dismiss] for how that staleness happens)
+  /// and is reset to `false` here to match reality, and the new entry always
+  /// starts draining regardless. This is the true invariant: "empty stack
+  /// implies not hovered."
   void show(LayrzSnackbar snackbar) {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final entry = _SnackbarEntry(snackbar: snackbar, vsync: this, reduceMotion: reduceMotion);
     entry.onExpired = () => _dismiss(entry);
-    if (_isHovered) {
+
+    final stackWasEmpty = _queue.isEmpty;
+    if (stackWasEmpty) {
+      _isHovered = false;
+    } else if (_isHovered) {
       entry.pauseDrain();
     }
+
     setState(() {
       _queue.insert(0, entry);
     });
@@ -519,6 +533,20 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
   /// controllers. Safe to call more than once for the same entry (guarded by
   /// [_SnackbarEntry.isClosing]); a race between, say, an auto-expiry and a
   /// close-tap firing in the same frame is a no-op on the second call.
+  ///
+  /// **Stale-hover hardening:** removing [entry] can leave [_queue] empty
+  /// while [_isHovered] is still `true`. This happens when a card is
+  /// dismissed (e.g. via its close button) while the pointer sits over it —
+  /// [MouseRegion.onExit] is not guaranteed to fire when the hovered widget
+  /// is removed from the tree out from under the pointer, rather than the
+  /// pointer actually leaving its bounds, so [_handleStackExit] never runs
+  /// and [_isHovered] leaks `true` with nothing left on screen to be hovered.
+  /// Since the stack is empty once this removal completes, the pointer
+  /// cannot genuinely be over any live card any more, so [_isHovered] is
+  /// reset to `false` here to match reality — this is the only place besides
+  /// [_handleStackExit] that clears it, and it closes the gap `onExit` left
+  /// open. (See [show] for the matching half of this invariant on the
+  /// insert side.)
   void _dismiss(_SnackbarEntry entry) {
     if (entry.isClosing) return;
     entry.isClosing = true;
@@ -528,6 +556,9 @@ class LayrzSnackbarMessengerState extends State<LayrzSnackbarMessenger> with Tic
     }
     setState(() {
       _queue.remove(entry);
+      if (_queue.isEmpty) {
+        _isHovered = false;
+      }
     });
     _measuredHeights.remove(entry);
     entry.dispose();
