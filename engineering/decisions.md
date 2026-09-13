@@ -5535,3 +5535,78 @@ colour remapping is wanted instead.
   consumer-supplies-a-parameter wiring dark mode established (`themeMode` → `colorblindMode`).
 - **D2 / D3**: Dependency-policy decisions about keeping Material out of layrz_ui's transitive graph;
   this entry applies the same principle to `layrz_sdk`.
+
+---
+
+## D81: `LayrzScaffoldShell` Desktop Revamp — Detail Pane as `LayrzCard`, List-Level Refresh in the Footer
+
+**Date**: 2026-09-12
+**Status**: Decided
+**Category**: Architecture / API / UX
+
+### Context
+
+Two limitations surfaced from real showroom and consumer-component use of `LayrzScaffoldShell`:
+
+- **Detail pane separation.** On the wide desktop and folded-creaseless layouts, the detail pane was
+  separated from the list by a 1px `divider`-coloured hairline (`Container(width: 1, ...)`). The
+  detail read as "the other half of a split" rather than as its own object, and the flat surface the
+  pane painted for itself did not match an elevated container in dark mode.
+- **No list-level refresh.** `LayrzScaffoldShell` exposed no way to attach a refresh affordance to
+  its own internal list scrollable. A consuming component (categories) could only wrap the entire
+  shell in `LayrzRefreshIndicator`, whose floating fallback button then floated over the whole
+  two-pane area — mispositioned, and (per the maintainer) "kinda weird" on desktop. `LayrzRefreshIndicator`'s
+  fallback button is hardcoded to float top-right over its child and cannot be relocated.
+
+### Decision
+
+**Detail pane becomes a `LayrzCard`; the list keeps a built-in, list-level refresh affordance in its
+footer region.**
+
+1. **Detail pane as card.** In the wide layout (and the folded *creaseless* `gap == 0` sub-case), the
+   hairline divider is removed and the detail pane is wrapped in `Padding(sp3) → LayrzCard(elevation: 1)`.
+   The list panel is unchanged. `DetailPane` no longer paints its own `sf1` surface — the enclosing
+   surface (the `LayrzCard` on desktop, `LayrzBottomSheet` on mobile) owns it. This also fixes a
+   latent dark-mode defect: the pane's flat `sf1` fill previously painted over the card's dark-mode
+   surface (`sf3`), defeating the intended contrast.
+   The folded **hinge** case (`gap > 0`, decision D73) is untouched — its spacer maps to real
+   physical screen occlusion and must not become a card gutter.
+
+2. **List-level refresh.** `LayrzScaffoldShell` gains an optional `onRefresh` (`Future<void> Function()?`)
+   and an optional `refreshController` (`LayrzRefreshController?`). When `onRefresh` is set, the shell
+   wires a `LayrzRefreshIndicator` around **its own internal list scrollable** (never the whole shell,
+   so nothing floats over the detail pane) and renders a refresh control in the list panel's **footer
+   region, alongside** any consumer-supplied `footer` — not as, and not replacing, the `footer` slot.
+   The indicator's floating fallback button is disabled; the footer control is the always-available
+   affordance on every platform, while the touch drag gesture still works and shares one
+   `LayrzRefreshController` with the footer control. `onRefresh == null` changes nothing (fully
+   backward compatible).
+
+### Rationale
+
+- A card makes the detail read as its own object and echoes the mobile bottom-sheet's floating-surface
+  feel on desktop; letting the enclosing surface own the fill removes a whole class of surface-colour
+  mismatches (the dark-mode bug above being the concrete one).
+- Refresh belongs at the list level because the list is the scrollable being refreshed; putting the
+  affordance in the footer region keeps it discoverable without floating chrome over the detail pane,
+  and it composes with an existing consumer `footer` instead of fighting it.
+- The floating fallback button was explicitly rejected for desktop; since `LayrzRefreshIndicator`
+  cannot relocate its own button, the shell provides its own footer control and uses the indicator
+  only for the pull gesture and spinner state.
+
+### Consequences
+
+- Consumers wanting pull-to-refresh on a `LayrzScaffoldShell` pass `onRefresh` instead of wrapping the
+  shell in their own `LayrzRefreshIndicator`. The categories component will adopt this and drop its
+  shell-wrapping workaround.
+- Detail content that relied on the pane painting an `sf1` background must now sit on the card's
+  surface (the common case) or paint its own; empty-state and selection behaviour are unchanged.
+- The wide/creaseless-folded detail pane is now inset by `sp3` and elevated; layouts that measured the
+  detail pane flush to the shell edge will see the gutter.
+
+### Related Decisions
+
+- **D73**: Foldable hinge split — the `gap > 0` occlusion spacer is preserved unchanged; only the
+  creaseless (`gap == 0`) case adopts the card.
+- **D79**: Builder-based detail pane — this revamp changes the pane's *surface and separation*, not
+  what feeds its content.
