@@ -1,16 +1,21 @@
 import 'package:flutter/foundation.dart' show compute, kIsWeb;
 
-/// How many merge runs execute between yields in the web (chunked) sort path.
+/// How many merged elements the web (chunked) sort processes between yields.
 ///
-/// After this many runs the sort yields with `Future.delayed(Duration.zero)` —
-/// a MACROTASK, not a microtask. This distinction is load-bearing: `await null`
+/// Budgeting by ELEMENTS (not merge-run count) keeps every chunk bounded: late
+/// merge passes have few runs but each merges a huge sub-array, so a run-count
+/// budget would let one chunk run for seconds. ~20k elements per chunk keeps a
+/// chunk in the low-tens-of-ms range for typical key comparisons.
+///
+/// After each budget the sort yields with `Future.delayed(Duration.zero)` — a
+/// MACROTASK, not a microtask. This distinction is load-bearing: `await null`
 /// (or any already-completed future) resumes on the microtask queue, and Dart
 /// drains the *entire* microtask queue before the browser ever paints, so it
 /// does NOT let the UI render mid-sort. Only returning to the event loop via a
 /// macrotask lets the browser service a frame — keeping the UI responsive (and
 /// the table's "sorting" strip animating) during a large sort on web, where
 /// `compute` cannot move the work off the single main thread.
-const int _kYieldEveryRuns = 64;
+const int _kYieldEveryElements = 20000;
 
 /// Payload sent across the isolate boundary to [sortByKeys] for the default
 /// (no `LayrzColumn.customSort`) sort path.
@@ -90,15 +95,20 @@ List<T> sortTableItems<T>(SortParams<T> params) {
 /// the main thread — cheap reference shuffling, independent of how large or
 /// deeply-nested `T` is.
 List<int> sortByKeys(SortKeysParams params) {
+  // Parse each key once (decorate-sort-undecorate) so the O(n log n)
+  // comparisons don't re-run num/duration/date parsing every call — the same
+  // optimization [sortByKeysYielding] uses, applied here to the native
+  // (isolate) path too.
+  final parsed = _parseSortKeys(params.sortKeys);
   final indices = List<int>.generate(params.sortKeys.length, (i) => i);
-  indices.sort((a, b) => defaultSortCompare(params.sortKeys[a], params.sortKeys[b], ascending: params.ascending));
+  indices.sort((a, b) => _compareParsedSortKeys(parsed[a], parsed[b], ascending: params.ascending));
   return indices;
 }
 
 /// A bottom-up (iterative) merge sort of the index array `0..n`, ordered by
-/// [defaultSortCompare] over [SortKeysParams.sortKeys], that `await`s a
-/// microtask every [_kYieldEveryRuns] merge runs so the event loop can service
-/// frames.
+/// the same rule as [defaultSortCompare] over [SortKeysParams.sortKeys] (via
+/// pre-parsed keys), yielding a macrotask every [_kYieldEveryElements] merged
+/// elements so the event loop can service frames.
 ///
 /// Merge sort (not `List.sort`) is used because the work must be broken into
 /// resumable chunks: Dart's built-in `List.sort` is a single synchronous call
@@ -107,11 +117,19 @@ List<int> sortByKeys(SortKeysParams params) {
 /// instead, trading a little raw speed for a responsive UI. It is stable and
 /// returns the sorted **index order**, matching [sortByKeys].
 Future<List<int>> sortByKeysYielding(SortKeysParams params) async {
-  final keys = params.sortKeys;
-  final n = keys.length;
+  final n = params.sortKeys.length;
+  // Parse each key ONCE up front (decorate-sort-undecorate), so the O(n log n)
+  // comparisons below never re-parse. This is the dominant speedup, independent
+  // of the yielding.
+  final parsed = _parseSortKeys(params.sortKeys);
+  final ascending = params.ascending;
   var current = List<int>.generate(n, (i) => i);
   var buffer = List<int>.filled(n, 0);
-  var runsSinceYield = 0;
+  // Yield by ELEMENTS PROCESSED, not by merge-run count: late passes have very
+  // few runs but each merges an enormous sub-array, so a run-count budget lets
+  // a single chunk run for seconds. An element budget keeps every chunk bounded
+  // regardless of merge width.
+  var sinceYield = 0;
 
   for (var width = 1; width < n; width *= 2) {
     for (var lo = 0; lo < n; lo += 2 * width) {
@@ -122,7 +140,7 @@ Future<List<int>> sortByKeysYielding(SortKeysParams params) async {
       var k = lo;
       while (i < mid && j < hi) {
         // `<= 0` keeps equal keys in their original relative order (stable).
-        if (defaultSortCompare(keys[current[i]], keys[current[j]], ascending: params.ascending) <= 0) {
+        if (_compareParsedSortKeys(parsed[current[i]], parsed[current[j]], ascending: ascending) <= 0) {
           buffer[k++] = current[i++];
         } else {
           buffer[k++] = current[j++];
@@ -134,11 +152,12 @@ Future<List<int>> sortByKeysYielding(SortKeysParams params) async {
       while (j < hi) {
         buffer[k++] = current[j++];
       }
-      if (++runsSinceYield >= _kYieldEveryRuns) {
-        runsSinceYield = 0;
+      sinceYield += hi - lo;
+      if (sinceYield >= _kYieldEveryElements) {
+        sinceYield = 0;
         // Macrotask yield: returns to the event loop so the browser can paint a
         // frame. A microtask (`await null`) would not — Dart drains all
-        // microtasks before rendering. See [_kYieldEveryRuns].
+        // microtasks before rendering. See [_kYieldEveryElements].
         await Future<void>.delayed(Duration.zero);
       }
     }
@@ -237,4 +256,61 @@ Duration? _tryParseDuration(String value) {
   final minutes = numericParts[numericParts.length - 2]!;
   final seconds = numericParts[numericParts.length - 1]!;
   return Duration(hours: hours, minutes: minutes, seconds: seconds);
+}
+
+/// A sort key string with its type interpretations parsed ONCE, so a merge
+/// sort can compare O(n log n) times without re-running `num.tryParse`,
+/// `_tryParseDuration`, and `DateTime.tryParse` on every comparison — the
+/// dominant cost of sorting a few thousand rows with [defaultSortCompare].
+///
+/// Holds every interpretation [defaultSortCompare] tries; [_compareParsedSortKeys]
+/// applies the exact same "first type both share wins, else fall through to a
+/// case-insensitive string compare" rule over these cached values, so the
+/// resulting order is identical to comparing the raw strings with
+/// [defaultSortCompare].
+class _ParsedSortKey {
+  _ParsedSortKey(String raw)
+    : number = num.tryParse(raw),
+      duration = _tryParseDuration(raw),
+      date = DateTime.tryParse(raw),
+      lowered = raw.toLowerCase();
+
+  /// The key parsed as a number, or `null` if it is not numeric.
+  final num? number;
+
+  /// The key parsed as an `H:M:S`/`M:S` duration, or `null`.
+  final Duration? duration;
+
+  /// The key parsed as a [DateTime], or `null`.
+  final DateTime? date;
+
+  /// The key lowercased once, for the case-insensitive string fallback.
+  final String lowered;
+}
+
+/// Parses [keys] into [_ParsedSortKey]s, one parse pass per key.
+List<_ParsedSortKey> _parseSortKeys(List<String> keys) => [for (final key in keys) _ParsedSortKey(key)];
+
+/// Compares two pre-parsed sort keys, mirroring [defaultSortCompare]'s
+/// fallthrough (numeric, then duration, then date, then case-insensitive
+/// string) but over cached values instead of re-parsing each call.
+///
+/// Kept behaviourally identical to [defaultSortCompare]; the two are covered by
+/// tests asserting they produce the same order.
+int _compareParsedSortKeys(_ParsedSortKey a, _ParsedSortKey b, {required bool ascending}) {
+  if (a.number != null && b.number != null) {
+    if (a.number == b.number) return 0;
+    final greater = a.number! > b.number!;
+    return ascending == greater ? 1 : -1;
+  }
+
+  if (a.duration != null && b.duration != null) {
+    return ascending ? a.duration!.compareTo(b.duration!) : b.duration!.compareTo(a.duration!);
+  }
+
+  if (a.date != null && b.date != null) {
+    return ascending ? a.date!.compareTo(b.date!) : b.date!.compareTo(a.date!);
+  }
+
+  return ascending ? a.lowered.compareTo(b.lowered) : b.lowered.compareTo(a.lowered);
 }
