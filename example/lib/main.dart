@@ -79,7 +79,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final font = const OpenSansFont();
   // final font = const DoppioOneFont();
-  await font.load();
+  await Future.wait([
+    font.load(),
+    BrowserContextMenu.disableContextMenu(),
+  ]);
   runApp(ProviderScope(child: ShowroomApp(font: font)));
 }
 
@@ -382,6 +385,8 @@ class ShowroomApp extends ConsumerWidget {
     final colorblindMode = ref.watch(colorblindModeProvider);
     final colorblindStrength = ref.watch(colorblindStrengthProvider);
     _applySystemOverlayStyle(context, mode);
+
+    debugPrint("MediaQuery.of(context).disableAnimations=${MediaQuery.of(context).disableAnimations}");
     return LayrzApp.router(
       routerConfig: _router,
       title: kAppTitle,

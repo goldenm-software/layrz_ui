@@ -261,6 +261,51 @@ class LayrzApp extends StatefulWidget {
   /// specific customer build) out entirely.
   final bool enableFindInPage;
 
+  /// ## Required web setup: disable the browser's native context menu
+  ///
+  /// **On web, if you use page-wide text selection (the default
+  /// [LayrzLayout.selectableContent]), you MUST disable the browser's native
+  /// right-click context menu yourself, in `main()`, before `runApp`:**
+  ///
+  /// ```dart
+  /// import 'package:flutter/foundation.dart' show kIsWeb;
+  /// import 'package:flutter/services.dart' show BrowserContextMenu;
+  ///
+  /// Future<void> main() async {
+  ///   WidgetsFlutterBinding.ensureInitialized();
+  ///   if (kIsWeb) {
+  ///     await BrowserContextMenu.disableContextMenu();
+  ///   }
+  ///   runApp(const MyApp());
+  /// }
+  /// ```
+  ///
+  /// **This is the browser/OS context menu (Back, Reload, Save image, Inspect…),
+  /// not [LayrzContextMenu]** — your in-app context menus are unaffected.
+  ///
+  /// **Why the library does not do this for you:** the correct call,
+  /// [BrowserContextMenu.disableContextMenu], is asynchronous — its `enabled`
+  /// flag only flips once a platform-channel round-trip resolves. Doing it
+  /// inside [LayrzApp] would either lose the race (the flag would still be
+  /// enabled during the first builds) or force [LayrzApp] to block/await during
+  /// widget construction, slowing every app's startup for a concern that belongs
+  /// in `main()`. Awaiting it once in `main()` is cheap and settles the flag
+  /// before the first frame.
+  ///
+  /// **Why it matters:** Flutter's [SelectableRegion] reads
+  /// `BrowserContextMenu.enabled` on every build to decide whether to wrap its
+  /// child in a `PlatformSelectableRegionContextMenu`. If that flag *changes
+  /// value* while a route transition is rebuilding the region's subtree, the
+  /// region's internal `SelectionContainer` element is re-inflated and
+  /// re-registers before the old one is removed, tripping
+  /// `SelectableRegionState`'s single-slot `assert(_selectable == null)`
+  /// (web-only, on navigation). Disabling it once and never toggling it keeps
+  /// the flag constant, so page-wide selection is safe across navigation.
+  ///
+  /// [LayrzLayout] carries a debug-only assert that fires if you forget this
+  /// step (selection on + browser menu still enabled on web) — a reminder, not
+  /// the fix. The fix is the `main()` call above.
+
   /// Imperative-routing constructor.
   const LayrzApp({
     super.key,

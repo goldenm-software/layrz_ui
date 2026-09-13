@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show BrowserContextMenu;
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
@@ -325,6 +327,25 @@ class _LayrzLayoutState extends State<LayrzLayout> {
 
   @override
   Widget build(BuildContext context) {
+    // Page-wide selection and the browser's native context menu are mutually
+    // exclusive on web. When [selectableContent] is on, this layout wraps its
+    // body in a [SelectableRegion]; that region re-inflates its internal
+    // SelectionContainer (tripping `SelectableRegionState`'s single-slot
+    // `assert(_selectable == null)`) whenever `BrowserContextMenu.enabled`
+    // changes value across a navigation rebuild. The fix is to disable the
+    // native browser menu ONCE in `main()` (see `LayrzApp`'s doc); it must be
+    // awaited there because the call is async. This assert is only a reminder
+    // that the step was missed — it is not the fix — so it fails loudly in debug
+    // rather than letting the crash surface as a red screen mid-navigation.
+    assert(
+      !(kIsWeb && widget.selectableContent && BrowserContextMenu.enabled),
+      'LayrzLayout.selectableContent is true while the browser context menu is '
+      'still enabled on web. These are incompatible: SelectableRegion crashes on '
+      'navigation when BrowserContextMenu.enabled changes. Disable it once in '
+      'main() before runApp — `if (kIsWeb) await BrowserContextMenu.disableContextMenu();` '
+      '(see LayrzApp docs) — or set selectableContent: false on this LayrzLayout.',
+    );
+
     final tokens = context.theme.tokens;
     final backgroundColor = widget.backgroundColor ?? tokens.colors.sf1;
 

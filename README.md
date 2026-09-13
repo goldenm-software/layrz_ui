@@ -28,10 +28,25 @@ dependencies:
 Then create your first app:
 
 ```dart
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show BrowserContextMenu;
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
-void main() => runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Required on web when you use page-wide text selection (the default in
+  // LayrzLayout): disable the browser's native right-click context menu once,
+  // here, before runApp. It must be awaited — the call is async. If you skip
+  // it, SelectableRegion crashes on navigation (LayrzLayout asserts in debug to
+  // remind you). This is the browser/OS menu, not LayrzContextMenu.
+  if (kIsWeb) {
+    await BrowserContextMenu.disableContextMenu();
+  }
+
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -46,6 +61,10 @@ class MyApp extends StatelessWidget {
   }
 }
 ```
+
+> **Web + text selection:** the `BrowserContextMenu.disableContextMenu()` call above is
+> mandatory on web whenever page-wide selection is enabled. See the note on `LayrzApp` /
+> `LayrzLayout` for why.
 
 For detailed setup, fonts, and routing, see [**Getting Started**](https://github.com/goldenm-software/layrz_ui/wiki/Getting-Started) in the wiki.
 
