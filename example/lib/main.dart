@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import 'layout.dart';
+import 'src/providers/colorblind_provider.dart';
 import 'src/providers/theme_mode_provider.dart';
 import 'src/sections/access_paths_section.dart';
 import 'src/sections/accordion_section.dart';
@@ -21,6 +22,7 @@ import 'src/sections/calendar_section.dart';
 import 'src/sections/cards_section.dart';
 import 'src/sections/chips_section.dart';
 import 'src/sections/code_section.dart';
+import 'src/sections/colorblind_section.dart';
 import 'src/sections/colors_section.dart';
 import 'src/sections/connection_indicator_section.dart';
 import 'src/sections/context_menu_section.dart';
@@ -313,6 +315,10 @@ final _router = GoRouter(
           path: '/scaffold-shell',
           pageBuilder: (context, state) => _fadePage(context, ScaffoldShellSection()),
         ),
+        GoRoute(
+          path: '/colorblind',
+          pageBuilder: (context, state) => _fadePage(context, ColorblindSection()),
+        ),
       ],
     ),
   ],
@@ -331,7 +337,11 @@ final _router = GoRouter(
 ///
 /// Reads [themeModeProvider] to decide which of [LayrzThemeData.light] and
 /// [LayrzThemeData.dark] is active, and re-evaluates the system status/navigation
-/// bar overlay style every time that mode changes.
+/// bar overlay style every time that mode changes. Also reads
+/// [colorblindModeProvider] and [colorblindStrengthProvider] and forwards them to
+/// [LayrzApp.router], so picking a colorblind simulation mode anywhere in the
+/// showroom (see `ColorblindSection` and the user-chrome dropdown in
+/// [ShowroomLayout]) re-renders the entire app under that simulation.
 class ShowroomApp extends ConsumerWidget {
   /// Creates a new [ShowroomApp].
   ///
@@ -369,6 +379,8 @@ class ShowroomApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(themeModeProvider);
+    final colorblindMode = ref.watch(colorblindModeProvider);
+    final colorblindStrength = ref.watch(colorblindStrengthProvider);
     _applySystemOverlayStyle(context, mode);
     return LayrzApp.router(
       routerConfig: _router,
@@ -379,6 +391,8 @@ class ShowroomApp extends ConsumerWidget {
       ),
       darkTheme: LayrzThemeData.dark(font: font),
       themeMode: mode,
+      colorblindMode: colorblindMode,
+      colorblindStrength: colorblindStrength,
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/colorblindness/colorblindness.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/find_in_page/find_in_page.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
@@ -94,6 +95,26 @@ class LayrzApp extends StatefulWidget {
   /// Which of [theme] and [darkTheme] is active. Defaults to [LayrzThemeMode.system],
   /// which follows the operating system's brightness setting.
   final LayrzThemeMode themeMode;
+
+  // ── Colorblindness (BETA) ───────────────────────────────────────────
+
+  /// The color-vision deficiency simulation applied to the whole app.
+  /// Defaults to [ColorblindMode.normal] (no simulation).
+  ///
+  /// [_LayrzAppState._wrapWithTheme] wraps the entire themed app content in a
+  /// single [ColorFiltered] using [ColorblindMode.filter] resolved from this
+  /// value and [colorblindStrength]. This is a simulation aid for previewing
+  /// how the app's colors read under a given color vision deficiency — it is
+  /// not a corrective/accessibility filter, and it is not persisted:
+  /// **persistence across app launches is the consumer's responsibility**,
+  /// the same as [themeMode].
+  final ColorblindMode colorblindMode;
+
+  /// How strongly [colorblindMode]'s simulation is applied, from `0.0` (no
+  /// effect — identical to [ColorblindMode.normal]) to `1.0` (full
+  /// simulation). Defaults to `1.0`. Values interpolate linearly between
+  /// identity and the full simulation matrix; see [ColorblindFilter.filter].
+  final double colorblindStrength;
 
   // ── App metadata ────────────────────────────────────────────────────
 
@@ -252,6 +273,8 @@ class LayrzApp extends StatefulWidget {
     this.theme,
     this.darkTheme,
     this.themeMode = LayrzThemeMode.system,
+    this.colorblindMode = ColorblindMode.normal,
+    this.colorblindStrength = 1.0,
     this.title = '',
     this.onGenerateTitle,
     this.color,
@@ -288,6 +311,8 @@ class LayrzApp extends StatefulWidget {
     this.theme,
     this.darkTheme,
     this.themeMode = LayrzThemeMode.system,
+    this.colorblindMode = ColorblindMode.normal,
+    this.colorblindStrength = 1.0,
     this.title = '',
     this.onGenerateTitle,
     this.color,
@@ -486,11 +511,20 @@ class _LayrzAppState extends State<LayrzApp> with WidgetsBindingObserver {
     // Use the provided scrollBehavior, or fall back to LayrzScrollBehavior
     final scrollBehavior = widget.scrollBehavior ?? const LayrzScrollBehavior();
 
-    return _LayrzAppScope(
-      pageTransitionType: widget.pageTransitionType,
-      child: ScrollConfiguration(
-        behavior: scrollBehavior,
-        child: innerChild,
+    // Colorblindness simulation (BETA) is applied last, as the outermost
+    // wrapper, so the single ColorFiltered covers everything built above —
+    // themed content, the debug watermark, and scroll configuration alike —
+    // mirroring how a global display filter would sit over the whole app.
+    // `ColorblindMode.normal.filter(_)` already returns the identity matrix,
+    // so this is a harmless no-op wrapper when colorblind simulation is off.
+    return ColorFiltered(
+      colorFilter: widget.colorblindMode.filter(widget.colorblindStrength),
+      child: _LayrzAppScope(
+        pageTransitionType: widget.pageTransitionType,
+        child: ScrollConfiguration(
+          behavior: scrollBehavior,
+          child: innerChild,
+        ),
       ),
     );
   }
