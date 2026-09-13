@@ -227,5 +227,36 @@ void main() {
         expect(style.checkboxFillColor.a, 1);
       },
     );
+
+    test(
+      'REGRESSION: chevronColor brightens to fg1 in dark mode, staying fg2 in light mode',
+      () {
+        // fg2 in the dark palette (0xFFB8BDCB) sits next to the near-white
+        // fg1 label text (0xFFECEEF3) and reads as effectively invisible next
+        // to it -- the chevron must resolve to fg1 on dark so it stays as
+        // legible as the label it sits beside, while light mode is
+        // unaffected (see [LayrzTreeRowStyleSpec.chevronColor]).
+        final darkTokens = LayrzThemeData.dark().tokens;
+        final lightTokens = LayrzThemeData.light().tokens;
+
+        final darkStyle = LayrzTreeRowStyleSpec.resolve(
+          darkTokens,
+          isHovered: false,
+          isSelected: false,
+          isPartiallySelected: false,
+        );
+        final lightStyle = LayrzTreeRowStyleSpec.resolve(
+          lightTokens,
+          isHovered: false,
+          isSelected: false,
+          isPartiallySelected: false,
+        );
+
+        expect(darkStyle.chevronColor, darkTokens.colors.fg1);
+        expect(darkStyle.chevronColor, isNot(darkTokens.colors.fg2));
+        expect(lightStyle.chevronColor, lightTokens.colors.fg2);
+        expect(lightStyle.chevronColor, isNot(lightTokens.colors.fg1));
+      },
+    );
   });
 }
