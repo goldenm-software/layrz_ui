@@ -3,7 +3,6 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
-import 'package:layrz_ui/src/table/src/row_scroll_sync.dart';
 import 'package:layrz_ui/src/table/src/table_header.dart';
 
 import 'helpers/pump_table.dart';
@@ -20,7 +19,7 @@ void main() {
   Widget buildHeader({
     required List<LayrzColumn<TableTestRow>> columns,
     required LayrzTableController<TableTestRow> controller,
-    LayrzTableRowScrollSync? scrollSync,
+    ScrollController? horizontalController,
     bool hasMultiselect = false,
     bool allSelected = false,
     ValueChanged<bool>? onSelectAllChanged,
@@ -41,7 +40,7 @@ void main() {
         columns: columns,
         controller: controller,
         columnWidths: {for (final c in columns) c.key: 150.0},
-        scrollSync: scrollSync ?? LayrzTableRowScrollSync(),
+        horizontalController: horizontalController ?? ScrollController(),
         hasMultiselect: hasMultiselect,
         allSelected: allSelected,
         onSelectAllChanged: onSelectAllChanged,
@@ -722,7 +721,7 @@ void main() {
           columns: columns,
           controller: controller,
           columnWidths: {for (final c in columns) c.key: 150.0},
-          scrollSync: LayrzTableRowScrollSync(),
+          horizontalController: ScrollController(),
           hasMultiselect: true,
           checkboxCellSize: 50,
         ),

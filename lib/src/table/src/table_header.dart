@@ -7,7 +7,6 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/inputs.dart';
 import 'package:layrz_ui/src/table/src/column.dart';
 import 'package:layrz_ui/src/table/src/controller.dart';
-import 'package:layrz_ui/src/table/src/row_scroll_sync.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
@@ -98,13 +97,12 @@ class LayrzTableHeader<T> extends StatefulWidget {
 
   /// The shared scroll-sync group this header's middle region joins.
   ///
-  /// The assembling widget constructs exactly one [LayrzTableRowScrollSync]
-  /// and shares it with this header and with every `LayrzTableRow` — this
-  /// widget calls [LayrzTableRowScrollSync.join] once, in
-  /// `State.initState`, to obtain its own linked [ScrollController], so
-  /// scrolling any row's middle region (or this header's) moves all of them
-  /// in lockstep.
-  final LayrzTableRowScrollSync scrollSync;
+  /// The horizontal [ScrollController] for this header's data-columns strip.
+  /// The assembling `LayrzTable` joins this controller and the content
+  /// viewport's controller into one horizontal `SyncScrollControllerGroup`, so
+  /// scrolling the header sideways moves the content columns in lockstep and
+  /// vice versa. Owned and disposed by `LayrzTable`, not by this widget.
+  final ScrollController horizontalController;
 
   /// Whether the header renders a pinned-left select-all checkbox cell.
   ///
@@ -169,7 +167,7 @@ class LayrzTableHeader<T> extends StatefulWidget {
     required this.columns,
     required this.controller,
     required this.columnWidths,
-    required this.scrollSync,
+    required this.horizontalController,
     this.height = 40,
     this.fallbackColumnWidth = 150,
     this.hasMultiselect = false,
@@ -185,19 +183,6 @@ class LayrzTableHeader<T> extends StatefulWidget {
 }
 
 class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
-  late final ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = widget.scrollSync.join();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   /// Looks up the [LayrzColumn] whose [LayrzColumn.key] equals [key].
   ///
@@ -624,7 +609,7 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
             if (widget.hasMultiselect) _buildCheckboxCell(context),
             Expanded(
               child: SingleChildScrollView(
-                controller: _scrollController,
+                controller: widget.horizontalController,
                 scrollDirection: Axis.horizontal,
                 physics: const ClampingScrollPhysics(),
                 child: Row(

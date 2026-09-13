@@ -45,6 +45,17 @@ class LayrzScrollbar extends StatefulWidget {
     /// Must be the same controller attached to the child's [Scrollable] widget.
     this.controller,
 
+    /// Which [ScrollNotification]s this scrollbar reacts to.
+    ///
+    /// Forwarded verbatim to [RawScrollbar.notificationPredicate]; when `null`
+    /// (the default), Flutter's `defaultScrollNotificationPredicate` is used
+    /// (depth-0 notifications only). Supply a custom predicate when the
+    /// scrollable this scrollbar tracks is nested inside another scrollable —
+    /// e.g. a vertical list inside a horizontal scroll view — so the scrollbar
+    /// binds to the correct (deeper) axis instead of the outer scrollable's
+    /// depth-0 notifications.
+    this.notificationPredicate,
+
     super.key,
   });
 
@@ -53,6 +64,12 @@ class LayrzScrollbar extends StatefulWidget {
 
   /// The scroll controller attached to the child.
   final ScrollController? controller;
+
+  /// Predicate deciding which [ScrollNotification]s drive this scrollbar.
+  ///
+  /// `null` means use [RawScrollbar]'s default. See the constructor argument
+  /// for when to override it.
+  final ScrollNotificationPredicate? notificationPredicate;
 
   @override
   State<LayrzScrollbar> createState() => _LayrzScrollbarState();
@@ -76,6 +93,7 @@ class _LayrzScrollbarState extends State<LayrzScrollbar> {
       },
       child: RawScrollbar(
         controller: widget.controller,
+        notificationPredicate: widget.notificationPredicate ?? defaultScrollNotificationPredicate,
         thumbVisibility: true,
         trackVisibility: _isHovering,
         thickness: kLayrzScrollbarThickness,
