@@ -41,6 +41,9 @@ Future<void> _pumpShellApp(
   await tester.binding.setSurfaceSize(size);
   addTearDown(() => tester.binding.setSurfaceSize(null));
 
+  final tableController = LayrzTableController<_TestItem>();
+  addTearDown(tableController.dispose);
+
   await tester.pumpWidget(
     LayrzApp(
       navigatorObservers: [observer],
@@ -50,6 +53,11 @@ Future<void> _pumpShellApp(
           controller: controller,
           items: items,
           itemExtent: 56.0,
+          title: const Text('Title'),
+          tableColumns: [
+            LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+          ],
+          tableController: tableController,
         ),
       ),
     ),

@@ -50,6 +50,8 @@ void main() {
     Future<BuildContext> pumpNestedShellApp(WidgetTester tester, LayrzScaffoldController controller) async {
       late BuildContext capturedShellBodyContext;
       final navigatorKey = GlobalKey<NavigatorState>();
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       final items = [
         LayrzScaffoldItem<_TestItem>(
@@ -86,6 +88,15 @@ void main() {
                           controller: controller,
                           items: items,
                           itemExtent: 56.0,
+                          tableColumns: [
+                            LayrzColumn<_TestItem>(
+                              key: const ValueKey('c'),
+                              headerText: 'C',
+                              valueBuilder: (item) => '',
+                              width: 200,
+                            ),
+                          ],
+                          tableController: tableController,
                           // Plain, non-tappable text -- used by the
                           // "page selection with no sheet open" test as a
                           // target that cannot accidentally open the sheet

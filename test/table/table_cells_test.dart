@@ -24,8 +24,13 @@ void main() {
   });
 
   List<LayrzColumn<TableTestRow>> columns() => [
-    LayrzColumn<TableTestRow>(key: const ValueKey('name'), headerText: 'Name', valueBuilder: (r) => r.name),
-    LayrzColumn<TableTestRow>(key: const ValueKey('amount'), headerText: 'Amount', valueBuilder: (r) => '${r.amount}'),
+    LayrzColumn<TableTestRow>(key: const ValueKey('name'), headerText: 'Name', valueBuilder: (r) => r.name, width: 150),
+    LayrzColumn<TableTestRow>(
+      key: const ValueKey('amount'),
+      headerText: 'Amount',
+      valueBuilder: (r) => '${r.amount}',
+      width: 150,
+    ),
   ];
 
   group('LayrzTableCheckboxCell', () {
@@ -70,9 +75,7 @@ void main() {
       );
 
       final decorated = tester.widget<DecoratedBox>(
-        find
-            .descendant(of: find.byType(LayrzTableCheckboxCell), matching: find.byType(DecoratedBox))
-            .first,
+        find.descendant(of: find.byType(LayrzTableCheckboxCell), matching: find.byType(DecoratedBox)).first,
       );
       final probe = tester.widget<_ProbeStripe>(find.byType(_ProbeStripe));
       expect((decorated.decoration as BoxDecoration).color, probe.expected);
@@ -107,7 +110,12 @@ void main() {
       addTearDown(tester.view.reset);
 
       final cols = [
-        LayrzColumn<TableTestRow>(key: const ValueKey('name'), headerText: 'Name', valueBuilder: (r) => r.name),
+        LayrzColumn<TableTestRow>(
+          key: const ValueKey('name'),
+          headerText: 'Name',
+          valueBuilder: (r) => r.name,
+          width: 150,
+        ),
       ];
       await pumpTable(
         tester,
@@ -216,6 +224,7 @@ void main() {
           headerText: 'Name',
           valueBuilder: (r) => r.name,
           onTap: (r) => tapped = r,
+          width: 150,
         ),
       ];
       await pumpTable(

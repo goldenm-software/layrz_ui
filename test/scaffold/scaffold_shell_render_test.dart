@@ -52,6 +52,7 @@ Future<void> _pumpShell(
   WidgetTester tester, {
   required List<LayrzScaffoldItem<_TestItem>> items,
   required LayrzScaffoldController controller,
+  required LayrzTableController<_TestItem> tableController,
   Size size = const Size(1500, 950),
   bool searchable = true,
   Widget? footer,
@@ -72,6 +73,11 @@ Future<void> _pumpShell(
       footer: footer,
       onItemTap: (item) => controller.open(key: item.key, builder: (_) => Text("detail:${item.item.name}")),
       itemExtent: 56.0,
+      title: const Text('Title'),
+      tableColumns: [
+        LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+      ],
+      tableController: tableController,
     ),
   );
 
@@ -86,7 +92,9 @@ Future<void> _pumpShell(
 void main() {
   group("LayrzScaffoldShell rendering", () {
     testWidgets("sanity check: two items at 1500x950 renders list items", (tester) async {
-      final controller = LayrzScaffoldController();
+      final controller = LayrzScaffoldController()
+        ..open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -106,17 +114,24 @@ void main() {
         tester,
         items: items,
         controller: controller,
+        tableController: tableController,
         size: const Size(1500, 950),
       );
 
-      // Verify the list panel renders by finding the Text widgets in tiles
-      expect(find.byType(Text), findsWidgets);
+      // With an item open, the wide split (list panel + detail pane) renders
+      // instead of the desktop default table -- verify the list panel's own
+      // tile Text widgets render.
+      expect(find.text("Alpha"), findsWidgets);
+      expect(find.text("Beta"), findsWidgets);
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("two-pane wide layout at 1500x950 shows list and detail side-by-side", (tester) async {
       final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -136,6 +151,7 @@ void main() {
         tester,
         items: items,
         controller: controller,
+        tableController: tableController,
         size: const Size(1500, 950),
       );
 
@@ -148,10 +164,13 @@ void main() {
       expect(find.text("detail:Alpha"), findsOneWidget);
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("single-pane narrow at 520x900 shows list when closed", (tester) async {
       final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -171,6 +190,7 @@ void main() {
         tester,
         items: items,
         controller: controller,
+        tableController: tableController,
         size: const Size(520, 900),
       );
 
@@ -180,10 +200,13 @@ void main() {
       expect(find.text("detail:Alpha"), findsNothing);
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("narrow layout with sheet: list still visible and sheet presents detail", (tester) async {
       final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -203,6 +226,7 @@ void main() {
         tester,
         items: items,
         controller: controller,
+        tableController: tableController,
         size: const Size(520, 900),
         narrowWithNavigator: true,
       );
@@ -219,10 +243,20 @@ void main() {
       expect(find.text("Alpha"), findsWidgets);
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("tapping a row opens it", (tester) async {
-      final controller = LayrzScaffoldController();
+      // Open with NO key (a keyless/create-new open, see the "NO KEY" group
+      // below) so the wide split -- and its list panel row -- renders even
+      // though the real item "1" starts unselected. This keeps the test on
+      // its original wide viewport rather than switching to compact, since a
+      // compact `controller.open()` would schedule the narrow detail sheet,
+      // which asserts without a Navigator ancestor (this test's pump helper
+      // provides none).
+      final controller = LayrzScaffoldController()..open(builder: (_) => const Text("placeholder"));
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -236,24 +270,37 @@ void main() {
         tester,
         items: items,
         controller: controller,
+        tableController: tableController,
         size: const Size(1500, 950),
       );
 
-      // Initially closed
-      expect(controller.isOpen, isFalse);
+      // Open, but with no item selected yet.
+      expect(controller.isOpen, isTrue);
+      expect(controller.openedKey, isNull);
 
-      // Tap the row
-      await tester.tap(find.byType(LayrzTappable));
+      // Tap the row, found as the LayrzTappable ancestor of the row's own
+      // "Alpha" tile text. The desktop table stays mounted (covered) behind
+      // the split even while it's open (see
+      // LayrzScaffoldShell._buildWideLayout) and renders its own
+      // LayrzTappable rows/action buttons, so a bare
+      // find.byType(LayrzTappable) would match those too; ListPanel itself
+      // is package-private and not reachable from this test.
+      await tester.tap(
+        find.ancestor(of: find.text("Alpha"), matching: find.byType(LayrzTappable)),
+      );
       await tester.pump();
 
       // Now should be open with the selected item
       expect(controller.openedKey, equals(const ValueKey("1")));
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("controller open/close methods work correctly", (tester) async {
       final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -267,6 +314,7 @@ void main() {
         tester,
         items: items,
         controller: controller,
+        tableController: tableController,
         size: const Size(1500, 950),
       );
 
@@ -283,10 +331,13 @@ void main() {
       expect(find.text("detail:Alpha"), findsNothing);
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("wide layout with item open: detail pane shows correctly", (tester) async {
       final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -300,6 +351,7 @@ void main() {
         tester,
         items: items,
         controller: controller,
+        tableController: tableController,
         size: const Size(1500, 950),
       );
 
@@ -311,10 +363,13 @@ void main() {
       expect(find.text("detail:Alpha"), findsOneWidget);
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("REGRESSION: narrow->wide preserves openedKey (Defect 1)", (tester) async {
       final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -335,6 +390,11 @@ void main() {
             controller: controller,
             items: items,
             itemExtent: 56.0,
+            title: const Text('Title'),
+            tableColumns: [
+              LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+            ],
+            tableController: tableController,
           ),
         ),
       );
@@ -356,10 +416,13 @@ void main() {
       expect(find.text("detail:Alpha"), findsOneWidget);
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("REGRESSION: wide->narrow opens sheet for selected item (Defect 1)", (tester) async {
       final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -380,6 +443,11 @@ void main() {
             controller: controller,
             items: items,
             itemExtent: 56.0,
+            title: const Text('Title'),
+            tableColumns: [
+              LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+            ],
+            tableController: tableController,
           ),
         ),
       );
@@ -399,10 +467,13 @@ void main() {
       expect(find.text("Alpha"), findsWidgets);
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("REGRESSION: rebuilds while sheet open don't stack duplicate sheets (Defect 2)", (tester) async {
       final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
       var items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -427,6 +498,16 @@ void main() {
                 controller: controller,
                 items: items,
                 itemExtent: 56.0,
+                title: const Text('Title'),
+                tableColumns: [
+                  LayrzColumn<_TestItem>(
+                    key: const ValueKey('c'),
+                    headerText: 'C',
+                    valueBuilder: (item) => '',
+                    width: 200,
+                  ),
+                ],
+                tableController: tableController,
               ),
             );
           },
@@ -450,6 +531,8 @@ void main() {
       expect(find.byType(DraggableScrollableSheet), findsOneWidget);
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     testWidgets("list row's LayrzTappable fills its full row extent with no gap", (tester) async {
@@ -464,6 +547,7 @@ void main() {
       /// exactly, with the row-to-row delta as the independent measure of the true fixed
       /// extent.
       final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
       final items = [
         const LayrzScaffoldItem(
           key: ValueKey("1"),
@@ -479,11 +563,16 @@ void main() {
         ),
       ];
 
+      // This test is about the list panel's own row geometry, not
+      // wide-layout split behavior -- a compact viewport always shows the
+      // list panel directly (no desktop table ever mounts there to
+      // contribute its own LayrzTappable rows alongside the list's).
       await _pumpShell(
         tester,
         items: items,
         controller: controller,
-        size: const Size(1500, 950),
+        tableController: tableController,
+        size: const Size(520, 900),
       );
 
       final tappables = find.byType(LayrzTappable);
@@ -506,6 +595,8 @@ void main() {
       );
 
       controller.dispose();
+
+      tableController.dispose();
     });
 
     group("NO KEY: opening a detail pane with no backing list item (create-new-item support)", () {
@@ -513,6 +604,7 @@ void main() {
         tester,
       ) async {
         final controller = LayrzScaffoldController();
+        final tableController = LayrzTableController<_TestItem>();
         final items = [
           const LayrzScaffoldItem(
             key: ValueKey("1"),
@@ -532,6 +624,7 @@ void main() {
           tester,
           items: items,
           controller: controller,
+          tableController: tableController,
           size: const Size(1500, 950),
         );
 
@@ -565,12 +658,15 @@ void main() {
         expect(find.text("Beta"), findsWidgets);
 
         controller.dispose();
+
+        tableController.dispose();
       });
 
       testWidgets("narrow layout: a keyless open's builder renders in the detail sheet, no row is highlighted", (
         tester,
       ) async {
         final controller = LayrzScaffoldController();
+        final tableController = LayrzTableController<_TestItem>();
         final items = [
           const LayrzScaffoldItem(
             key: ValueKey("1"),
@@ -584,6 +680,7 @@ void main() {
           tester,
           items: items,
           controller: controller,
+          tableController: tableController,
           size: const Size(520, 900),
           narrowWithNavigator: true,
         );
@@ -603,6 +700,8 @@ void main() {
         }
 
         controller.dispose();
+
+        tableController.dispose();
       });
     });
   });

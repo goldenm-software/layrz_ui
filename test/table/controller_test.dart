@@ -547,7 +547,8 @@ void main() {
   });
 
   group('syncColumns (membership sync)', () {
-    LayrzColumn<int> column(Key key) => LayrzColumn<int>(key: key, headerText: '$key', valueBuilder: (i) => '$i');
+    LayrzColumn<int> column(Key key) =>
+        LayrzColumn<int>(key: key, headerText: '$key', valueBuilder: (i) => '$i', width: 150);
 
     test('appends newly-seen keys in declaration order, starting visible', () {
       final controller = LayrzTableController<int>();
@@ -856,6 +857,122 @@ void main() {
 
       expect(notified, 0);
       expect(controller.hiddenColumns, {a});
+    });
+  });
+
+  group('column widths', () {
+    test('setColumnWidth stores an override, notifies, and emits the full override map', () async {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+      var notified = 0;
+      controller.addListener(() => notified++);
+      final events = <LayrzTableEvent<int>>[];
+      final sub = controller.events.listen(events.add);
+
+      controller.setColumnWidth(const ValueKey('a'), 250);
+
+      expect(controller.columnWidthOverride(const ValueKey('a')), 250);
+      expect(controller.columnWidthOverrides, {const ValueKey('a'): 250});
+      expect(notified, 1);
+
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(events, [
+        LayrzTableColumnWidthsEvent<int>(columnWidths: {const ValueKey('a'): 250}),
+      ]);
+    });
+
+    test('setColumnWidth to the same value is a no-op (no notify, no event)', () async {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+      controller.setColumnWidth(const ValueKey('a'), 250);
+
+      var notified = 0;
+      controller.addListener(() => notified++);
+      final events = <LayrzTableEvent<int>>[];
+      final sub = controller.events.listen(events.add);
+
+      controller.setColumnWidth(const ValueKey('a'), 250);
+
+      expect(notified, 0);
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(events, isEmpty);
+    });
+
+    test('a second setColumnWidth accumulates into the override map', () {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+
+      controller.setColumnWidth(const ValueKey('a'), 250);
+      controller.setColumnWidth(const ValueKey('b'), 300);
+
+      expect(controller.columnWidthOverrides, {
+        const ValueKey('a'): 250,
+        const ValueKey('b'): 300,
+      });
+    });
+
+    test('clearColumnWidth removes the override, notifies, and emits the remaining map', () async {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+      controller.setColumnWidth(const ValueKey('a'), 250);
+      controller.setColumnWidth(const ValueKey('b'), 300);
+
+      var notified = 0;
+      controller.addListener(() => notified++);
+      final events = <LayrzTableEvent<int>>[];
+      final sub = controller.events.listen(events.add);
+
+      controller.clearColumnWidth(const ValueKey('a'));
+
+      expect(controller.columnWidthOverride(const ValueKey('a')), isNull);
+      expect(controller.columnWidthOverrides, {const ValueKey('b'): 300});
+      expect(notified, 1);
+
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(events, [
+        LayrzTableColumnWidthsEvent<int>(columnWidths: {const ValueKey('b'): 300}),
+      ]);
+    });
+
+    test('clearColumnWidth on a column with no override is a no-op', () async {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+
+      var notified = 0;
+      controller.addListener(() => notified++);
+      final events = <LayrzTableEvent<int>>[];
+      final sub = controller.events.listen(events.add);
+
+      controller.clearColumnWidth(const ValueKey('nope'));
+
+      expect(notified, 0);
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(events, isEmpty);
+    });
+
+    test('the constructor seeds overrides from columnWidths', () {
+      final controller = LayrzTableController<int>(
+        columnWidths: {const ValueKey('a'): 250},
+      );
+      addTearDown(controller.dispose);
+
+      expect(controller.columnWidthOverride(const ValueKey('a')), 250);
+      expect(controller.columnWidthOverrides, {const ValueKey('a'): 250});
+    });
+
+    test('columnWidthOverrides is an unmodifiable snapshot', () {
+      final controller = LayrzTableController<int>();
+      addTearDown(controller.dispose);
+      controller.setColumnWidth(const ValueKey('a'), 250);
+
+      expect(
+        () => controller.columnWidthOverrides[const ValueKey('b')] = 1,
+        throwsUnsupportedError,
+      );
     });
   });
 

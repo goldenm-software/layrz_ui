@@ -26,6 +26,7 @@ List<LayrzScaffoldItem<_TestItem>> _plainItems(int count) {
 }
 
 const _kWideSize = Size(1600, 1200);
+const _kCompactSize = Size(400, 800);
 
 void main() {
   group("ListPanel — scrollbar gutter (list_panel.dart padding placement)", () {
@@ -34,10 +35,17 @@ void main() {
       (tester) async {
         addTearDown(tester.view.reset);
         tester.view.devicePixelRatio = 1.0;
-        tester.view.physicalSize = _kWideSize;
+        // This test is about the list panel's own ListView, not wide-layout
+        // geometry -- a compact viewport always shows the list panel directly
+        // (the wide layout's desktop default table stays mounted even once
+        // an item is open, per LayrzScaffoldShell._buildWideLayout, and it
+        // has its own ListView.builder rows that would pollute a bare
+        // find.byType(ListView) query on wide).
+        tester.view.physicalSize = _kCompactSize;
 
         final controller = LayrzScaffoldController();
         final items = _plainItems(6);
+        final tableController = LayrzTableController<_TestItem>();
 
         await pumpThemed(
           tester,
@@ -46,6 +54,16 @@ void main() {
               controller: controller,
               items: items,
               itemExtent: 56.0,
+              title: const Text('Title'),
+              tableColumns: [
+                LayrzColumn<_TestItem>(
+                  key: const ValueKey('c'),
+                  headerText: 'C',
+                  valueBuilder: (item) => '',
+                  width: 200,
+                ),
+              ],
+              tableController: tableController,
             ),
           ),
         );
@@ -85,6 +103,7 @@ void main() {
         }
 
         controller.dispose();
+        tableController.dispose();
       },
     );
 
@@ -96,6 +115,7 @@ void main() {
         tester.view.physicalSize = _kWideSize;
 
         final controller = LayrzScaffoldController();
+        final tableController = LayrzTableController<_TestItem>();
 
         await pumpThemed(
           tester,
@@ -104,6 +124,16 @@ void main() {
               controller: controller,
               items: const [],
               itemExtent: 56.0,
+              title: const Text('Title'),
+              tableColumns: [
+                LayrzColumn<_TestItem>(
+                  key: const ValueKey('c'),
+                  headerText: 'C',
+                  valueBuilder: (item) => '',
+                  width: 200,
+                ),
+              ],
+              tableController: tableController,
             ),
           ),
         );
@@ -112,6 +142,7 @@ void main() {
         expect(find.byType(ListView), findsNothing);
 
         controller.dispose();
+        tableController.dispose();
       },
     );
   });

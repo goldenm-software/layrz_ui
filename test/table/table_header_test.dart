@@ -11,9 +11,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   List<LayrzColumn<TableTestRow>> threeColumns() => [
-    LayrzColumn<TableTestRow>(key: const ValueKey('c1'), headerText: 'Col 1', valueBuilder: (r) => r.name),
-    LayrzColumn<TableTestRow>(key: const ValueKey('c2'), headerText: 'Col 2', valueBuilder: (r) => '${r.amount}'),
-    LayrzColumn<TableTestRow>(key: const ValueKey('c3'), headerText: 'Col 3', valueBuilder: (r) => r.name),
+    LayrzColumn<TableTestRow>(key: const ValueKey('c1'), headerText: 'Col 1', valueBuilder: (r) => r.name, width: 150),
+    LayrzColumn<TableTestRow>(
+      key: const ValueKey('c2'),
+      headerText: 'Col 2',
+      valueBuilder: (r) => '${r.amount}',
+      width: 150,
+    ),
+    LayrzColumn<TableTestRow>(key: const ValueKey('c3'), headerText: 'Col 3', valueBuilder: (r) => r.name, width: 150),
   ];
 
   Widget buildHeader({
@@ -101,6 +106,7 @@ void main() {
           headerText: 'Col 1',
           valueBuilder: (r) => r.name,
           isSortable: false,
+          width: 150,
         ),
       ];
       final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
@@ -464,7 +470,12 @@ void main() {
     testWidgets('Hide column is disabled at the minVisibleColumns boundary', (tester) async {
       useWideViewport(tester);
       final columns = [
-        LayrzColumn<TableTestRow>(key: const ValueKey('only'), headerText: 'Only', valueBuilder: (r) => r.name),
+        LayrzColumn<TableTestRow>(
+          key: const ValueKey('only'),
+          headerText: 'Only',
+          valueBuilder: (r) => r.name,
+          width: 150,
+        ),
       ];
       final controller = LayrzTableController<TableTestRow>(
         columnOrder: columns.map((c) => c.key).toList(),
@@ -762,6 +773,131 @@ void main() {
         find.byWidgetPredicate((w) => w is SizedBox && w.width == 200 && w.height == 40),
       );
       expect(actionsCellSize.width, 200);
+    });
+  });
+
+  group('LayrzTableHeader column resize', () {
+    /// The resize handles are the thin (8px) [RawGestureDetector]s at each
+    /// header cell's right edge — distinguished from the wider sort/reorder
+    /// gesture regions by their narrow width. Returns them left-to-right, one
+    /// per visible column.
+    List<Finder> resizeHandles(WidgetTester tester) {
+      final all = find.byType(RawGestureDetector);
+      final result = <Finder>[];
+      for (var i = 0; i < tester.widgetList(all).length; i++) {
+        final f = all.at(i);
+        if (tester.getRect(f).width <= 10) result.add(f);
+      }
+      // Order left-to-right by x so [0] is the first visible column's handle.
+      result.sort((a, b) => tester.getRect(a).left.compareTo(tester.getRect(b).left));
+      return result;
+    }
+
+    testWidgets('each visible column exposes a resize handle with real semantics', (tester) async {
+      useWideViewport(tester);
+      final handle = tester.ensureSemantics();
+      try {
+        final columns = threeColumns();
+        final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+        addTearDown(controller.dispose);
+
+        await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+        // One 8px handle per visible column.
+        expect(resizeHandles(tester).length, columns.length);
+        // The handle carries a descriptive semantics label.
+        expect(find.bySemanticsLabel('Resize Col 1 column'), findsOneWidget);
+        expect(find.bySemanticsLabel('Resize Col 2 column'), findsOneWidget);
+        expect(find.bySemanticsLabel('Resize Col 3 column'), findsOneWidget);
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('dragging the resize handle right widens the column via a controller override', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns(); // each width 150, fixture passes columnWidths 150
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      expect(controller.columnWidthOverride(const ValueKey('c1')), isNull);
+
+      await tester.drag(resizeHandles(tester).first, const Offset(60, 0));
+      await tester.pumpAndSettle();
+
+      // The column widened from its 150 base. The exact delta is the drag
+      // distance minus the recognizer's touch slop (~18px consumed before the
+      // first onUpdate), so assert a widened override in a slop-tolerant band
+      // rather than an exact pixel value.
+      final override = controller.columnWidthOverride(const ValueKey('c1'));
+      expect(override, isNotNull);
+      expect(override, greaterThan(150), reason: 'dragging right must widen the column');
+      expect(override, lessThanOrEqualTo(210), reason: 'never wider than the full drag distance');
+    });
+
+    testWidgets('dragging left is clamped at the minimum column width (fallbackColumnWidth)', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns(); // width 150, min (fallbackColumnWidth) 150
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      // Drag far left — the column is already at the min (150), so the override
+      // can never go below it.
+      await tester.drag(resizeHandles(tester).first, const Offset(-500, 0));
+      await tester.pumpAndSettle();
+
+      expect(controller.columnWidthOverride(const ValueKey('c1')), 150);
+    });
+
+    testWidgets('dragging right is clamped at LayrzColumn.maxWidth', (tester) async {
+      useWideViewport(tester);
+      final columns = [
+        LayrzColumn<TableTestRow>(
+          key: const ValueKey('c1'),
+          headerText: 'Col 1',
+          valueBuilder: (r) => r.name,
+          width: 150,
+          maxWidth: 200,
+        ),
+        LayrzColumn<TableTestRow>(
+          key: const ValueKey('c2'),
+          headerText: 'Col 2',
+          valueBuilder: (r) => '${r.amount}',
+          width: 150,
+        ),
+      ];
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      // Drag far right — capped at maxWidth 200, not 150 + 500.
+      await tester.drag(resizeHandles(tester).first, const Offset(500, 0));
+      await tester.pumpAndSettle();
+
+      expect(controller.columnWidthOverride(const ValueKey('c1')), 200);
+    });
+
+    testWidgets('resizing does not change the sort or column order (no gesture cross-talk)', (tester) async {
+      useWideViewport(tester);
+      final columns = threeColumns();
+      final controller = LayrzTableController<TableTestRow>(columnOrder: columns.map((c) => c.key).toList());
+      addTearDown(controller.dispose);
+
+      await pumpTable(tester, buildHeader(columns: columns, controller: controller));
+
+      final orderBefore = controller.columnOrder;
+
+      await tester.drag(resizeHandles(tester).first, const Offset(40, 0));
+      await tester.pumpAndSettle();
+
+      // A resize must not toggle sort, and must not reorder columns.
+      expect(controller.sortColumnKey, isNull, reason: 'resizing must not trigger a sort');
+      expect(controller.columnOrder, orderBefore, reason: 'resizing must not reorder columns');
     });
   });
 }

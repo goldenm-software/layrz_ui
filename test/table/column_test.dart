@@ -9,6 +9,7 @@ void main() {
         key: const ValueKey('col'),
         headerText: 'Amount',
         valueBuilder: (item) => '$item',
+        width: 150,
       );
 
       expect(column.key, const ValueKey('col'));
@@ -17,7 +18,11 @@ void main() {
       expect(column.richTextBuilder, isNull);
       expect(column.alignment, Alignment.centerLeft);
       expect(column.isSortable, isTrue);
-      expect(column.width, isNull);
+      // width is a required fixed pixel width (there is no more flex/null-width
+      // column), so this asserts the value passed above.
+      expect(column.width, 150);
+      // maxWidth defaults to null (no upper resize bound).
+      expect(column.maxWidth, isNull);
       expect(column.onTap, isNull);
       expect(column.customSort, isNull);
     });
@@ -35,6 +40,7 @@ void main() {
         alignment: Alignment.centerRight,
         isSortable: false,
         width: 120,
+        maxWidth: 400,
         onTap: onTap,
         customSort: customSort,
       );
@@ -43,6 +49,7 @@ void main() {
       expect(column.alignment, Alignment.centerRight);
       expect(column.isSortable, isFalse);
       expect(column.width, 120);
+      expect(column.maxWidth, 400);
       expect(column.onTap, onTap);
       expect(column.customSort, customSort);
     });
@@ -53,6 +60,7 @@ void main() {
           key: const ValueKey('col'),
           headerText: 'Amount',
           valueBuilder: (item) => '$item',
+          width: 150,
         );
 
         final copy = original.copyWith(headerText: 'Total', isSortable: false);
@@ -91,6 +99,7 @@ void main() {
           key: const ValueKey('col-a'),
           headerText: 'Amount',
           valueBuilder: (item) => '$item',
+          width: 150,
         );
 
         final copy = original.copyWith(key: const ValueKey('col-b'));
@@ -102,16 +111,36 @@ void main() {
 
     group('equality', () {
       test('two columns of the same type with the same key are equal', () {
-        final a = LayrzColumn<int>(key: const ValueKey('col'), headerText: 'A', valueBuilder: (item) => '$item');
-        final b = LayrzColumn<int>(key: const ValueKey('col'), headerText: 'B', valueBuilder: (item) => 'different');
+        final a = LayrzColumn<int>(
+          key: const ValueKey('col'),
+          headerText: 'A',
+          valueBuilder: (item) => '$item',
+          width: 150,
+        );
+        final b = LayrzColumn<int>(
+          key: const ValueKey('col'),
+          headerText: 'B',
+          valueBuilder: (item) => 'different',
+          width: 150,
+        );
 
         expect(a, b);
         expect(a.hashCode, b.hashCode);
       });
 
       test('columns of the same type with different keys are unequal', () {
-        final a = LayrzColumn<int>(key: const ValueKey('col-a'), headerText: 'A', valueBuilder: (item) => '$item');
-        final b = LayrzColumn<int>(key: const ValueKey('col-b'), headerText: 'A', valueBuilder: (item) => '$item');
+        final a = LayrzColumn<int>(
+          key: const ValueKey('col-a'),
+          headerText: 'A',
+          valueBuilder: (item) => '$item',
+          width: 150,
+        );
+        final b = LayrzColumn<int>(
+          key: const ValueKey('col-b'),
+          headerText: 'A',
+          valueBuilder: (item) => '$item',
+          width: 150,
+        );
 
         expect(a == b, isFalse);
       });
@@ -121,11 +150,13 @@ void main() {
           key: const ValueKey('shared'),
           headerText: 'A',
           valueBuilder: (item) => '$item',
+          width: 150,
         );
         final stringColumn = LayrzColumn<String>(
           key: const ValueKey('shared'),
           headerText: 'A',
           valueBuilder: (item) => item,
+          width: 150,
         );
 
         // ignore: unrelated_type_equality_checks
@@ -134,13 +165,23 @@ void main() {
       });
 
       test('a column is equal to itself (identical)', () {
-        final a = LayrzColumn<int>(key: const ValueKey('col'), headerText: 'A', valueBuilder: (item) => '$item');
+        final a = LayrzColumn<int>(
+          key: const ValueKey('col'),
+          headerText: 'A',
+          valueBuilder: (item) => '$item',
+          width: 150,
+        );
 
         expect(a == a, isTrue);
       });
 
       test('a column is not equal to an unrelated object', () {
-        final a = LayrzColumn<int>(key: const ValueKey('col'), headerText: 'A', valueBuilder: (item) => '$item');
+        final a = LayrzColumn<int>(
+          key: const ValueKey('col'),
+          headerText: 'A',
+          valueBuilder: (item) => '$item',
+          width: 150,
+        );
 
         // ignore: unrelated_type_equality_checks
         expect(a == 'not a column', isFalse);

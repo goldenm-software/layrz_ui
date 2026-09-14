@@ -209,6 +209,56 @@ void main() {
     });
   });
 
+  group('LayrzTableColumnWidthsEvent', () {
+    test('carries the given columnWidths payload', () {
+      final event = LayrzTableColumnWidthsEvent<int>(
+        columnWidths: {const ValueKey('a'): 120.0, const ValueKey('b'): 200.0},
+      );
+
+      expect(event.columnWidths, {const ValueKey('a'): 120.0, const ValueKey('b'): 200.0});
+    });
+
+    test('an empty columnWidths represents every override cleared', () {
+      const event = LayrzTableColumnWidthsEvent<int>(columnWidths: {});
+
+      expect(event.columnWidths, isEmpty);
+    });
+
+    test('equal when columnWidths match regardless of construction order', () {
+      final a = LayrzTableColumnWidthsEvent<int>(
+        columnWidths: {const ValueKey('a'): 120.0, const ValueKey('b'): 200.0},
+      );
+      final b = LayrzTableColumnWidthsEvent<int>(
+        columnWidths: {const ValueKey('b'): 200.0, const ValueKey('a'): 120.0},
+      );
+
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+    });
+
+    test('unequal when a width differs for the same key', () {
+      final a = LayrzTableColumnWidthsEvent<int>(columnWidths: {const ValueKey('a'): 120.0});
+      final b = LayrzTableColumnWidthsEvent<int>(columnWidths: {const ValueKey('a'): 130.0});
+
+      expect(a == b, isFalse);
+    });
+
+    test('unequal when columnWidths sizes differ', () {
+      final a = LayrzTableColumnWidthsEvent<int>(columnWidths: {const ValueKey('a'): 120.0});
+      final b = LayrzTableColumnWidthsEvent<int>(
+        columnWidths: {const ValueKey('a'): 120.0, const ValueKey('b'): 200.0},
+      );
+
+      expect(a == b, isFalse);
+    });
+
+    test('toString reports the columnWidths', () {
+      final event = LayrzTableColumnWidthsEvent<int>(columnWidths: {const ValueKey('a'): 120.0});
+
+      expect(event.toString(), contains('120'));
+    });
+  });
+
   group('LayrzTableRefreshEvent', () {
     test('carries no payload', () {
       const event = LayrzTableRefreshEvent<int>();
@@ -246,6 +296,7 @@ void main() {
         LayrzTableSearchEvent<int>(searchText: ''),
         LayrzTableSelectionEvent<int>(selection: {}),
         LayrzTableColumnsEvent<int>(columnOrder: [], hiddenColumns: {}),
+        LayrzTableColumnWidthsEvent<int>(columnWidths: {}),
         LayrzTableRefreshEvent<int>(),
       ];
 
@@ -260,6 +311,7 @@ void main() {
         LayrzTableSearchEvent<int>() => 'search',
         LayrzTableSelectionEvent<int>() => 'selection',
         LayrzTableColumnsEvent<int>() => 'columns',
+        LayrzTableColumnWidthsEvent<int>() => 'columnWidths',
         LayrzTableRefreshEvent<int>() => 'refresh',
       };
 
@@ -267,6 +319,7 @@ void main() {
       expect(describe(const LayrzTableSearchEvent<int>(searchText: '')), 'search');
       expect(describe(const LayrzTableSelectionEvent<int>(selection: {})), 'selection');
       expect(describe(const LayrzTableColumnsEvent<int>(columnOrder: [], hiddenColumns: {})), 'columns');
+      expect(describe(const LayrzTableColumnWidthsEvent<int>(columnWidths: {})), 'columnWidths');
       expect(describe(const LayrzTableRefreshEvent<int>()), 'refresh');
     });
   });

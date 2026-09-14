@@ -10,9 +10,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   List<LayrzColumn<TableTestRow>> threeColumns() => [
-    LayrzColumn<TableTestRow>(key: const ValueKey('c1'), headerText: 'Col 1', valueBuilder: (r) => r.name),
-    LayrzColumn<TableTestRow>(key: const ValueKey('c2'), headerText: 'Col 2', valueBuilder: (r) => '${r.amount}'),
-    LayrzColumn<TableTestRow>(key: const ValueKey('c3'), headerText: 'Col 3', valueBuilder: (r) => r.name),
+    LayrzColumn<TableTestRow>(key: const ValueKey('c1'), headerText: 'Col 1', valueBuilder: (r) => r.name, width: 150),
+    LayrzColumn<TableTestRow>(
+      key: const ValueKey('c2'),
+      headerText: 'Col 2',
+      valueBuilder: (r) => '${r.amount}',
+      width: 150,
+    ),
+    LayrzColumn<TableTestRow>(key: const ValueKey('c3'), headerText: 'Col 3', valueBuilder: (r) => r.name, width: 150),
   ];
 
   Future<void> openMenu(WidgetTester tester) async {
@@ -105,7 +110,12 @@ void main() {
     testWidgets('the toggle for the last visible column is disabled at the floor', (tester) async {
       useWideViewport(tester);
       final columns = [
-        LayrzColumn<TableTestRow>(key: const ValueKey('only'), headerText: 'Only', valueBuilder: (r) => r.name),
+        LayrzColumn<TableTestRow>(
+          key: const ValueKey('only'),
+          headerText: 'Only',
+          valueBuilder: (r) => r.name,
+          width: 150,
+        ),
       ];
       final controller = LayrzTableController<TableTestRow>(
         columnOrder: columns.map((c) => c.key).toList(),

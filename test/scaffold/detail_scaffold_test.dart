@@ -463,6 +463,8 @@ void main() {
         (tester) async {
           final controller = LayrzScaffoldController();
           addTearDown(controller.dispose);
+          final tableController = LayrzTableController<String>();
+          addTearDown(tableController.dispose);
 
           await tester.binding.setSurfaceSize(const Size(520, 900));
           addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -474,6 +476,16 @@ void main() {
                 child: LayrzScaffoldShell<String>(
                   controller: controller,
                   itemExtent: 56.0,
+                  title: const Text('Title'),
+                  tableColumns: [
+                    LayrzColumn<String>(
+                      key: const ValueKey('c'),
+                      headerText: 'C',
+                      valueBuilder: (item) => '',
+                      width: 200,
+                    ),
+                  ],
+                  tableController: tableController,
                   items: [
                     const LayrzScaffoldItem(
                       key: ValueKey("1"),
@@ -519,6 +531,8 @@ void main() {
         (tester) async {
           final controller = LayrzScaffoldController();
           addTearDown(controller.dispose);
+          final tableController = LayrzTableController<String>();
+          addTearDown(tableController.dispose);
 
           await tester.binding.setSurfaceSize(const Size(520, 900));
           addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -530,6 +544,16 @@ void main() {
                 child: LayrzScaffoldShell<String>(
                   controller: controller,
                   itemExtent: 56.0,
+                  title: const Text('Title'),
+                  tableColumns: [
+                    LayrzColumn<String>(
+                      key: const ValueKey('c'),
+                      headerText: 'C',
+                      valueBuilder: (item) => '',
+                      width: 200,
+                    ),
+                  ],
+                  tableController: tableController,
                   items: [
                     const LayrzScaffoldItem(
                       key: ValueKey("1"),

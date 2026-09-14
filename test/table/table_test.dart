@@ -25,11 +25,13 @@ void main() {
       key: const ValueKey('name'),
       headerText: 'Name',
       valueBuilder: (row) => row.name,
+      width: 150,
     ),
     LayrzColumn<TableTestRow>(
       key: const ValueKey('amount'),
       headerText: 'Amount',
       valueBuilder: (row) => row.amount.toString(),
+      width: 150,
     ),
   ];
 
@@ -205,6 +207,7 @@ void main() {
               nameCallCount++;
               return row.name;
             },
+            width: 150,
           ),
           LayrzColumn<TableTestRow>(
             key: const ValueKey('amount'),
@@ -213,6 +216,7 @@ void main() {
               amountCallCount++;
               return row.amount.toString();
             },
+            width: 150,
           ),
         ];
 
@@ -613,6 +617,7 @@ void main() {
           headerText: 'Name',
           valueBuilder: (row) => 'raw:${row.name}',
           richTextBuilder: (row) => [TextSpan(text: 'rich:'), TextSpan(text: row.name)],
+          width: 150,
         ),
       ];
 
@@ -658,6 +663,7 @@ void main() {
           headerText: 'Name',
           valueBuilder: (row) => row.name,
           onTap: (row) => tapped = row,
+          width: 150,
         ),
       ];
 
