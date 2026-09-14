@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.0
+
+First stable release. This release carries breaking changes to `LayrzScaffoldShell`, `LayrzScaffoldItem`, and `LayrzColumn`.
+
+- **BREAKING — `LayrzScaffoldShell` desktop redesign (DESIGN-216):** on desktop the shell now opens on a full-width `LayrzTable` and collapses to the list-detail split only when an item is open (the two cross-fade; the table stays mounted behind the split). `title`, `tableColumns`, and `tableController` are now **required**; `showActionLabel` was added to label the table's per-row open button. The desktop table's per-row open button and the list rows both route through `onItemTap` — the shell never opens the detail itself, so closing the detail is the caller's responsibility (call `LayrzScaffoldController.close`).
+- **BREAKING — `LayrzScaffoldItem.actions` removed:** the hover/swipe row quick-actions are gone; the interaction is now uniformly tap-to-open-detail.
+- **BREAKING — foldable-hinge split removed:** `LayrzFoldSplit`, `resolveFoldSplit`, and the shell's physical-seam split are deleted; foldable devices now use the ordinary wide/narrow layout by width.
+- **BREAKING — `LayrzColumn.width` is now required** and there is no more flex: every column is a fixed pixel width, and the table scrolls horizontally when the columns exceed its width. `LayrzColumn.maxWidth` was added.
+- **`LayrzTable` columns are now resizable:** drag the handle on a header cell's right edge. Width overrides live on `LayrzTableController` (`setColumnWidth`, `clearColumnWidth`, `columnWidthOverride`, `columnWidthOverrides`, and a constructor `columnWidths` seed) and emit the new `LayrzTableColumnWidthsEvent`, so widths are observable and persistable.
+- `LayrzConnectionIndicator` full mode now renders as a chip (rounded-box radius and compact padding, matching `LayrzChip`) instead of a fully-rounded pill.
+- Fixed `LayrzSelectInput` overflowing its closed field when the selected item's `child` is wider than the field (e.g. a `Row` with an icon and a long label) — the selected-item presentation is now clipped to the field.
+- Fixed `LayrzSwitchInput`'s keyboard-focus affordance being invisible in light mode (the interactive off-track now steps `sf4`→`sf3` in light, matching the dark-mode `sf1`→`sf2` treatment).
+- Fixed a `LayrzCheckboxInput` dark-mode background.
+
 ## 1.0.0-rc.1
 
 - Added colorblind simulation (BETA): a `ColorblindMode` enum (protanopia/protanomaly/deuteranopia/deuteranomaly/tritanopia/tritanomaly/normal) with `LayrzApp.colorblindMode` and `LayrzApp.colorblindStrength`, applied app-wide via a single `ColorFiltered`.
