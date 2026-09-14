@@ -14,8 +14,8 @@ import 'package:flutter/widgets.dart' show Key, immutable;
 ///
 /// This is a sealed class: the subclass set below (`LayrzTableSortEvent`,
 /// `LayrzTableSearchEvent`, `LayrzTableSelectionEvent`, `LayrzTableColumnsEvent`,
-/// `LayrzTableRefreshEvent`) is exhaustive, so a `switch` over
-/// `LayrzTableEvent<T>` does not need a fallback `default` case.
+/// `LayrzTableColumnWidthsEvent`, `LayrzTableRefreshEvent`) is exhaustive, so a
+/// `switch` over `LayrzTableEvent<T>` does not need a fallback `default` case.
 ///
 /// The type parameter [T] is the row type of the `LayrzTable<T>` that owns
 /// the emitting controller, matching [LayrzTableSelectionEvent]'s payload.
@@ -157,6 +157,46 @@ final class LayrzTableColumnsEvent<T> extends LayrzTableEvent<T> {
 
   @override
   String toString() => 'LayrzTableColumnsEvent(columnOrder: $columnOrder, hiddenColumns: $hiddenColumns)';
+}
+
+/// Emitted when a column's width is resized by the user (dragging a header
+/// resize handle) or by a direct call to `LayrzTableController.setColumnWidth`/
+/// `clearColumnWidth`.
+///
+/// Carries the controller's full **override** map — every column [Key] the
+/// user has explicitly resized, mapped to its overridden width in logical
+/// pixels. A column never resized (still at its `LayrzColumn.width` default)
+/// does not appear in this map at all, so the payload is exactly the set of
+/// user customizations a consumer would persist and later restore via
+/// `LayrzTableController.setColumnWidth`.
+@immutable
+final class LayrzTableColumnWidthsEvent<T> extends LayrzTableEvent<T> {
+  /// Creates a column-widths-changed event.
+  const LayrzTableColumnWidthsEvent({required this.columnWidths});
+
+  /// The overridden width, in logical pixels, of every column the user has
+  /// explicitly resized, keyed by that column's [Key].
+  ///
+  /// Columns still at their `LayrzColumn.width` default are absent. An empty
+  /// map means every override has been cleared (all columns back to default).
+  final Map<Key, double> columnWidths;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! LayrzTableColumnWidthsEvent<T>) return false;
+    if (other.columnWidths.length != columnWidths.length) return false;
+    for (final entry in columnWidths.entries) {
+      if (other.columnWidths[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hashAllUnordered([for (final e in columnWidths.entries) Object.hash(e.key, e.value)]);
+
+  @override
+  String toString() => 'LayrzTableColumnWidthsEvent(columnWidths: $columnWidths)';
 }
 
 /// Emitted when the table is asked to refresh, e.g. from a direct call to

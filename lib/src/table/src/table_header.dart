@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show HorizontalDragGestureRecognizer;
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
@@ -10,6 +11,16 @@ import 'package:layrz_ui/src/table/src/controller.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 import 'package:layrz_ui/src/tooltips/tooltips.dart';
 
+/// The width, in logical pixels, of the column-resize handle's HIT area on the
+/// right edge of each header cell — deliberately wider than the visible strip
+/// so the drag is easy to grab, while the reorder handle and sort tap keep the
+/// rest of the cell.
+const double _kResizeHandleHitWidth = 8.0;
+
+/// The width, in logical pixels, of the resize handle's VISIBLE strip (a thin
+/// divider-coloured rule), centered within the wider hit area.
+const double _kResizeHandleVisualWidth = 2.0;
+
 /// The frozen header row of a `LayrzTable<T>`: one cell per visible column,
 /// each carrying up to three interactions.
 ///
@@ -18,10 +29,11 @@ import 'package:layrz_ui/src/tooltips/tooltips.dart';
 /// that trigger in its own toolbar row, beside the search field, rather
 /// than in this header. See `LayrzColumnMenu`'s own doc for what it drives.
 ///
-/// **Structural seam (a note for whoever assembles `LayrzTable` in U9):**
+/// **Structural seam (a note for whoever assembles `LayrzTable`):**
 /// this widget does not compute column widths itself — the widget that owns
-/// the global column-width math (fixed columns subtract, flex columns split
-/// evenly, both floored at `minColumnWidth`) must compute one resolved width
+/// the global column-width math (each column's `LayrzColumn.width`, overridden
+/// by any `LayrzTableController` resize, clamped to
+/// `[minColumnWidth, LayrzColumn.maxWidth]`) must compute one resolved width
 /// per visible column **once** and hand the same [columnWidths] map to both
 /// this header and every `LayrzTableRow`, so the two stay pixel-aligned. The
 /// header DOES join the shared scroll-sync group itself: it takes the same
@@ -75,9 +87,9 @@ class LayrzTableHeader<T> extends StatefulWidget {
   /// The resolved width, in logical pixels, of every currently-visible
   /// column, keyed by [LayrzColumn.key].
   ///
-  /// Computed once by the assembling `LayrzTable` widget (fixed columns keep
-  /// their own [LayrzColumn.width]; flex columns split the remaining space
-  /// evenly, floored at the table's `minColumnWidth`) and shared verbatim
+  /// Computed once by the assembling `LayrzTable` widget (each column's own
+  /// [LayrzColumn.width], overridden by any [LayrzTableController] resize,
+  /// clamped to `[minColumnWidth, LayrzColumn.maxWidth]`) and shared verbatim
   /// with every `LayrzTableRow`'s cells so header and body columns stay
   /// aligned. A visible column absent from this map renders at
   /// [fallbackColumnWidth].
@@ -183,7 +195,6 @@ class LayrzTableHeader<T> extends StatefulWidget {
 }
 
 class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
-
   /// Looks up the [LayrzColumn] whose [LayrzColumn.key] equals [key].
   ///
   /// Returns `null` if no such column exists in [LayrzTableHeader.columns]
@@ -442,7 +453,78 @@ class _LayrzTableHeaderState<T> extends State<LayrzTableHeader<T>> {
         children: [
           dragTarget,
           Positioned.fill(child: bottomDivider),
+          // The resize handle is pinned to the cell's RIGHT EDGE, above the
+          // reorder DragTarget/Draggable, so a horizontal drag that starts on
+          // this thin strip resizes the column while a drag starting on the
+          // cell body (the reorder handle icon) still reorders — two distinct
+          // hit zones, no gesture conflict.
+          Positioned(
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: _kResizeHandleHitWidth,
+            child: _buildResizeHandle(context, column, width),
+          ),
         ],
+      ),
+    );
+  }
+
+  /// Builds the column-resize handle for [column], a thin strip on the cell's
+  /// right edge that resizes the column on horizontal drag.
+  ///
+  /// Dragging updates the column's width override on the controller
+  /// (`LayrzTableController.setColumnWidth`), clamped to
+  /// `[minColumnWidth (fallbackColumnWidth), LayrzColumn.maxWidth]` so the
+  /// stored/emitted override never holds an out-of-range value. The pointer
+  /// shows a horizontal-resize cursor on hover. [currentWidth] is the cell's
+  /// current resolved width, the base the drag delta is applied to.
+  Widget _buildResizeHandle(BuildContext context, LayrzColumn<T> column, double currentWidth) {
+    final tokens = context.tokens;
+    final minWidth = widget.fallbackColumnWidth;
+    final maxWidth = column.maxWidth ?? double.infinity;
+    final upper = maxWidth < minWidth ? minWidth : maxWidth;
+
+    // The resize drag is driven by a [RawGestureDetector] with an eager
+    // [HorizontalDragGestureRecognizer]: the header wraps its cells in a
+    // horizontal [SingleChildScrollView], and a plain [GestureDetector]'s
+    // horizontal-drag recognizer competes with — and loses to — that
+    // Scrollable's own drag recognizer in the gesture arena, so the handle
+    // would never fire. Giving the recognizer an `onStart` (so it declares
+    // interest immediately) plus [HitTestBehavior.opaque] on the handle lets it
+    // win the arena within its own 8px strip while leaving the rest of the
+    // header scrollable. Each drag update applies its `delta.dx` to the current
+    // override (or the resolved width on the first update).
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      child: RawGestureDetector(
+        behavior: HitTestBehavior.opaque,
+        gestures: {
+          HorizontalDragGestureRecognizer: GestureRecognizerFactoryWithHandlers<HorizontalDragGestureRecognizer>(
+            () => HorizontalDragGestureRecognizer(),
+            (recognizer) {
+              recognizer
+                ..onStart = (_) {}
+                ..onUpdate = (details) {
+                  final base = widget.controller.columnWidthOverride(column.key) ?? currentWidth;
+                  final next = (base + details.delta.dx).clamp(minWidth, upper);
+                  widget.controller.setColumnWidth(column.key, next);
+                };
+            },
+          ),
+        },
+        child: Semantics(
+          label: 'Resize ${column.headerText} column',
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: _kResizeHandleVisualWidth,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: tokens.colors.divider),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

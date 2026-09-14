@@ -48,13 +48,22 @@ class LayrzTableController<T> extends ChangeNotifier {
   ///
   /// [minVisibleColumns] sets the floor described on [minVisibleColumns] —
   /// defaults to `1` and must be at least `1`.
+  ///
+  /// [columnWidths] optionally seeds per-column width overrides (keyed by
+  /// column [Key]), e.g. restored from a previously persisted
+  /// [LayrzTableColumnWidthsEvent] payload. Defaults to no overrides, so every
+  /// column starts at its own `LayrzColumn.width` default. Seeded values are
+  /// not clamped here — the table clamps every effective width to
+  /// `[minColumnWidth, LayrzColumn.maxWidth]` when it resolves widths.
   LayrzTableController({
     List<Key> columnOrder = const [],
     Set<Key> hiddenColumns = const {},
+    Map<Key, double> columnWidths = const {},
     this.minVisibleColumns = 1,
   }) : assert(minVisibleColumns >= 1, 'minVisibleColumns must be at least 1'),
        _columnOrder = List<Key>.of(columnOrder),
-       _hiddenColumns = Set<Key>.of(hiddenColumns);
+       _hiddenColumns = Set<Key>.of(hiddenColumns),
+       _columnWidthOverrides = Map<Key, double>.of(columnWidths);
 
   /// The minimum number of columns that must remain visible at all times.
   ///
@@ -80,6 +89,14 @@ class LayrzTableController<T> extends ChangeNotifier {
   ///
   /// A key present in [columnOrder] but absent from this set is visible.
   final Set<Key> _hiddenColumns;
+
+  /// Per-column width overrides, in logical pixels, keyed by column [Key].
+  ///
+  /// Only columns the user has explicitly resized appear here; a column absent
+  /// from this map uses its own `LayrzColumn.width` default. This is the
+  /// persistable set of user width customizations — see [columnWidthOverrides],
+  /// [setColumnWidth] and [clearColumnWidth].
+  final Map<Key, double> _columnWidthOverrides;
 
   /// The current search text used to filter rows.
   ///
@@ -124,6 +141,20 @@ class LayrzTableController<T> extends ChangeNotifier {
   /// The subset of [columnOrder] that is currently visible, in the same
   /// relative order.
   Set<Key> get visibleColumnKeys => _columnOrder.where((key) => !_hiddenColumns.contains(key)).toSet();
+
+  /// The per-column width overrides, in logical pixels, keyed by column [Key].
+  ///
+  /// Only columns the user has explicitly resized (via [setColumnWidth], the
+  /// header resize drag, or the constructor's `columnWidths`) appear here; a
+  /// column absent from this map renders at its own `LayrzColumn.width`
+  /// default. This is exactly the payload of [LayrzTableColumnWidthsEvent] and
+  /// the set to persist and later restore.
+  Map<Key, double> get columnWidthOverrides => Map<Key, double>.unmodifiable(_columnWidthOverrides);
+
+  /// The width override, in logical pixels, for the column identified by
+  /// [key], or `null` if that column has no override (it renders at its
+  /// `LayrzColumn.width` default).
+  double? columnWidthOverride(Key key) => _columnWidthOverrides[key];
 
   /// The current search text used to filter rows. Empty means unfiltered.
   String get searchText => _searchText;
@@ -175,7 +206,9 @@ class LayrzTableController<T> extends ChangeNotifier {
   /// [LayrzTableSearchEvent], the selection mutators emit
   /// [LayrzTableSelectionEvent], the column mutators ([setColumnVisible],
   /// [toggleColumn], [reorderColumn], [syncColumns], [setColumnOrder], and
-  /// [setHiddenColumns]) emit [LayrzTableColumnsEvent], and [refresh] emits
+  /// [setHiddenColumns]) emit [LayrzTableColumnsEvent], the width mutators
+  /// ([setColumnWidth], [clearColumnWidth]) emit [LayrzTableColumnWidthsEvent],
+  /// and [refresh] emits
   /// [LayrzTableRefreshEvent]. A mutation refused (or, for [setHiddenColumns],
   /// clamped down to a no-op) by the [minVisibleColumns] guard emits
   /// nothing when nothing actually changed. The stream is closed in
@@ -215,6 +248,41 @@ class LayrzTableController<T> extends ChangeNotifier {
     _searchText = text;
     notifyListeners();
     _eventsController.add(LayrzTableSearchEvent<T>(searchText: text));
+  }
+
+  /// Sets an explicit width override, in logical pixels, for the column
+  /// identified by [key].
+  ///
+  /// [width] is stored verbatim (not clamped here); the table clamps every
+  /// effective width to `[minColumnWidth, LayrzColumn.maxWidth]` when it
+  /// resolves widths, so passing an out-of-range value simply resolves to the
+  /// nearest bound. If the stored override is unchanged this is a no-op (no
+  /// [notifyListeners], no event). Otherwise it calls [notifyListeners] and
+  /// emits a [LayrzTableColumnWidthsEvent] carrying the full override map.
+  void setColumnWidth(Key key, double width) {
+    if (_columnWidthOverrides[key] == width) return;
+    _columnWidthOverrides[key] = width;
+    notifyListeners();
+    _emitColumnWidths();
+  }
+
+  /// Removes the width override for the column identified by [key], returning
+  /// it to its `LayrzColumn.width` default.
+  ///
+  /// A no-op (no [notifyListeners], no event) when [key] had no override.
+  /// Otherwise calls [notifyListeners] and emits a
+  /// [LayrzTableColumnWidthsEvent] carrying the remaining override map.
+  void clearColumnWidth(Key key) {
+    if (!_columnWidthOverrides.containsKey(key)) return;
+    _columnWidthOverrides.remove(key);
+    notifyListeners();
+    _emitColumnWidths();
+  }
+
+  /// Emits a [LayrzTableColumnWidthsEvent] with a snapshot of the current
+  /// override map.
+  void _emitColumnWidths() {
+    _eventsController.add(LayrzTableColumnWidthsEvent<T>(columnWidths: Map<Key, double>.of(_columnWidthOverrides)));
   }
 
   /// Sets whether the column identified by [key] is visible.
