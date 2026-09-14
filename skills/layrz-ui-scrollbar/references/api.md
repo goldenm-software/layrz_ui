@@ -51,6 +51,7 @@ ScrollConfiguration(
 const LayrzScrollbar({
   required this.child,
   this.controller,
+  this.notificationPredicate,
   super.key,
 });
 ```
@@ -63,8 +64,9 @@ const LayrzScrollbar({
 |---|---|---|---|
 | `child` | `Widget` | — | Required. The scrollable widget to decorate (typically `SingleChildScrollView`, `ListView`, or `CustomScrollView`). |
 | `controller` | `ScrollController?` | `null` | Should be the same controller attached to `child`'s own `Scrollable`. `null` falls back to `PrimaryScrollController`. |
+| `notificationPredicate` | `ScrollNotificationPredicate?` | `null` | Forwarded verbatim to `RawScrollbar.notificationPredicate`. `null` uses Flutter's `defaultScrollNotificationPredicate` (depth-0 notifications only). Override when the tracked scrollable is nested inside another one (e.g. a vertical list inside a horizontal scroll view), so the scrollbar binds to the correct (deeper) axis. |
 
-No other constructor parameters exist. Visual constants (not caller-configurable): thickness `kLayrzScrollbarThickness = 8.0`; radius `kLayrzScrollbarRadius = Radius.circular(4.0)`; `crossAxisMargin`/`mainAxisMargin = 0.0`.
+Visual constants (not caller-configurable): thickness `kLayrzScrollbarThickness = 8.0`; radius `kLayrzScrollbarRadius = Radius.circular(4.0)`; `crossAxisMargin`/`mainAxisMargin = 0.0`.
 
 ---
 

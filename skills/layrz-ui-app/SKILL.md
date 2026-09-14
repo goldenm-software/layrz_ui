@@ -54,6 +54,7 @@ class MyApp extends StatelessWidget {
 - **`scrollBehavior` defaults to `LayrzScrollBehavior`**, which installs a themed scrollbar on pointer platforms automatically — passing your own `ScrollBehavior` opts out of that.
 - **`pageTransitionType` only drives real page transitions on the imperative constructor.** On `LayrzApp.router`, there is no seam into a caller-supplied `RouterConfig`'s pages; read `LayrzApp.pageTransitionTypeOf(context)` and apply it to your own route builder.
 - Localization always installs `LayrzUiL10nDelegate` — appended after any caller-supplied `localizationsDelegates`, never duplicated.
+- **`colorblindMode`/`colorblindStrength` (beta)** apply a whole-app color-vision-deficiency simulation via a single `ColorFiltered` wrap — `.normal` (default) is the identity filter. This is a preview aid for developers/designers, not an accessibility correction, and it is not persisted across launches.
 
 ---
 

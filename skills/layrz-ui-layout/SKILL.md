@@ -43,7 +43,7 @@ LayrzLayout(
 
 ## Key behaviors
 
-- **Two presentations, container-driven, not viewport-driven**: `expanded` (178px fixed rail, md/lg/xl bands) and `drawer` (56px top bar + off-canvas drawer, xs/sm bands), resolved via `resolveLayrzLayoutPresentation` against `LayoutBuilder` constraints.
+- **Two presentations, container-driven, not viewport-driven**: `expanded` (220px fixed rail, md/lg/xl bands) and `drawer` (64px top bar + off-canvas drawer, xs/sm bands), resolved via `resolveLayrzLayoutPresentation` against `LayoutBuilder` constraints.
 - **`items` is a flat, sealed list** — `LayrzNavigatorPage` (tappable, `isSelected` caller-owned) and `LayrzNavigatorLabel` (non-interactive section caption). No nested/tree navigation.
 - **Consumer owns routing.** `LayrzLayout` never pushes routes itself; `LayrzNavigatorPage.onTap` and `isSelected` are entirely caller-driven.
 - **Notifications bell is hidden entirely** when both `notifications` is empty AND `onNotificationTap` is null.
@@ -58,8 +58,8 @@ LayrzLayout(
 
 | Presentation | Bands | Width | Chrome |
 |---|---|---|---|
-| Expanded | md, lg, xl | 178px fixed rail (`kLayrzLayoutRailWidth`) | Rail: user block, nav list, notifications footer |
-| Drawer | xs, sm | 56px top bar (`kLayrzLayoutTopBarHeight`), 260px drawer (`kLayrzLayoutDrawerWidth`) | Top bar: logo, drawer trigger, notifications, user block |
+| Expanded | md, lg, xl | 220px fixed rail (`kLayrzLayoutRailWidth`) | Rail: user block, nav list, notifications footer |
+| Drawer | xs, sm | 64px top bar (`kLayrzLayoutCompactTopBarHeight` — the drawer path is always compact, so the 56px `kLayrzLayoutTopBarHeight` never actually applies here), 260px drawer (`kLayrzLayoutDrawerWidth`) | Top bar: logo, drawer trigger, notifications, user block |
 
 ---
 

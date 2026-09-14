@@ -102,7 +102,7 @@ final maybeCustom = context.maybeThemeExtension<MyThemeExtension>();
 | `tokens` | `LayrzTokens` | `LayrzTheme.of(this).tokens`. Preferred way to access design values. |
 | `breakpoint` | `LayrzBreakpoint` | Resolved from `MediaQuery.sizeOf(this).width` — always viewport-driven, never container-driven. One of `.xs`/`.sm`/`.md`/`.lg`/`.xl`. |
 | `isCompact` | `bool` | `true` for `.xs`/`.sm` (< 960px), `false` for `.md`/`.lg`/`.xl`. **The single source of truth for responsive sizing decisions** — never substitute `LayrzPlatform.isMobile`, which is OS-based, not width-based. |
-| `isDark` | `bool` | **BETA.** `true` when `LayrzTheme.of(this).brightness == Brightness.dark`. Do not build on this — the design system targets light mode only. |
+| `isDark` | `bool` | **BETA** (decision D78). `true` when `LayrzTheme.of(this).brightness == Brightness.dark`. Brightness-based — a distinct axis from `isCompact` (width-based); never substitute one for the other. |
 | `brightness` | `Brightness` | **BETA.** Shorthand for `LayrzTheme.of(this).brightness`. |
 | `tokenizer` | `LayrzTokenizer` | `LayrzTokenizer(tokens)` — group getters and flat shortcuts over design tokens. |
 | `l10n` | `LayrzUiL10n` | `LayrzUiL10n.of(this)` — the preferred way to access localized strings. |
@@ -127,4 +127,4 @@ final maybeCustom = context.maybeThemeExtension<MyThemeExtension>();
 - **`flattenOn` results are surface-specific.** The returned opaque color is only pixel-correct when painted over the exact `background` argument — caching and reusing it against a different surface is wrong.
 - **`darken`/`lighten` are alpha-blend, not HSL.** There is no `.shadeXXX` swatch API on semantic color tokens in this design system — use these methods to derive a tone instead.
 - **`isCompact`/`breakpoint` are never a substitute for `LayrzPlatform.isMobile`/`.isTouchOS`, and vice versa.** Viewport width and OS identity are orthogonal; conflating them is a real, easy-to-miss bug (see the `layrz-ui-selection-magnifier` skill for a concrete case where the wrong one strips a feature from a real target platform).
-- **`isDark`/`brightness` are BETA and unsupported for feature work** — this design system is light-mode only (decision D7); dark-mode branches should not be introduced against these getters.
+- **`isDark`/`brightness` are BETA (decision D78), not unsupported** — dark mode is a real, shipped feature (`LayrzThemeMode`, `LayrzApp.darkTheme`/`themeMode`, `LayrzThemeData.dark()`), but several components still carry known light-only hardcodes; check D78's Consequences list before relying on full correctness.

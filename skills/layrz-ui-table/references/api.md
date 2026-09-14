@@ -20,6 +20,7 @@ LayrzTable<User>(
     LayrzColumn<User>(
       key: const ValueKey('name'),
       headerText: 'Name',
+      width: 200,
       valueBuilder: (user) => user.name,
     ),
   ],
@@ -40,16 +41,28 @@ LayrzTable<User>(
   onFilteredCountChanged: (count) => print('Showing $count rows'),
 )
 
-// Disabling search, fixed vs. flex columns
+// Disabling search; a column with a resize ceiling
 LayrzTable<User>(
   items: users,
   canSearch: false,
   minColumnWidth: 120,
   columns: [
     LayrzColumn<User>(key: const ValueKey('id'), headerText: 'ID', width: 80, valueBuilder: (u) => u.id),
-    LayrzColumn<User>(key: const ValueKey('name'), headerText: 'Name', valueBuilder: (u) => u.name), // flex
+    LayrzColumn<User>(
+      key: const ValueKey('name'),
+      headerText: 'Name',
+      width: 200,
+      maxWidth: 400,
+      valueBuilder: (u) => u.name,
+    ),
   ],
 )
+
+// Restoring persisted column widths into a fresh controller
+final controller = LayrzTableController<User>(
+  columnOrder: [const ValueKey('id'), const ValueKey('name')],
+  columnWidths: {const ValueKey('name'): 260}, // e.g. from a persisted LayrzTableColumnWidthsEvent
+);
 ```
 
 ---
@@ -97,7 +110,7 @@ LayrzTable({
 | `actionsCount` | `int` | `0` | Single source of truth for the actions column's existence. Must not be negative. |
 | `hasMultiselect` | `bool` | `false` | Renders a pinned-left checkbox cell per row and a header select-all when `true`. |
 | `canSearch` | `bool` | `true` | Whether the toolbar renders a search field. The column-menu trigger stays visible regardless. |
-| `minColumnWidth` | `double` | `150` | Floor for flex (width-`null`) columns. Must be `> 0`. |
+| `minColumnWidth` | `double` | `150` | Floor for every column's effective (resized-or-default) width. Must be `> 0`. |
 | `height` | `double` | `50` | Fixed height of every data row. |
 | `headerHeight` | `double` | `40` | Fixed height of the frozen header row. |
 | `emptyText` | `String?` | `null` | Shown when `items` is empty. Localized house default when `null`. |
@@ -119,7 +132,8 @@ LayrzTable({
 | `richTextBuilder` | `List<InlineSpan> Function(T item)?` | `null` | Overrides visual rendering only — search/default sort still use `valueBuilder`. |
 | `alignment` | `Alignment` | `Alignment.centerLeft` | Horizontal alignment of cell content. |
 | `isSortable` | `bool` | `true` | Whether tapping the header toggles sort. |
-| `width` | `double?` | `null` | Fixed width; `null` makes it a flex column sharing remaining space, floored at `minColumnWidth`. |
+| `width` | `double` | — | Required. The column's default fixed width in logical pixels — no flex/share-remaining-space behavior exists. A user can resize the column by dragging the header handle; the effective width is `controller.columnWidthOverride(key) ?? width`, clamped to `[minColumnWidth, maxWidth]`. |
+| `maxWidth` | `double?` | `null` | Resize ceiling in logical pixels. `null` means no upper bound — the column can be dragged arbitrarily wide, with the table scrolling horizontally to accommodate. |
 | `onTap` | `CellTap<T>?` | `null` | `typedef CellTap<T> = void Function(T item)`. `null` falls back to copy-to-clipboard. |
 | `customSort` | `int Function(T a, T b, bool ascending)?` | `null` | Overrides the default comparator. **Must be isolate-safe.** Must already account for `ascending`. |
 
@@ -133,6 +147,7 @@ LayrzTable({
 LayrzTableController({
   List<Key> columnOrder = const [],
   Set<Key> hiddenColumns = const {},
+  Map<Key, double> columnWidths = const {},
   this.minVisibleColumns = 1,
 }) : assert(minVisibleColumns >= 1, 'minVisibleColumns must be at least 1');
 ```
@@ -143,6 +158,8 @@ LayrzTableController({
 | `columnOrder` | `List<Key> get` | Every known column key, in display order, hidden columns included. |
 | `hiddenColumns` | `Set<Key> get` | Currently-hidden column keys. |
 | `visibleColumnKeys` | `Set<Key> get` | Subset of `columnOrder` not in `hiddenColumns`. |
+| `columnWidthOverrides` | `Map<Key, double> get` | Every column the user has explicitly resized, keyed by column `Key`, mapped to its override width. A column absent from this map renders at its own `LayrzColumn.width` default. Seed via the constructor's `columnWidths`. |
+| `columnWidthOverride(Key key)` | `double? get` | The override for one column, or `null` if unresized. |
 | `searchText` | `String get` | Current search filter text. |
 | `sortColumnKey` | `Key? get` | `null` means unsorted. |
 | `sortAscending` | `bool get` | Meaningless while `sortColumnKey` is `null`. |
@@ -159,6 +176,8 @@ LayrzTableController({
 | `syncColumns(List<LayrzColumn<T>> columns)` | `void` | Reconciles by pure key membership; called internally by `LayrzTable` on column-set changes. |
 | `setColumnOrder(List<Key> order)` | `void` | Wholesale order replacement, reconciled by known-key membership. |
 | `setHiddenColumns(Set<Key> hidden)` | `void` | Wholesale hidden-set replacement; clamped (not refused) against `minVisibleColumns`. |
+| `setColumnWidth(Key key, double width)` | `void` | Sets an explicit width override for one column. Stored verbatim (not clamped here — the table clamps effective width to `[minColumnWidth, maxWidth]` when resolving). No-op if unchanged. |
+| `clearColumnWidth(Key key)` | `void` | Removes a column's width override, returning it to its `LayrzColumn.width` default. No-op if it had none. |
 | `selectItem(T item)` / `deselectItem(T item)` / `toggleSelection(T item)` | `void` | Single-item selection mutators. |
 | `selectAll(Iterable<T> items)` | `void` | Replaces selection with every item given. |
 | `clearSelection()` | `void` | Empties the selection. |
@@ -191,9 +210,10 @@ Also has `copyWith({...})`.
 | `LayrzTableSearchEvent<T>` | `searchText: String` | `search` |
 | `LayrzTableSelectionEvent<T>` | `selection: Set<T>` | `selectItem`, `deselectItem`, `toggleSelection`, `selectAll`, `clearSelection` |
 | `LayrzTableColumnsEvent<T>` | `columnOrder: List<Key>`, `hiddenColumns: Set<Key>` | `setColumnVisible`, `toggleColumn`, `reorderColumn`, `syncColumns`, `setColumnOrder`, `setHiddenColumns` |
+| `LayrzTableColumnWidthsEvent<T>` | `columnWidths: Map<Key, double>` | `setColumnWidth`, `clearColumnWidth`, and the header resize-drag gesture |
 | `LayrzTableRefreshEvent<T>` | none | `refresh` |
 
-`LayrzTableEvent<T>` is `sealed` — a `switch` over it is exhaustive with no `default` case needed. `LayrzTableColumnsEvent` carries `hiddenColumns`, not `visibleColumnKeys` — a key present in `columnOrder` but absent from `hiddenColumns` is visible. This shape mirrors the controller's own constructor, so an event payload can be fed straight into `setColumnOrder`/`setHiddenColumns` to restore a persisted layout.
+`LayrzTableEvent<T>` is `sealed` — a `switch` over it is exhaustive with no `default` case needed (six subclasses total). `LayrzTableColumnsEvent` carries `hiddenColumns`, not `visibleColumnKeys` — a key present in `columnOrder` but absent from `hiddenColumns` is visible. This shape mirrors the controller's own constructor, so an event payload can be fed straight into `setColumnOrder`/`setHiddenColumns` to restore a persisted layout. `LayrzTableColumnWidthsEvent.columnWidths` mirrors `columnWidthOverrides`/the constructor's `columnWidths` the same way — a column absent from the map is at its default width.
 
 ---
 
@@ -212,6 +232,8 @@ Also has `copyWith({...})`.
 - **Search cache**: a lowercased display-string cache is built once per `items`/`columns` identity change (not per keystroke); search filters against the cache.
 - **Off-thread sort**: the default comparator path sends only precomputed sort keys and an index array across the isolate boundary — never the row objects. A `customSort` column instead sends the whole filtered item list across the boundary, since it must compare actual `T` objects.
 - **Column widths** are computed once per `LayoutBuilder` pass and handed identically to the header and every row, so cells align pixel-for-pixel. The actions column width is computed from a fixed formula over `actionsCount`, never from actual button content.
+- **No flex columns**: every `LayrzColumn.width` is a fixed pixel value. When the visible columns' widths sum wider than the available width, the data area scrolls horizontally; when narrower, the remainder is trailing whitespace — columns never stretch to fill it.
+- **Column resizing**: dragging the handle on a header cell's right edge sets an override via `LayrzTableController.setColumnWidth`, clamped to `[minColumnWidth, LayrzColumn.maxWidth]`. The effective width used everywhere (header, cells, layout) is `controller.columnWidthOverride(key) ?? column.width`.
 - **Select-all** is computed against the full `items` list, not the search-filtered subset — selecting all always means all, regardless of the current search.
 - **Column reconciliation** (`syncColumns`, `setColumnOrder`, `setHiddenColumns`) is always by `Key` membership, never by index.
 - **Disposal**: caller-owned when `controller` is supplied; table-owned when omitted.

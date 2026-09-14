@@ -70,6 +70,8 @@ const LayrzApp({
   this.theme,
   this.darkTheme,
   this.themeMode = LayrzThemeMode.system,
+  this.colorblindMode = ColorblindMode.normal,
+  this.colorblindStrength = 1.0,
   this.title = '',
   this.onGenerateTitle,
   this.color,
@@ -106,6 +108,8 @@ const LayrzApp.router({
   this.theme,
   this.darkTheme,
   this.themeMode = LayrzThemeMode.system,
+  this.colorblindMode = ColorblindMode.normal,
+  this.colorblindStrength = 1.0,
   this.title = '',
   this.onGenerateTitle,
   this.color,
@@ -155,6 +159,8 @@ No asserts on this constructor — the two forms are kept mutually exclusive pur
 | `theme` | `LayrzThemeData?` | `LayrzThemeData.light()` | The light theme. Immutable once mounted. |
 | `darkTheme` | `LayrzThemeData?` | `LayrzThemeData.dark()` | The (beta) dark theme, used only when `themeMode` resolves to dark. See Behavior notes. |
 | `themeMode` | `LayrzThemeMode` | `.system` | Which of `theme`/`darkTheme` is active: `.light`, `.dark`, or `.system` (follows `MediaQuery.platformBrightness`). |
+| `colorblindMode` | `ColorblindMode` | `.normal` | **Beta.** Color-vision-deficiency simulation applied to the whole app via a single `ColorFiltered` wrap. A preview/simulation aid, not an accessibility fix — not persisted across launches (consumer's responsibility, like `themeMode`). |
+| `colorblindStrength` | `double` | `1.0` | **Beta.** Strength of `colorblindMode`'s simulation, `0.0` (no effect) to `1.0` (full simulation), interpolated linearly. |
 | `title` | `String` | `''` | One-line app description shown in the OS task switcher. |
 | `onGenerateTitle` | `GenerateAppTitle?` | `null` | Generates a localized title; takes precedence over `title`. |
 | `color` | `Color?` | `null` | Primary color surfaced to the host OS. Defaults to the effective theme's `primaryColor`. |
@@ -183,6 +189,24 @@ No asserts on this constructor — the two forms are kept mutually exclusive pur
 |---|---|---|
 | `pageTransitionTypeOf` | `static LayrzTransitionType pageTransitionTypeOf(BuildContext context)` | Returns the nearest ancestor `LayrzApp`'s `pageTransitionType`, or `.fade` if no `LayrzApp` ancestor exists. Intended for router-based callers building their own route pages. |
 | `buildLayrzUiL10nDelegates` | `@visibleForTesting List<LocalizationsDelegate<dynamic>> buildLayrzUiL10nDelegates(Iterable<LocalizationsDelegate<dynamic>>? userDelegates)` | Top-level helper (not a member of the class) merging caller delegates with the default `LayrzUiL10nDelegate`, without duplicating it. |
+
+---
+
+## `ColorblindMode` enum
+
+Source: `lib/src/colorblindness/src/colorblind_mode.dart`. Defined locally in `layrz_ui` (not imported from `layrz_sdk`) to avoid a transitive Material dependency.
+
+| Value | Simulates |
+|---|---|
+| `.protanopia` | Complete red blindness. |
+| `.protanomaly` | Red-weak color vision (milder than `.protanopia`). |
+| `.deuteranopia` | Complete green blindness — the most common form of color vision deficiency. |
+| `.deuteranomaly` | Green-weak color vision (milder than `.deuteranopia`). |
+| `.tritanopia` | Complete blue blindness (rare). |
+| `.tritanomaly` | Blue-weak color vision (milder than `.tritanopia`). |
+| `.normal` (default) | No simulation; colors render unmodified. |
+
+`ColorblindFilter.filter(strength)` resolves a mode to the matrix `ColorFilter` `LayrzApp` applies; `.normal` always returns the identity filter regardless of `strength`.
 
 ---
 

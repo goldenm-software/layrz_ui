@@ -90,7 +90,7 @@ No asserts — every combination of parameters is valid.
 ## Behavior notes
 
 - **Track geometry** (fixed, not configurable): 52×28 track, 20×20 thumb, 4px inset on all sides — 24px of horizontal thumb travel.
-- **Colour precedence**: disabled > error (`errors.isNotEmpty`) > pressed/hover/focus-visible > default. See the colour-state table in `SKILL.md`.
+- **Colour precedence**: disabled > error (`errors.isNotEmpty`) > pressed/hover/focus-visible > default. See the colour-state table in `SKILL.md`. The off-track color is theme-aware (`context.isDark`): resting off-track is `sf4` in light mode vs. `sf1` in dark mode, and hover/focus/pressed off-track is `sf3` in light mode vs. `sf2` in dark mode — chosen so the interactive state always reads as one surface step away from resting in either palette. The on-track (`primary`/`danger`) and thumb-disabled (`fg4`) colors are theme-invariant; the enabled thumb itself is `sf1` in light mode and `sf4` in dark mode.
 - **Focus-visible**: the track-colour focus treatment shows only when focus was gained via keyboard, not via a pointer tap (tracked internally via a `_focusFromPointer` flag).
 - **Non-colour indicator**: the thumb's own left/right position indicates on/off state, not colour alone (WCAG 1.4.1).
 - **Semantics**: the control announces `toggled`, `enabled`, and a tap action; `labelText` (when set) is the announced name. The label `Text` itself is not separately excluded from semantics the way the checkbox's is (no `ExcludeSemantics` wrapper on the label `Text`), since the switch's `Semantics.label` already supplies the name.

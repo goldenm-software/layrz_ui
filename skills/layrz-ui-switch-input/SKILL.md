@@ -46,14 +46,16 @@ LayrzSwitchInput(
 
 ## Colour states
 
-| State | Off track | On track |
-|---|---|---|
-| Disabled | `sf3` | `sf3` |
-| Error (`errors.isNotEmpty`) | `danger` @ 50% tonal | `danger` |
-| Hovered / focus-visible / pressed | `sf4` | `primary` |
-| Default | `sf3` | `primary` |
+Off-track color is theme-aware (light vs dark); on-track color is not (it's always `primary` or `danger`).
 
-Precedence: disabled > error > pressed/hover/focused > default. The thumb itself is `sf1` (white) normally, `fg4` when disabled.
+| State | Off track (light) | Off track (dark) | On track |
+|---|---|---|---|
+| Disabled | `sf3` | `sf1` | same as off — track doesn't animate color while disabled |
+| Error (`errors.isNotEmpty`) | `danger` @ tonal opacity, flattened on `sf4` | same formula (theme-invariant) | `danger` |
+| Hovered / focus-visible / pressed | `sf3` | `sf2` | `primary` |
+| Default | `sf4` | `sf1` | `primary` |
+
+Precedence: disabled > error > pressed/hover/focused > default. The thumb itself is `sf1` (white) in light mode, `sf4` in dark mode when enabled; `fg4` when disabled (both themes).
 
 ---
 

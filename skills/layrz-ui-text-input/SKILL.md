@@ -26,6 +26,7 @@ description: Use LayrzTextInput in a layrz_ui Flutter widget. Apply when adding 
 ```dart
 LayrzTextInput(
   labelText: 'Name',
+  value: name,
   errors: nameErrors,
   onChanged: (value) {
     name = value;
@@ -39,6 +40,7 @@ LayrzTextInput(
 ## Key behaviors
 
 - **`labelText` or `hintText` is mandatory** — at least one must be non-null (debug assertion). Both together are valid; neither alone is an error.
+- **Prefer `value` over `controller` for simple fields.** `value` initializes the field's text and works together with `onChanged` — no controller to create or dispose. Reach for `controller` only when you genuinely need programmatic control (reading/setting text outside `onChanged`, selection manipulation, listening to the `TextEditingController` directly). **`value` is ignored whenever a `controller` is supplied** — the controller is then the sole source of truth, so don't pass both expecting them to combine.
 - **Slot exclusivity** — at most one of `prefixIcon` / `prefix` / `prefixText`; same rule for the suffix trio. Providing two asserts in debug mode.
 - `disabled: true` blocks all input and taps; `readOnly: true` blocks editing but still fires `onTap` — this is how picker-style fields work.
 - `errors` is a caller-owned `List<String>`, joined with `", "` into one line below the field on wide viewports (≥ 960px `md`+); below that, errors move into a tap-triggered tooltip anchored to the error icon, one per line. This is automatic — you never branch on viewport for it.
@@ -63,7 +65,8 @@ LayrzTextInput(
   },
 )
 
-// 2. Read-only field that opens a picker
+// 2. Read-only field that opens a picker (needs a controller: text is set
+//    programmatically from outside onChanged, not typed by the user)
 LayrzTextInput(
   labelText: 'Date',
   readOnly: true,
@@ -71,9 +74,10 @@ LayrzTextInput(
   onTap: () => showDatePicker(),
 )
 
-// 3. Prefix icon + suffix action (e.g. copy-to-clipboard)
+// 3. Prefix icon + suffix action (e.g. copy-to-clipboard) — plain `value`, no controller needed
 LayrzTextInput(
   labelText: 'Share URL',
+  value: url,
   prefixIcon: MdiIcons.linkVariant,
   suffixIcon: MdiIcons.contentCopy,
   onSuffixTap: () => copyToClipboard(url),
@@ -88,11 +92,11 @@ LayrzTextInput(
   onChanged: (value) => query = value,
 )
 
-// 5. Disabled field
+// 5. Disabled field with a fixed value — no controller needed since nothing edits it
 LayrzTextInput(
   labelText: 'Locked field',
   disabled: true,
-  controller: TextEditingController(text: 'Cannot edit this'),
+  value: 'Cannot edit this',
 )
 ```
 
@@ -100,6 +104,7 @@ LayrzTextInput(
 
 ## Form conventions
 
+- Default to `value:` + `onChanged` for ordinary form fields; only reach for `controller:` when the field genuinely needs programmatic text/selection control from outside `onChanged` — a plain `TextEditingController()` per field is one more object to create and dispose for no benefit when `value` covers the case.
 - Guard async `onChanged` follow-ups with `if (context.mounted)` before calling the parent callback.
 - Pass `errors: <List<String>>` from your own form validation state — there is no `context.getErrors` in layrz_ui; the caller owns and computes the list.
 - Localize `labelText`/`hintText`/`helperText` via `LayrzUiL10n.of(context)` when the string is a real product string; a plain literal is fine in examples and simple internal tools.

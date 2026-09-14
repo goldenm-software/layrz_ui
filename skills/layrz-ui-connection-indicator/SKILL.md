@@ -1,6 +1,6 @@
 ---
 name: layrz-ui-connection-indicator
-description: Use LayrzConnectionIndicator in a layrz_ui Flutter widget. Apply when rendering a live device/asset/connection status indicator — a 5-state (online/idle/offline/disconnected/no-data) resolution from elapsed time since last telemetry, as a bare dot or as a colored pill wrapping caller content.
+description: Use LayrzConnectionIndicator in a layrz_ui Flutter widget. Apply when rendering a live device/asset/connection status indicator — a 5-state (online/idle/offline/disconnected/no-data) resolution from elapsed time since last telemetry, as a bare dot or as a colored chip-like chrome wrapping caller content.
 ---
 
 > **Dart syntax:** This library requires Dart ≥ 3.13. Use dot shorthand for all enum values (e.g. `.dot`, `.full`) — never the fully-qualified form (`LayrzConnectionIndicatorMode.dot`).
@@ -13,7 +13,7 @@ description: Use LayrzConnectionIndicator in a layrz_ui Flutter widget. Apply wh
 
 - Any live connection/telemetry status: device online/offline badges, asset trackers, last-seen indicators in a table or detail pane.
 - Use `mode: .dot` for a compact colored dot with a tooltip announcing state + "time ago" — table cells, list rows, map markers.
-- Use `mode: .full` to wrap arbitrary caller content (e.g. an asset name) in a state-colored pill — headers, cards, chips.
+- Use `mode: .full` to wrap arbitrary caller content (e.g. an asset name) in a state-colored chip-like chrome — headers, cards, chips.
 - **Do not use** for a generic network/API connectivity indicator unrelated to a specific entity's telemetry — this widget's 5-state model is specifically about elapsed time since `receivedAt`.
 - **Do not use** for progress or loading feedback — use `LayrzProgressBar` instead.
 
@@ -30,7 +30,7 @@ LayrzConnectionIndicator(
 ```
 
 ```dart
-// Full mode — wraps caller content in a state-colored pill
+// Full mode — wraps caller content in a state-colored chip-like chrome
 LayrzConnectionIndicator(
   receivedAt: device.lastTelemetryAt,
   mode: .full,
@@ -46,7 +46,7 @@ LayrzConnectionIndicator(
 - **`mode: .full` REQUIRES a non-null `child`** — omitting one throws an `AssertionError` at construction.
 - `receivedAt: null` always resolves to the no-data state, regardless of `connection` or `clock`.
 - The widget re-renders itself once a minute via an internal `Timer.periodic` — no polling or manual rebuild needed from the caller.
-- `.full` mode forces the child's text/icon color to the resolved state color's contrast color via a hard `DefaultTextStyle`/`IconTheme` (not `.merge`) — a caller-supplied `Text` with its own explicit color still renders legibly, most notably on the dark Disconnected pill.
+- `.full` mode forces the child's text/icon color to the resolved state color's contrast color via a hard `DefaultTextStyle`/`IconTheme` (not `.merge`) — a caller-supplied `Text` with its own explicit color still renders legibly, most notably on the dark Disconnected chip.
 - Elapsed time is measured against `DateTime.now()` in the local zone by default. Pass `clock` (a `DateTime Function()`) to inject a fixed time for tests — never rely on real wall-clock time in a test.
 - Only the online/idle thresholds are configurable via `connection` (`LayrzConnectionTimes`); the 30-day offline→disconnected boundary is a fixed constant.
 

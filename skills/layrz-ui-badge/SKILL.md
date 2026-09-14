@@ -60,7 +60,7 @@ LayrzBadge(
 LayrzBadge(
   label: 'Online',
   type: .success,
-  child: LayrzAvatar(url: user.avatarUrl),
+  child: LayrzAvatar.image(imageSource: user.avatarUrl, semanticLabel: "${user.fullName}'s profile photo"),
 )
 
 // 3. Icon badge, top-left corner, custom color
@@ -70,7 +70,7 @@ LayrzBadge(
   type: .custom,
   color: const Color(0xFF2E7D32),
   alignment: .topLeft,
-  child: LayrzAvatar(url: user.avatarUrl),
+  child: LayrzAvatar.image(imageSource: user.avatarUrl, semanticLabel: "${user.fullName}'s profile photo"),
 )
 
 // 4. Toggle visibility without remounting the child

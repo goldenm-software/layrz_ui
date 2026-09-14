@@ -1,6 +1,6 @@
 ---
 name: layrz-ui-scaffold-shell
-description: Use LayrzScaffoldShell<T> in a layrz_ui Flutter app. Apply when building a list-detail view — two-pane desktop, single-pane + modal sheet on mobile, foldable-hinge-aware side-by-side split, or shell-owned search filtering via LayrzScaffoldItem.searchableStrings.
+description: Use LayrzScaffoldShell<T> in a layrz_ui Flutter app. Apply when building a list-detail view — a full-width table by default on desktop that collapses into a two-pane split when an item opens, single-pane + modal sheet on mobile, or shell-owned search filtering via LayrzScaffoldItem.searchableStrings.
 ---
 
 > **Dart syntax:** This library requires Dart ≥ 3.13. Use dot shorthand for all enum values — never the fully-qualified form.
@@ -11,12 +11,12 @@ description: Use LayrzScaffoldShell<T> in a layrz_ui Flutter app. Apply when bui
 
 ## When to use
 
-- A generic list-detail view: emails, users, tickets, any master/detail pattern where selecting a list row shows details.
+- A generic list-detail view: emails, users, tickets, any master/detail pattern where opening a row shows details.
 - Generic over item type `T` — works with any domain object via `LayrzScaffoldItem<T>`.
-- The shell owns list rendering, search filtering, and desktop/mobile/foldable presentation switching; the consumer owns the detail content (`onDetailsBuild`) and the opened-item state (`LayrzScaffoldController`).
+- The shell owns list/table rendering, search filtering, and desktop/mobile presentation switching; the consumer owns the detail content (via `LayrzScaffoldController.open`) and the table's columns (`tableColumns`).
 - **Do not use** for the top-level app shell (nav rail + drawer) — use `LayrzLayout` instead.
 - **Do not use** for a fixed, author-defined tab set — use `LayrzTabView` instead.
-- **Do not use** raw `Row`/`ListView` list-detail hand-rolling — this shell already handles the desktop/mobile/foldable split, search, and selection persistence.
+- **Do not use** raw `Row`/`ListView`/`LayrzTable` hand-rolling — this shell already handles the desktop-table/split/mobile-sheet switching, search, and selection persistence.
 
 ---
 
@@ -24,9 +24,11 @@ description: Use LayrzScaffoldShell<T> in a layrz_ui Flutter app. Apply when bui
 
 ```dart
 final controller = LayrzScaffoldController();
+final tableController = LayrzTableController<User>();
 
 LayrzScaffoldShell<User>(
   controller: controller,
+  title: Text('Users', style: context.theme.tokens.typography.h6),
   itemExtent: 56,
   items: users
       .map(
@@ -38,43 +40,55 @@ LayrzScaffoldShell<User>(
         ),
       )
       .toList(),
-  onDetailsBuild: (user) => Column(
-    children: [
-      Text(user.name, style: context.theme.tokens.typography.h6),
-      Text('Email: ${user.email}'),
-    ],
+  tableColumns: [
+    LayrzColumn<User>(key: const ValueKey('name'), headerText: 'Name', width: 200, valueBuilder: (u) => u.name),
+    LayrzColumn<User>(key: const ValueKey('email'), headerText: 'Email', width: 260, valueBuilder: (u) => u.email),
+  ],
+  tableController: tableController,
+  onItemTap: (item) => controller.open(
+    key: item.key,
+    builder: (_) => Column(
+      children: [
+        Text(item.item.name, style: context.theme.tokens.typography.h6),
+        Text('Email: ${item.item.email}'),
+      ],
+    ),
   ),
 )
 ```
+
+Dispose `controller` and `tableController` yourself — the shell never disposes either.
 
 ---
 
 ## Key behaviors
 
-- **Not a router** — `LayrzScaffoldShell<T>` never navigates; the consumer owns routing and the detail widget's own content.
+- **Not a router** — `LayrzScaffoldShell<T>` never navigates; the consumer owns routing and the detail content's own widgets.
+- **Desktop defaults to a full-width table, not a split.** On a wide container (`!context.isCompact`, ≥ 960px) with nothing open, the shell renders a full-width `LayrzTable<T>` built from `items` + `tableColumns`, with one built-in per-row "open" action button. Opening an item (via that button, or a list row on narrow) collapses the shell into the classic list(300px)+detail split for as long as something is open; the two presentations cross-fade, and the table stays mounted (not disposed) behind the split for performance.
 - **Selection is keyed, not instance-based**: `LayrzScaffoldController.openedKey` tracks a `Key`, not the item — refetching the list with new `T` instances (same keys) preserves selection.
-- **Search is shell-owned, not customizable**: filters `LayrzScaffoldItem.searchableStrings` case-insensitively as substrings. No `filter` callback, no way to intercept the query. Set `searchable: false` to hide the field entirely.
-- **Row tapping is implicit** — there is no `onTap` on the shell; tapping a row calls `controller.open(item.key)` internally. Listen to the controller (`ListenableBuilder`) to react to selection outside `onDetailsBuild`.
+- **Search is shell-owned, not customizable**: filters `LayrzScaffoldItem.searchableStrings` case-insensitively as substrings; also drives `canSearch` on the internal desktop table. No `filter` callback, no way to intercept the query. Set `searchable: false` to hide the field entirely.
+- **The shell never opens the detail pane itself.** Both the list rows (narrow, and the wide split) and the desktop table's built-in per-row open button route through `onItemTap`; the caller decides what happens, typically calling `controller.open(key:, builder:)` for the tapped item.
+- **Closing the detail is the app's responsibility.** There is no built-in "close" button inside the detail content itself — the list panel's own header close button (shown while wide and open) calls `controller.close()` to return to the table, but any close affordance placed *inside* the detail builder (e.g. a header back button in a narrow sheet) must call `controller.close()` explicitly.
 - **Narrow band requires a `Navigator` ancestor** (e.g. inside `LayrzApp`) — the detail sheet pushes on the **root** navigator. Missing one fires a debug assert; the list still renders without detail capability.
-- **Foldable-hinge awareness**: on a device reporting a genuine vertical fold/hinge crossing the shell, the shell forces an asymmetric side-by-side split at the seam — independent of breakpoint band. A horizontal seam never splits (keyboard-oscillation bug, fixed by design).
-- **Selection survives every presentation change** — breakpoint crossing, fold appearing/disappearing, rotation — none of it clears `controller.openedKey`.
+- **Selection survives every presentation change** — breakpoint crossing included — none of it clears `controller.openedKey` on its own (narrow→wide pops the sheet but keeps the selection; wide→narrow re-opens the sheet for it).
 
 ---
 
 ## Presentations
 
-| Band | List pane | Detail |
+| Band | Nothing open | Item open |
 |---|---|---|
-| Expanded (md/lg/xl) | 300px fixed, left | Side-by-side, fills remaining width |
-| Foldable (vertical seam, ≥480px shell height) | Sized to the mapped hinge seam (asymmetric) | Side-by-side at the true seam position |
-| Narrow (sm/xs) | Always visible, full width | `LayrzBottomSheet` layered over the list |
+| Wide (`!context.isCompact`, ≥ 960px) | Full-width `LayrzTable<T>` (built from `items` + `tableColumns`) | Classic side-by-side split: 300px list pane (left) + detail pane (right), cross-faded over the still-mounted table |
+| Narrow (`context.isCompact`, < 960px) | List panel, full width | `LayrzBottomSheet` layered over the list |
+
+`tableColumns` never affects the narrow layout — it is only ever consumed by the desktop default table.
 
 ---
 
 ## Common patterns
 
 ```dart
-// 1. Reacting to selection outside onDetailsBuild
+// 1. Reacting to selection outside the detail builder
 ListenableBuilder(
   listenable: controller,
   builder: (context, _) {
@@ -83,26 +97,30 @@ ListenableBuilder(
   },
 )
 
-// 2. Row-level quick actions (edit/delete), revealed on hover (desktop) / swipe (mobile)
-LayrzScaffoldItem<User>(
-  key: ValueKey(user.id),
-  item: user,
-  tile: Text(user.name),
-  actions: [
-    LayrzButton.edit(labelText: 'Edit ${user.name}', isFab: true, onTap: () => onEdit(user)),
-    LayrzButton.delete(labelText: 'Delete ${user.name}', isFab: true, onTap: () => onDelete(user)),
-  ],
-)
+// 2. Closing the detail from inside its own builder (e.g. a narrow-sheet back button)
+onItemTap: (item) => controller.open(
+  key: item.key,
+  builder: (_) => Column(
+    children: [
+      LayrzButton.cancel(labelText: 'Close', isFab: true, onTap: controller.close),
+      UserDetailView(user: item.item),
+    ],
+  ),
+),
 
-// 3. Empty state and footer
+// 3. Empty state, footer, and a custom open-button label
 LayrzScaffoldShell<User>(
   controller: controller,
+  title: Text('Users'),
   itemExtent: 56,
   items: items,
   searchable: users.isNotEmpty,
   emptyState: Center(child: Text(LayrzUiL10n.of(context).noResultsFound)),
   footer: LayrzButton.save(labelText: 'Add user', isFab: true, onTap: onAddUser),
-  onDetailsBuild: (user) => UserDetailView(user: user),
+  tableColumns: columns,
+  tableController: tableController,
+  showActionLabel: 'View user',
+  onItemTap: (item) => controller.open(key: item.key, builder: (_) => UserDetailView(user: item.item)),
 )
 ```
 
@@ -110,8 +128,9 @@ LayrzScaffoldShell<User>(
 
 ## Usage conventions
 
-- Always dispose your own `LayrzScaffoldController` — the shell listens but never disposes it.
+- Always dispose your own `LayrzScaffoldController` and `LayrzTableController<T>` — the shell listens to both but never disposes either.
 - Build `LayrzScaffoldItem.tile` yourself — there is no rich-text tile base class; any widget works (`Row`, custom card, etc.).
-- Prefer the icon-only Fab presentation (`isFab: true`) for `LayrzScaffoldItem.actions` — the revealed strip is typically narrow relative to the row.
-- Sort and group `items` yourself before passing them — the shell does neither.
+- Design `tableColumns` around the same domain object as `items` — each `LayrzColumn<T>.valueBuilder` reads directly off `T` (the shell unwraps `LayrzScaffoldItem.item` for you); there is no separate per-item cell data type.
+- Sort and group `items` yourself before passing them — the shell does neither, and the internal table renders them in that order absent its own sort/search state.
 - Ensure a `Navigator` ancestor exists (normally satisfied automatically inside `LayrzApp`) so the narrow-band detail sheet can present.
+- Give the caller-owned `tableController` a stable lifetime (e.g. a `State` field) — creating it inline in `build()` resets the desktop table's sort/search/column state on every rebuild.

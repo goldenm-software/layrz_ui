@@ -44,7 +44,7 @@ final isNarrow = context.isCompact;
 - **`darken`/`lighten` are alpha-blend based**, not HSL lightness — `darken(amount)` composites black at `amount` opacity over the color (preserving its own alpha); `lighten` composites white the same way. Use `darken` instead of a `.shadeXXX` swatch lookup (swatches don't exist on single-`Color` semantic tokens in this design system).
 - **`context.isCompact` is viewport-width-based** (`xs`/`sm` bands, < 960px) — **not** OS-based. A narrow desktop window is compact; a landscape tablet is not. Never substitute `LayrzPlatform.isMobile` for this or vice versa.
 - **`context.l10n`** resolves `LayrzUiL10n.of(this)` — the canonical way to reach localized strings from a `BuildContext` inside this design system.
-- **`context.isDark`/`context.brightness`** exist but are marked **BETA** — this codebase targets light mode only; do not build features that branch on them.
+- **`context.isDark`/`context.brightness`** are the brightness-based counterpart to `context.isCompact`'s width-based decision — never substitute one for the other. Dark mode itself is **beta** (decision D78): the API is real and shipped, but some components still carry known light-only hardcodes (see D78's Consequences list) before it is production-ready.
 
 ---
 
@@ -87,4 +87,4 @@ Container(
 - **`contrastColor`'s threshold is not WCAG-strict.** Do not assume every color pairing meets AA contrast just because `contrastColor` picked black or white — some mid-tone colors (e.g. Material green) fall below 4.5:1 by design; pick darker accent colors if strict compliance matters.
 - **`flattenOn` is background-specific.** The opaque result it returns is only visually identical when painted over the exact `background` passed in — reusing a flattened color against a different surface produces the wrong color.
 - **`isCompact`/`breakpoint` vs. `LayrzPlatform.isMobile`/`.isTouchOS` are never interchangeable.** One is viewport width, the other is OS identity — conflating them (e.g. hiding a feature on "mobile" by checking `isCompact` when the intent was actually "touch device") is a common, hard-to-notice bug.
-- **`isDark`/`brightness` are BETA and out of scope.** This design system is light-mode only (decision D7) — do not wire UI behavior to these getters.
+- **`isDark`/`brightness` are BETA, not unsupported.** Dark mode shipped under decision D78 (superseding D7's original light-only ruling) with a real API surface (`LayrzThemeMode`, `LayrzApp.darkTheme`/`themeMode`, `LayrzThemeData.dark()`) — using these getters is fine, but check D78's Consequences list for components with known light-only hardcodes before relying on full dark-mode correctness everywhere.

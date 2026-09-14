@@ -29,11 +29,13 @@ LayrzTable<User>(
     LayrzColumn<User>(
       key: const ValueKey('name'),
       headerText: 'Name',
+      width: 200,
       valueBuilder: (user) => user.name,
     ),
     LayrzColumn<User>(
       key: const ValueKey('email'),
       headerText: 'Email',
+      width: 260,
       valueBuilder: (user) => user.email,
     ),
   ],
@@ -45,6 +47,8 @@ LayrzTable<User>(
 ## Key behaviors
 
 - Every `LayrzColumn.key` must be unique within `columns` — asserted at construction. `columns` must be non-empty.
+- `LayrzColumn.width` is **required** — every column has a fixed pixel width; there is no flex/share-remaining-space column. When the visible columns' widths sum to more than the table's available width, the data area scrolls horizontally instead of shrinking columns to fit; narrower sums just leave trailing whitespace.
+- Columns are **user-resizable** by dragging a handle on each header cell's right edge. The effective width is always `controller.columnWidthOverride(key) ?? column.width`, clamped to `[minColumnWidth, column.maxWidth]` (an absent `maxWidth` means no upper bound).
 - `LayrzColumn.valueBuilder` and `customSort` **must be isolate-safe** — they may run in a background isolate during sort (via `compute`). Never capture `BuildContext`, i18n lookups, or a `ChangeNotifier`/`State` in them.
 - No paginator exists — the whole filtered/sorted `items` list renders through one virtualized `ListView.builder` below a frozen header.
 - `actionsCount` (not `actionsBuilder`) is the single source of truth for the actions column — `actionsCount == 0` (the default) means no actions column at all, even if `actionsBuilder` is supplied.
@@ -86,6 +90,7 @@ LayrzTable<User>(
 LayrzColumn<User>(
   key: const ValueKey('status'),
   headerText: 'Status',
+  width: 140,
   valueBuilder: (user) => user.isActive ? 'Active' : 'Inactive',
   customSort: (a, b, ascending) {
     final result = (a.isActive ? 0 : 1).compareTo(b.isActive ? 0 : 1);
@@ -108,17 +113,21 @@ controller.events.listen((event) {
     case LayrzTableColumnsEvent<User>():
       // persist event.columnOrder / event.hiddenColumns
       break;
+    case LayrzTableColumnWidthsEvent<User>():
+      // persist event.columnWidths
+      break;
     case LayrzTableRefreshEvent<User>():
       _reload();
       break;
   }
 });
 
-// 4. Fixed-width column with a per-cell tap handler
+// 4. Column with a per-cell tap handler and a resize ceiling
 LayrzColumn<User>(
   key: const ValueKey('email'),
   headerText: 'Email',
   width: 220,
+  maxWidth: 400,
   valueBuilder: (user) => user.email,
   onTap: (user) => _openProfile(user),
 )
