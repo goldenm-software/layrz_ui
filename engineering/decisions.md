@@ -4534,8 +4534,16 @@ The maintainer's reasoning was never that `LayrzCalendar` is incapable of the in
 ## D73: Foldable-Hinge-Aware `LayrzScaffoldShell` — Vertical-Only Split, Gated on Shell Height, Not Modal Under D69
 
 **Date**: 2026-08-31  
-**Status**: Decided  
+**Status**: Superseded by D80 (2026-09-14)  
 **Category**: Architecture / API Design
+
+> **Superseded.** The foldable-hinge split described here was removed entirely as part of the
+> DESIGN-216 desktop redesign (decision D80). `LayrzScaffoldShell` no longer inspects
+> `MediaQuery.displayFeaturesOf` or resolves a physical-seam split: the `LayrzFoldSplit` type,
+> `resolveFoldSplit`, and the whole `_buildFoldedSideBySideLayout` / `localToGlobal` machinery are
+> gone. A foldable device now falls into the ordinary wide (table-or-split) or narrow (list + sheet)
+> path by width like any other device. This section is kept for history; see D80 for the current
+> desktop behaviour and the rationale for dropping the fold split.
 
 ### Context
 
@@ -5610,3 +5618,68 @@ footer region.**
   creaseless (`gap == 0`) case adopts the card.
 - **D79**: Builder-based detail pane — this revamp changes the pane's *surface and separation*, not
   what feeds its content.
+
+## D80: DESIGN-216 — Desktop `LayrzScaffoldShell` Opens on a Table; Resizable Columns; Fold Split Removed
+
+**Date**: 2026-09-14  
+**Status**: Decided  
+**Category**: Architecture / API Design
+
+### Context
+
+DESIGN-216 ("Redesign of desktop mode") changed the desktop presentation of `LayrzScaffoldShell`.
+The team's finding: the list-detail split is good for multitasking on an opened item, but a plain
+list under-uses a desktop's width — a table shows far more per row and is the better default for
+scanning a dataset. The request: **default desktop view is a full-width `LayrzTable`; opening an
+item collapses into the existing list-left / detail-right split.** Mobile/compact is unchanged
+(list + modal sheet).
+
+Two adjacent changes landed in the same pass:
+
+- **Resizable columns** on `LayrzTable`, requested in the same meeting.
+- **Removal of the foldable-hinge split** (D73): once desktop is table-first, the bespoke
+  physical-seam split no longer fit, and its `localToGlobal`/`RenderTransform`-mid-layout machinery
+  was pure liability. A foldable now falls into wide or narrow by width like any device.
+
+### Decision
+
+**`LayrzScaffoldShell` (breaking, pre-1.0):**
+
+- On wide (`!context.isCompact`): render a full-width `LayrzTable` when nothing is open; the
+  list-detail split when an item is open. The two cross-fade. The table is kept **permanently
+  mounted** behind the split (covered by an opaque `sf1` ground, `IgnorePointer` + `ExcludeSemantics`)
+  rather than disposed and recreated on every open/close — recreating it re-paid its ~150ms
+  first-mount build on web (no isolate), which janked every toggle.
+- New required params: `tableColumns` (`List<LayrzColumn<T>>`), `tableController`
+  (`LayrzTableController<T>`, caller-owned), and `title` (`Widget`). Optional `showActionLabel`.
+- The table's per-row "open" affordance recycles the table's own actions slot — one eye button —
+  which invokes `onItemTap` (never `controller.open` directly). Closing the detail is the app's
+  responsibility (place a close affordance in the detail builder, call `controller.close()`).
+- `LayrzScaffoldItem.actions` **removed** — the hover-overlay/swipe quick-actions are gone; the
+  interaction is uniformly "tap to open the detail, then act from there".
+- The foldable-hinge subsystem (`LayrzFoldSplit`, `resolveFoldSplit`, `LayrzFoldAxis`, the shell's
+  fold machinery) is **removed**; D73 is superseded.
+
+**`LayrzTable` (breaking, pre-1.0):**
+
+- `LayrzColumn.width` is now **required** (`double`), and there is **no flex** — every column is a
+  fixed pixel width. When columns sum wider than the table, the data area scrolls horizontally; when
+  narrower, the surplus is trailing whitespace (columns never stretch). New optional
+  `LayrzColumn.maxWidth` (`double?`, null = uncapped).
+- Columns are **resizable** by dragging a handle on each header cell's right edge. The override is
+  stored on `LayrzTableController` (`setColumnWidth` / `clearColumnWidth` / `columnWidthOverride` /
+  `columnWidthOverrides`, plus a constructor `columnWidths` seed), so widths are observable and
+  persistable from outside. Effective width = override ?? `column.width`, clamped to
+  `[minColumnWidth, maxWidth]`. A resize emits the new `LayrzTableColumnWidthsEvent`
+  (`Map<Key, double>`, the override map) on the controller's event stream.
+- The resize handle uses a `RawGestureDetector` with an eager `HorizontalDragGestureRecognizer` so
+  it wins the gesture arena against the header's own horizontal scroll view; a plain
+  `GestureDetector` silently lost the drag.
+
+### Consequences
+
+- Every existing `LayrzColumn` caller must now pass `width`. Every `LayrzScaffoldShell` caller must
+  pass `title`, `tableColumns`, and `tableController`. The `LayrzTableEvent` sealed hierarchy gained
+  a case, so exhaustive switches over it must handle `LayrzTableColumnWidthsEvent`.
+- Foldable devices lose the dedicated two-pane seam-aware split; this was judged an acceptable trade
+  for removing a fragile, crash-prone subsystem now that desktop is table-first.
