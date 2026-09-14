@@ -1,68 +1,71 @@
 import "package:flutter/widgets.dart";
+import "package:flutter_material_design_icons/flutter_material_design_icons.dart";
 import "package:layrz_ui/src/cards/cards.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
 import "package:layrz_ui/src/refresh/refresh.dart";
 import "package:layrz_ui/src/scaffold/src/scaffold_item.dart";
 import "package:layrz_ui/src/sheets/sheets.dart";
+import "package:layrz_ui/src/table/table.dart";
 import "package:layrz_ui/src/tokens/tokens.dart";
 
 import "detail_pane.dart";
-import "fold_split.dart";
 import "list_panel.dart";
 import "scaffold_controller.dart";
 
 /// An adaptive list-detail shell widget in the layrz_ui design system.
 ///
 /// [LayrzScaffoldShell] provides a responsive container for list-detail navigation.
-/// On wide containers (md, lg, xl breakpoints), the list panel (300px) and detail pane
-/// are displayed side-by-side. On narrow containers (xs, sm breakpoints), the list panel
-/// is always shown; opening an item presents the detail content in a modal [LayrzBottomSheet]
-/// layered over the list. Dismissing the sheet closes the controller. A resize from narrow
-/// to wide pops the sheet but preserves the selection, and a resize to narrow auto-opens
-/// the sheet for any already-selected item.
+///
+/// **Wide containers** (`!context.isCompact`, i.e. width ≥ 960px) have two
+/// presentations, chosen by whether an item is open ([LayrzScaffoldController.isOpen]):
+///
+/// - **Nothing open** → the shell fills its whole width with a [LayrzTable]
+///   built from [items] and [tableColumns]. A table shows far more per row than
+///   a list tile can, which is the better default for scanning a dataset. Each
+///   table row carries one built-in "open" button (see [showActionLabel]) that
+///   invokes [onItemTap] for that item — there is no whole-row tap. Opening an
+///   item flips the shell into the split below.
+/// - **An item open** → the classic side-by-side split: the list panel (300px)
+///   on the left, the detail pane on the right. The list panel's header renders
+///   [title] with a leading close button that calls [LayrzScaffoldController.close]
+///   to return to the table.
+///
+/// The two wide presentations cross-fade into each other (see the motion tokens'
+/// standard transition), so opening or closing an item is a fade rather than an
+/// instant swap.
+///
+/// On narrow containers (xs, sm breakpoints), the list panel is always shown;
+/// opening an item presents the detail content in a modal [LayrzBottomSheet]
+/// layered over the list. Dismissing the sheet closes the controller. A resize
+/// from narrow to wide pops the sheet but preserves the selection, and a resize
+/// to narrow auto-opens the sheet for any already-selected item. [tableColumns]
+/// never affects the narrow layout, and the narrow header renders [title] as-is
+/// with no close button.
 ///
 /// **Narrow layout constraint:** The shell requires a [Navigator] ancestor (e.g. [LayrzApp])
 /// to show the detail sheet on narrow breakpoints. If no Navigator is present, the list
 /// still renders without the detail, and a debug assertion fires on the sheet attempt.
 ///
-/// The shell is container-driven via [LayoutBuilder] constraints, not viewport-driven.
-/// The consuming app passes items and owns the controller; the shell owns the layout
-/// and search filtering.
-///
-/// **Foldable-hinge awareness.** Independently of the breakpoint band, the shell inspects
-/// `MediaQuery.displayFeaturesOf(context)` for a physical fold or hinge that genuinely
-/// crosses its own box (see [resolveFoldSplit]). When a **vertical** seam is found
-/// (splitting the box left/right, e.g. a Z Fold in portrait, or a Z Flip rotated to
-/// landscape), it overrides the band and always forces a side-by-side split, at the seam's
-/// own mapped position — even at an `xs`/`sm` width that would otherwise render the narrow
-/// list + sheet path. The two panes are deliberately **asymmetric**, matching whatever the
-/// physical seam actually measures; they are never equalised. There is no keyboard-aware
-/// behavior in this split: it has no presentation to change, so its height simply follows
-/// `MediaQuery.viewInsetsOf` the same way any other inline layout would.
-///
-/// A **horizontal** seam (e.g. a Z Flip in portrait, or a Z Fold rotated to landscape)
-/// never produces a split at all — [resolveFoldSplit] always returns `null` for it, a
-/// decision made after a stacked top/bottom layout for that case was built and tested on
-/// real hardware and found to fight the on-screen keyboard (see [resolveFoldSplit]'s own
-/// doc comment for the specifics). A device reporting only a horizontal seam, or no usable
-/// display feature at all (the vast majority of them), sees no change in behavior — the
-/// shell falls through to exactly the band-driven path below.
+/// The consuming app passes items and owns the controller; the shell owns the
+/// layout and search filtering.
 class LayrzScaffoldShell<T> extends StatefulWidget {
   /// The items to display in the list.
   final List<LayrzScaffoldItem<T>> items;
 
-  /// Called when a list row is tapped.
+  /// Called when a list row (or a desktop table row's open button) is activated.
   ///
-  /// The shell no longer opens the detail pane on tap by itself — the caller
-  /// decides what happens, typically by opening the detail pane for the tapped
-  /// item's own content:
+  /// The shell never opens the detail pane by itself — the caller decides what
+  /// happens, typically by opening the detail pane for the activated item's own
+  /// content:
   ///
   /// ```dart
   /// onItemTap: (item) => controller.open(key: item.key, builder: (_) => Detail(item.item)),
   /// ```
   ///
-  /// Leaving this null makes rows inert on tap (no detail pane, no highlight
-  /// change) — useful for a purely informational list. Defaults to null.
+  /// Both the list rows (narrow, and the wide split) and the desktop table's
+  /// built-in per-row open button route through this same callback. Leaving it
+  /// null makes rows inert (no detail pane, no highlight change) — useful for a
+  /// purely informational list. Defaults to null.
   final void Function(LayrzScaffoldItem<T> item)? onItemTap;
 
   /// Controller for managing the opened item.
@@ -74,8 +77,12 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// Whether the search field is visible.
   final bool searchable;
 
-  /// Optional title widget rendered above the search field in the list panel.
-  final Widget? title;
+  /// The title widget rendered above the search field in the list panel.
+  ///
+  /// On wide containers, while an item is open, the list panel's header renders
+  /// this title in a row with a leading close button that returns to the table;
+  /// on narrow containers it renders as-is. Required.
+  final Widget title;
 
   /// The item extent for the list panel.
   final double itemExtent;
@@ -120,21 +127,65 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// lockstep.
   final LayrzRefreshController? refreshController;
 
+  /// The columns for the desktop default table view.
+  ///
+  /// On a wide container (`!context.isCompact`) with **nothing open**, the shell
+  /// renders a full-width [LayrzTable] over [items] and these columns. Each
+  /// [LayrzColumn.valueBuilder] reads directly off the item's own data object
+  /// (`LayrzScaffoldItem.item`, of type [T]), so no per-item cell data is needed
+  /// on [LayrzScaffoldItem] itself; the shell unwraps `items.map((i) => i.item)`
+  /// into the table.
+  ///
+  /// Opening an item (via the table's built-in per-row open button, which invokes
+  /// [onItemTap]) collapses the shell into the list-detail split for as long as
+  /// something is open. Required; the narrow layout ignores this field entirely.
+  final List<LayrzColumn<T>> tableColumns;
+
+  /// The controller for the desktop default table's own state — sort, search,
+  /// column order/visibility, and selection.
+  ///
+  /// Passed straight through to the internal [LayrzTable]. This is the app's
+  /// handle for observing or driving that table state from outside the shell
+  /// (e.g. a listener on sort/search, or reading the current selection).
+  /// Required, and **caller-owned**: the shell never disposes it, mirroring
+  /// [LayrzTable]'s own controller-ownership contract.
+  ///
+  /// The desktop table only mounts on wide viewports (`!context.isCompact`), so
+  /// on a compact-only shell this controller stays idle-but-valid — it simply
+  /// has no table to drive until the viewport is wide. It remains the caller's
+  /// to dispose regardless.
+  final LayrzTableController<T> tableController;
+
+  /// The label (and accessibility/tooltip hint) for the desktop table's
+  /// built-in per-row "open" button.
+  ///
+  /// Only used while the desktop table default view is showing. When null, the
+  /// shell uses the localized `LayrzUiL10n.scaffoldOpenItem` ("Open item")
+  /// default.
+  final String? showActionLabel;
+
   /// Creates a new [LayrzScaffoldShell].
   ///
   /// - [items]: The items to display in the list. Required.
-  /// - [onItemTap]: Called when a list row is tapped. Defaults to null, which leaves
-  ///   rows inert on tap.
+  /// - [onItemTap]: Called when a row (or the table's open button) is activated.
+  ///   Defaults to null, which leaves rows inert.
   /// - [controller]: Controller for managing the opened item. Required.
   /// - [footer]: Optional footer widget for the list panel. Defaults to null.
   /// - [searchable]: Whether the search field is visible. Defaults to true.
-  /// - [title]: Optional title widget rendered above the search field. Defaults to null.
+  /// - [title]: The title widget rendered above the search field. Required.
   /// - [itemExtent]: The height of each list item. Required.
   /// - [emptyState]: Optional widget to display when the list is empty. Defaults to null.
   /// - [onRefresh]: Called to refresh the list's data. Defaults to null, which disables
   ///   the refresh affordance entirely (no indicator, no footer control).
   /// - [refreshController]: Optional controller for the refresh lifecycle. Defaults to
   ///   null, ignored unless [onRefresh] is also non-null.
+  /// - [tableColumns]: Columns for the desktop default table view. Required. Ignored on
+  ///   the narrow layout.
+  /// - [tableController]: Controller for the desktop table's sort/search/column/selection
+  ///   state, passed through to the internal [LayrzTable]. Required and caller-owned (the
+  ///   shell never disposes it). Idle-but-valid on a compact-only shell.
+  /// - [showActionLabel]: Label/tooltip for the desktop table's built-in per-row open
+  ///   button. Defaults to null, which uses the localized "Open item" string.
   const LayrzScaffoldShell({
     super.key,
     required this.items,
@@ -142,11 +193,14 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
     required this.controller,
     this.footer,
     this.searchable = true,
-    this.title,
+    required this.title,
     required this.itemExtent,
     this.emptyState,
     this.onRefresh,
     this.refreshController,
+    required this.tableColumns,
+    required this.tableController,
+    this.showActionLabel,
   });
 
   @override
@@ -167,109 +221,34 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   /// Reference to the builder context from the narrow sheet, used to pop it specifically.
   BuildContext? _narrowSheetContext;
 
-  /// Key on the outermost box this widget returns, used ONLY as the anchor
-  /// [_scheduleShellRectRefresh] reads from -- never touched during [build]
-  /// or layout.
+  /// The desktop table's rows — `widget.items` unwrapped to their underlying
+  /// data objects — cached across builds.
   ///
-  /// **Why this cannot be resolved during [build]/layout at all**, not even
-  /// via a key one layer out from the naive `LayoutBuilder` context: an
-  /// earlier version of this code read `_shellBoundaryKey`'s box directly
-  /// inside `build` (reasoning it held the *previous* frame's already-laid-out
-  /// geometry) and called `RenderBox.localToGlobal` on it there. That still
-  /// crashed on a real device, because `localToGlobal` doesn't just read the
-  /// keyed box's own offset -- it walks every ANCESTOR via
-  /// `RenderObject.getTransformTo`, and `RenderTransform.applyPaintTransform`
-  /// asserts `hasSize` on each one it walks through. Under `LayrzLayout`'s
-  /// drawer presentation, that ancestor chain includes the animated drawer's
-  /// own `RenderTransform` -- and *that* ancestor can still be
-  /// `NEEDS-LAYOUT` while this shell's `LayoutBuilder` is being built as part
-  /// of the very same frame's layout pass (composition puts the shell inside
-  /// an `Overlay`'s `_RenderTheater`, several proxy boxes, and the drawer's
-  /// `RenderTransform`, in that order). A previous-frame box being fully laid
-  /// out does not make ITS ancestors fully laid out on THIS frame -- they are
-  /// laid out top-down, and a `LayoutBuilder` deep in the tree can run before
-  /// an animating ancestor higher up has reached its own `performLayout` this
-  /// frame. There is no depth in the tree from which `localToGlobal` is safe
-  /// to call synchronously during any part of the layout phase.
-  ///
-  /// The fix: never call `localToGlobal` from `build` at all.
-  /// [_scheduleShellRectRefresh] reads it from a post-frame callback instead,
-  /// where the ENTIRE frame's layout (every ancestor, animating or not) is
-  /// guaranteed complete -- see [_scheduleShellRectRefresh]'s own doc comment.
-  final GlobalKey _shellBoundaryKey = GlobalKey();
+  /// **Why this must be cached and not rebuilt per build:** `LayrzTable`
+  /// re-runs its full string-cache rebuild and off-thread sort whenever the
+  /// `items` list it receives is not `identical` to the previous one
+  /// (`LayrzTable.didUpdateWidget`). On web there is no isolate, so that
+  /// "off-thread" recompute runs synchronously on the UI thread — a ~150ms
+  /// main-thread stall was measured on every open/close when the shell handed
+  /// the table a freshly-allocated `items.map(...).toList()` each build (the
+  /// `AnimatedSwitcher` cross-fade rebuilds this subtree repeatedly). Caching
+  /// the unwrapped list and only re-deriving it when `widget.items` changes
+  /// identity keeps the reference stable across those rebuilds, so the table
+  /// recomputes only when the data genuinely changes.
+  List<T>? _tableRows;
 
-  /// The shell's own global rect, as last computed by
-  /// [_scheduleShellRectRefresh]. `null` until the first post-frame callback
-  /// has run at least once.
-  ///
-  /// [_resolveFoldSplit] reads this value ONLY -- it never touches
-  /// [_shellBoundaryKey] or calls `localToGlobal` itself. Because this is
-  /// necessarily last-frame's geometry (see [_scheduleShellRectRefresh]), a
-  /// fold appearing or the shell moving resolves with a one-frame lag, the
-  /// same trade-off the previous (crashing) approach already accepted.
-  Rect? _lastShellRect;
+  /// The source `items` list [_tableRows] was last derived from, used to
+  /// detect an actual data change vs. an incidental rebuild.
+  List<LayrzScaffoldItem<T>>? _tableRowsSource;
 
-  /// Whether a [_scheduleShellRectRefresh] post-frame callback is already
-  /// pending for the current frame.
-  ///
-  /// Without this guard, calling [_scheduleShellRectRefresh] from every
-  /// [build] (as [build] does, unconditionally, since it cannot know in
-  /// advance whether the rect actually moved) would queue a new
-  /// post-frame callback on every single rebuild -- harmless in the sense
-  /// that duplicate callbacks would each just recompute the same value, but
-  /// wasteful and, more importantly, exactly the shape of bug that has bitten
-  /// this file before (see the `didUpdateWidget` items-change-notifier
-  /// comment above). One callback per frame is enough: it always reads the
-  /// LATEST geometry once the frame's layout is done, regardless of how many
-  /// times [build] ran to get there.
-  bool _shellRectRefreshScheduled = false;
-
-  /// Schedules a post-frame callback that reads [_shellBoundaryKey]'s
-  /// current global rect and, if it changed, stores it in [_lastShellRect]
-  /// and triggers exactly one rebuild to consume the fresh value.
-  ///
-  /// This is the ONLY place [RenderBox.localToGlobal] is called anywhere in
-  /// this class, and it is called from
-  /// [WidgetsBinding.addPostFrameCallback], never from [build] -- see
-  /// [_shellBoundaryKey]'s own doc comment for why calling it during layout
-  /// crashes on a real device. By the time a post-frame callback runs, the
-  /// ENTIRE frame's layout phase has finished for the whole tree, not just
-  /// this widget's own subtree -- every ancestor, including an animating
-  /// `RenderTransform` like `LayrzLayout`'s drawer, is guaranteed to already
-  /// have `hasSize == true`. That is what makes `localToGlobal` safe here
-  /// and nowhere else.
-  ///
-  /// The `setState` only fires when the newly-read rect actually differs
-  /// from [_lastShellRect] (or the first successful read). A
-  /// steady-state frame where nothing moved recomputes the same rect and
-  /// schedules no further work, so this cannot degrade into an unconditional
-  /// per-frame rebuild loop -- the same discipline
-  /// `_scheduledFoldResolveFrame` (the earlier, now-removed one-shot guard)
-  /// existed to preserve.
-  void _scheduleShellRectRefresh() {
-    if (_shellRectRefreshScheduled) return;
-    _shellRectRefreshScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _shellRectRefreshScheduled = false;
-      if (!mounted) return;
-
-      final renderObject = _shellBoundaryKey.currentContext?.findRenderObject();
-      if (renderObject is! RenderBox || !renderObject.attached || !renderObject.hasSize) {
-        // Still not laid out even after a full frame (e.g. the very first
-        // frame ever, before this widget has been through layout at all).
-        // Try again next frame rather than giving up -- but only once more
-        // is queued at a time, per the guard above.
-        _scheduleShellRectRefresh();
-        return;
-      }
-
-      final rect = renderObject.localToGlobal(Offset.zero) & renderObject.size;
-      if (rect != _lastShellRect) {
-        setState(() {
-          _lastShellRect = rect;
-        });
-      }
-    });
+  /// The stable unwrapped-rows list for the desktop table, re-derived only
+  /// when [LayrzScaffoldShell.items] changes identity. See [_tableRows].
+  List<T> get _cachedTableRows {
+    if (!identical(_tableRowsSource, widget.items) || _tableRows == null) {
+      _tableRowsSource = widget.items;
+      _tableRows = widget.items.map((item) => item.item).toList(growable: false);
+    }
+    return _tableRows!;
   }
 
   double get _itemExtent => widget.itemExtent + context.tokens.spacing.pd2.vertical;
@@ -320,173 +299,132 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
 
   @override
   Widget build(BuildContext context) {
-    // Always (re)schedule a post-frame rect refresh -- see
-    // _scheduleShellRectRefresh's own doc comment for why this is cheap
-    // (guarded to at most one pending callback) and why it is the only
-    // place this class ever calls localToGlobal.
-    _scheduleShellRectRefresh();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tokens = context.tokens;
+        // Wide vs. compact is the design system's single source of truth:
+        // `isWide == !context.isCompact` (compact is width < 960px).
+        final isWide = !context.isCompact;
 
-    return KeyedSubtree(
-      key: _shellBoundaryKey,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final tokens = context.tokens;
-          final breakpoint = tokens.breakpoints.bandAt(constraints.maxWidth);
-          final isWide = breakpoint.index >= LayrzBreakpoint.md.index;
+        // A resize from narrow to wide pops a currently-open sheet without
+        // closing the controller, so the selection survives the switch into
+        // the wide (table/split) layout, which never shows the sheet.
+        if (_sheetOpen && isWide) {
+          // Schedule the pop for after the build, to avoid modifying the widget tree during build.
+          // Mark it as shell-initiated so the sheet dismissal callback doesn't close the controller.
+          _dismissedByShell = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_narrowSheetContext != null && _narrowSheetContext!.mounted) {
+              Navigator.of(_narrowSheetContext!).pop();
+              _narrowSheetContext = null;
+            }
+          });
+        }
 
-          final foldSplit = _resolveFoldSplit(context);
-
-          // Only a vertical seam ever produces a foldSplit at all (see
-          // resolveFoldSplit's own doc comment for why a horizontal seam is
-          // rejected before it ever reaches here) -- so there is no axis
-          // check to make here, and deliberately no keyboard term: a
-          // horizontal seam never splits, and a vertical split has no
-          // presentation change tied to the keyboard to guard against.
-          final useFoldedSideBySide = foldSplit != null;
-
-          // Any presentation change the shell itself must reverse (band crossing to
-          // wide, or a fold appearing/disappearing that switches the shell into or
-          // out of a layout that never shows the sheet) pops a currently-open sheet
-          // without closing the controller, so the selection survives the switch.
-          final sheetMustClose = _sheetOpen && (isWide || useFoldedSideBySide);
-          if (sheetMustClose) {
-            // Schedule the pop for after the build, to avoid modifying the widget tree during build.
-            // Mark it as shell-initiated so the sheet dismissal callback doesn't close the controller.
-            _dismissedByShell = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (_narrowSheetContext != null && _narrowSheetContext!.mounted) {
-                Navigator.of(_narrowSheetContext!).pop();
-                _narrowSheetContext = null;
-              }
-            });
-          }
-
-          if (useFoldedSideBySide) {
-            return _buildFoldedSideBySideLayout(context, tokens, foldSplit);
-          }
-          if (isWide) {
-            return _buildWideLayout(context, tokens);
-          } else {
-            return _buildNarrowLayout(context, tokens);
-          }
-        },
-      ),
+        if (isWide) {
+          return _buildWideLayout(context, tokens);
+        } else {
+          return _buildNarrowLayout(context, tokens);
+        }
+      },
     );
   }
 
-  /// Resolves the shell's own physical-seam split, or `null` when there is
-  /// none to act on.
+  /// Builds the wide layout used on wide containers (`!context.isCompact`).
   ///
-  /// Reads [_lastShellRect] ONLY -- this method never touches
-  /// [_shellBoundaryKey], never calls [RenderBox.localToGlobal], and is safe
-  /// to call unconditionally from [build] on every frame, including mid
-  /// layout. See [_shellBoundaryKey]'s own doc comment for why calling
-  /// `localToGlobal` from here used to crash on a real device (an ancestor
-  /// `RenderTransform`, e.g. `LayrzLayout`'s drawer, mid-layout) and
-  /// [_scheduleShellRectRefresh] for where that offset is actually computed
-  /// instead.
+  /// Two presentations, per DESIGN-216, chosen by [LayrzScaffoldController.isOpen]:
   ///
-  /// If [_lastShellRect] is still `null` -- this widget's very first frame,
-  /// before any post-frame callback has run yet -- this returns `null` and
-  /// behaves exactly like a non-foldable device for that one frame; the
-  /// [_scheduleShellRectRefresh] call already unconditionally made from
-  /// [build] resolves it as soon as the first frame's layout completes.
-  LayrzFoldSplit? _resolveFoldSplit(BuildContext context) {
-    final shellRect = _lastShellRect;
-    if (shellRect == null) {
-      return null;
-    }
-
-    final features = MediaQuery.displayFeaturesOf(context);
-    if (features.isEmpty) {
-      return null;
-    }
-
-    return resolveFoldSplit(features: features, shellRect: shellRect);
-  }
-
-  /// Builds the wide (side-by-side) layout used at `md`+ breakpoints.
+  /// - Nothing open → the whole width is a [LayrzTable] default view (see
+  ///   [_buildDefaultTable]).
+  /// - An item open → the side-by-side split (see [_buildWideSplit]).
   ///
-  /// The detail pane is wrapped in a [LayrzCard] rather than separated from
-  /// the list panel by a hairline divider — a card reads as its own object
-  /// (echoing the narrow layout's floating bottom sheet) instead of a bare
-  /// rule down the middle. A [LayrzSpacingTokens.sp3] gutter surrounds the
-  /// card on every side, giving it room to read as a distinct surface without
-  /// a hard line against the list panel or the shell's own edges.
+  /// **The table is kept permanently mounted**, with the split layered above it
+  /// in a [Stack] and cross-faded in/out via [AnimatedOpacity] on the split
+  /// layer alone. This is deliberate and load-bearing for performance: an
+  /// earlier version used an [AnimatedSwitcher] that swapped the two subtrees,
+  /// which DISPOSED and RE-CREATED the whole [LayrzTable] on every open/close.
+  /// The table's first-mount build/layout of its header, virtualized rows and
+  /// sync-scroll controllers costs ~150ms on web (measured), so re-creating it
+  /// on each toggle produced a ~150ms stall per open and per close. Keeping it
+  /// mounted pays that cost once. While the split is shown it fully, opaquely
+  /// covers the table, and the table layer is wrapped in [IgnorePointer]/
+  /// [ExcludeSemantics] so the covered table takes no input and adds no
+  /// duplicate semantics.
+  ///
+  /// The fade duration/curve come from the motion tokens (dTransition, easing),
+  /// obeying the design system's animation contract — a standard transition
+  /// under the 250ms cap, with the standard easing curve.
   Widget _buildWideLayout(BuildContext context, LayrzTokens tokens) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final isOpen = widget.controller.isOpen;
+
+    return Stack(
+      fit: StackFit.expand,
       children: [
-        ListPanel<T>(
-          items: widget.items,
-          openedKey: widget.controller.openedKey,
-          controller: widget.controller,
-          onTap: widget.onItemTap,
-          searchable: widget.searchable,
-          footer: widget.footer,
-          title: widget.title,
-          itemExtent: _itemExtent,
-          emptyState: widget.emptyState,
-          onRefresh: widget.onRefresh,
-          refreshController: widget.refreshController,
-        ),
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.all(tokens.spacing.sp3),
-            child: LayrzCard(
-              elevation: 1,
-              child: DetailPane(
-                builder: widget.controller.openedBuilder,
-              ),
-            ),
+        // The table is always mounted (never disposed on open/close); it is
+        // simply covered by the split while an item is open. It stops taking
+        // input and stops contributing semantics while covered.
+        IgnorePointer(
+          ignoring: isOpen,
+          child: ExcludeSemantics(
+            excluding: isOpen,
+            child: _buildDefaultTable(context, tokens),
           ),
+        ),
+        // Only the (lightweight) split fades in/out over the persistent table,
+        // via an AnimatedSwitcher whose child is an empty box while closed —
+        // so the heavy LayrzTable is never disposed/recreated by the toggle,
+        // while the split still cross-fades on open and close.
+        AnimatedSwitcher(
+          duration: tokens.motion.dTransition,
+          switchInCurve: tokens.motion.easing,
+          switchOutCurve: tokens.motion.easing,
+          child: isOpen
+              ? KeyedSubtree(
+                  key: const ValueKey('layrz-scaffold-wide-split'),
+                  child: _buildWideSplit(context, tokens),
+                )
+              : const SizedBox.shrink(key: ValueKey('layrz-scaffold-wide-none')),
         ),
       ],
     );
   }
 
-  /// Builds the side-by-side split forced by a vertical physical seam.
+  /// Builds the classic wide side-by-side split: the list panel on the left and
+  /// the detail pane (wrapped in a [LayrzCard]) on the right.
   ///
-  /// Structurally close to [_buildWideLayout] -- same [ListPanel]/[DetailPane]
-  /// wiring, same `onTap` -> [LayrzScaffoldController.open] -- except the list
-  /// panel takes [split]'s mapped [LayrzFoldSplit.leadingExtent] instead of its
-  /// usual fixed width. What sits between the two panes depends on
-  /// [LayrzFoldSplit.gap]:
+  /// Returning to the table (closing the open item) is the caller's
+  /// responsibility — the app places whatever close/back affordance it wants
+  /// inside its own detail builder and calls [LayrzScaffoldController.close].
+  /// The shell only cross-fades table<->split off [LayrzScaffoldController.isOpen].
   ///
-  /// - **`gap == 0`** (a creaseless `fold`, no physical thickness): there is no
-  ///   real occlusion to preserve, so this case gets the same [LayrzCard]
-  ///   treatment as [_buildWideLayout] -- a padded card wrapping the detail
-  ///   pane, in place of the old hairline divider.
-  /// - **`gap > 0`** (a `hinge` with genuine physical thickness, decision
-  ///   D73): the gap is preserved EXACTLY as a bare [SizedBox] spacer sized to
-  ///   the seam's own measured occlusion -- it maps to real, physically
-  ///   unusable screen space, not a design choice, so it must never be
-  ///   replaced by card padding or a gutter of the design system's own
-  ///   choosing.
+  /// The detail pane is wrapped in a [LayrzCard] rather than separated from the
+  /// list panel by a hairline divider — a card reads as its own object (echoing
+  /// the narrow layout's floating bottom sheet) instead of a bare rule down the
+  /// middle. A [LayrzSpacingTokens.sp3] gutter surrounds the card on every side.
   ///
-  /// The two panes are deliberately asymmetric, matching the physical seam --
-  /// they are never equalised to 50/50.
-  Widget _buildFoldedSideBySideLayout(BuildContext context, LayrzTokens tokens, LayrzFoldSplit split) {
-    final listPanel = ListPanel<T>(
-      items: widget.items,
-      openedKey: widget.controller.openedKey,
-      controller: widget.controller,
-      onTap: widget.onItemTap,
-      searchable: widget.searchable,
-      footer: widget.footer,
-      title: widget.title,
-      itemExtent: _itemExtent,
-      emptyState: widget.emptyState,
-      width: split.leadingExtent,
-      onRefresh: widget.onRefresh,
-      refreshController: widget.refreshController,
-    );
-
-    if (split.gap == 0) {
-      return Row(
+  /// The whole split paints an opaque `sf1` ground, because the desktop table
+  /// stays mounted BEHIND it (see [_buildWideLayout]) — without an opaque
+  /// backing the table would show through the gutter around the detail card and
+  /// any gap the list panel does not itself cover.
+  Widget _buildWideSplit(BuildContext context, LayrzTokens tokens) {
+    return ColoredBox(
+      color: tokens.colors.sf1,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          listPanel,
+          ListPanel<T>(
+            items: widget.items,
+            openedKey: widget.controller.openedKey,
+            controller: widget.controller,
+            onTap: widget.onItemTap,
+            searchable: widget.searchable,
+            footer: widget.footer,
+            title: widget.title,
+            itemExtent: _itemExtent,
+            emptyState: widget.emptyState,
+            onRefresh: widget.onRefresh,
+            refreshController: widget.refreshController,
+          ),
           Expanded(
             child: Padding(
               padding: EdgeInsets.all(tokens.spacing.sp3),
@@ -499,27 +437,71 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
             ),
           ),
         ],
-      );
-    }
-
-    return Row(
-      children: [
-        listPanel,
-        // Physical-seam spacer (decision D73): sized to the hinge's real
-        // occlusion, never a design-system gutter -- see this method's own
-        // doc comment.
-        SizedBox(width: split.gap),
-        Expanded(
-          child: DetailPane(
-            builder: widget.controller.openedBuilder,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
+  /// Builds the desktop default full-width [LayrzTable] view (DESIGN-216).
+  ///
+  /// The table's rows are the items' own data objects — `widget.items` unwrapped
+  /// via [LayrzScaffoldItem.item] — since each [LayrzColumn.valueBuilder] reads
+  /// off [T] directly. No per-item cell data lives on [LayrzScaffoldItem].
+  ///
+  /// [LayrzTable] has no whole-row tap affordance, so the shell recycles the
+  /// table's own per-row actions slot ([LayrzTable.actionsBuilder] with
+  /// [LayrzTable.actionsCount] `1`) for a single built-in "open" button. Its tap
+  /// resolves the tapped data object back to its [LayrzScaffoldItem] and fires
+  /// [LayrzScaffoldShell.onItemTap] — the same callback the list rows use — so
+  /// the app opens the detail exactly as it does from the list, collapsing the
+  /// shell into the split.
+  Widget _buildDefaultTable(BuildContext context, LayrzTokens tokens) {
+    final openLabel = widget.showActionLabel ?? context.l10n.scaffoldOpenItem;
+
+    // The table gets the same sp3 gutter the split's detail card uses, so it
+    // reads as a padded surface rather than sitting flush against the shell's
+    // own edges. `_cachedTableRows` is a reference-stable list (see its doc) so
+    // the table does not re-run its off-thread sort on every rebuild.
+    return Padding(
+      padding: EdgeInsets.all(tokens.spacing.sp3),
+      child: LayrzTable<T>(
+        items: _cachedTableRows,
+        columns: widget.tableColumns,
+        controller: widget.tableController,
+        canSearch: widget.searchable,
+        actionsCount: 1,
+        actionsBuilder: (data) => [
+          LayrzTableAction(
+            icon: MdiIcons.eyeOutline,
+            labelText: openLabel,
+            onTap: () => _openFromTable(data),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Resolves the table row's data object [data] back to its owning
+  /// [LayrzScaffoldItem] and fires [LayrzScaffoldShell.onItemTap] for it, if any.
+  ///
+  /// The lookup is by identity of the underlying data object: the table renders
+  /// exactly the same [T] instances the shell was handed (unwrapped in
+  /// [_buildDefaultTable]), so the first item whose `.item` is identical to
+  /// [data] is the one that produced this row. A caller with no [onItemTap]
+  /// leaves the open button inert.
+  void _openFromTable(T data) {
+    final onItemTap = widget.onItemTap;
+    if (onItemTap == null) return;
+    for (final item in widget.items) {
+      if (identical(item.item, data)) {
+        onItemTap(item);
+        return;
+      }
+    }
+  }
+
   Widget _buildNarrowLayout(BuildContext context, LayrzTokens tokens) {
-    // Always show the list panel on narrow layouts
+    // Always show the list panel on narrow layouts. The narrow header renders
+    // the title as-is — no close button, since the sheet has its own dismiss.
     final panel = ListPanel<T>(
       items: widget.items,
       openedKey: widget.controller.openedKey,

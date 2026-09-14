@@ -10,6 +10,17 @@ mixin LayrzUiL10nScaffoldMixin {
   /// English default: "Refresh"
   String get scaffoldRefresh => 'Refresh';
 
+  /// Localized label (and accessibility/tooltip hint) for the "open item"
+  /// affordance in `LayrzScaffoldShell`'s desktop default table view — the
+  /// per-row button that opens an item's detail pane, collapsing the shell
+  /// from the full-width table into the list-detail split.
+  ///
+  /// Used as the default `LayrzScaffoldShell.showActionLabel` when the caller
+  /// supplies none.
+  ///
+  /// English default: "Open item"
+  String get scaffoldOpenItem => 'Open item';
+
   /// Localized label for `LayrzApp`'s automatic debug-mode watermark.
   ///
   /// Used as the default `LayrzAppBanner.labelText` that `LayrzApp` installs
