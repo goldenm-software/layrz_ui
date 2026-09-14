@@ -39,6 +39,10 @@ List<LayrzScaffoldItem<_TestItem>> _buildItems() {
 /// fallback button over both panes).
 void main() {
   group("LayrzScaffoldShell.onRefresh", () {
+    // The wide (1600x1200) iteration below opens item "1" before pumping so
+    // the list panel/split renders -- on a wide viewport with nothing open,
+    // the shell shows its desktop default table instead, which has neither
+    // a ListPanelRefreshFooter nor a list-scoped LayrzRefreshIndicator.
     for (final viewport in [const Size(1600, 1200), const Size(400, 800)]) {
       final isWide = viewport.width >= 960;
       final label = isWide ? "wide (1600x1200)" : "compact (400x800)";
@@ -51,7 +55,10 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
 
         final controller = LayrzScaffoldController();
+        if (isWide) controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         addTearDown(controller.dispose);
+        final tableController = LayrzTableController<_TestItem>();
+        addTearDown(tableController.dispose);
 
         await pumpThemed(
           tester,
@@ -60,6 +67,16 @@ void main() {
               controller: controller,
               items: _buildItems(),
               itemExtent: 56.0,
+              title: const Text('Title'),
+              tableColumns: [
+                LayrzColumn<_TestItem>(
+                  key: const ValueKey('c'),
+                  headerText: 'C',
+                  valueBuilder: (item) => '',
+                  width: 200,
+                ),
+              ],
+              tableController: tableController,
               footer: const Text("Consumer footer", key: Key("consumer-footer")),
               onRefresh: () async {},
             ),
@@ -83,7 +100,10 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
 
         final controller = LayrzScaffoldController();
+        if (isWide) controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         addTearDown(controller.dispose);
+        final tableController = LayrzTableController<_TestItem>();
+        addTearDown(tableController.dispose);
 
         await pumpThemed(
           tester,
@@ -92,6 +112,16 @@ void main() {
               controller: controller,
               items: _buildItems(),
               itemExtent: 56.0,
+              title: const Text('Title'),
+              tableColumns: [
+                LayrzColumn<_TestItem>(
+                  key: const ValueKey('c'),
+                  headerText: 'C',
+                  valueBuilder: (item) => '',
+                  width: 200,
+                ),
+              ],
+              tableController: tableController,
               footer: const Text("Consumer footer", key: Key("consumer-footer")),
             ),
           ),
@@ -111,6 +141,8 @@ void main() {
 
         final controller = LayrzScaffoldController();
         addTearDown(controller.dispose);
+        final tableController = LayrzTableController<_TestItem>();
+        addTearDown(tableController.dispose);
 
         await pumpThemed(
           tester,
@@ -119,6 +151,16 @@ void main() {
               controller: controller,
               items: _buildItems(),
               itemExtent: 56.0,
+              title: const Text('Title'),
+              tableColumns: [
+                LayrzColumn<_TestItem>(
+                  key: const ValueKey('c'),
+                  headerText: 'C',
+                  valueBuilder: (item) => '',
+                  width: 200,
+                ),
+              ],
+              tableController: tableController,
             ),
           ),
         );
@@ -135,7 +177,10 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
 
         final controller = LayrzScaffoldController();
+        if (isWide) controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
         addTearDown(controller.dispose);
+        final tableController = LayrzTableController<_TestItem>();
+        addTearDown(tableController.dispose);
 
         var callCount = 0;
         final completer = Completer<void>();
@@ -147,6 +192,16 @@ void main() {
               controller: controller,
               items: _buildItems(),
               itemExtent: 56.0,
+              title: const Text('Title'),
+              tableColumns: [
+                LayrzColumn<_TestItem>(
+                  key: const ValueKey('c'),
+                  headerText: 'C',
+                  valueBuilder: (item) => '',
+                  width: 200,
+                ),
+              ],
+              tableController: tableController,
               onRefresh: () {
                 callCount++;
                 return completer.future;
@@ -197,6 +252,8 @@ void main() {
 
         final controller = LayrzScaffoldController();
         addTearDown(controller.dispose);
+        final tableController = LayrzTableController<_TestItem>();
+        addTearDown(tableController.dispose);
 
         await pumpThemed(
           tester,
@@ -205,6 +262,16 @@ void main() {
               controller: controller,
               items: _buildItems(),
               itemExtent: 56.0,
+              title: const Text('Title'),
+              tableColumns: [
+                LayrzColumn<_TestItem>(
+                  key: const ValueKey('c'),
+                  headerText: 'C',
+                  valueBuilder: (item) => '',
+                  width: 200,
+                ),
+              ],
+              tableController: tableController,
               onRefresh: () async {},
             ),
           ),
@@ -242,6 +309,8 @@ void main() {
 
       final controller = LayrzScaffoldController();
       addTearDown(controller.dispose);
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       await pumpThemed(
         tester,
@@ -250,6 +319,11 @@ void main() {
             controller: controller,
             items: _buildItems(),
             itemExtent: 56.0,
+            title: const Text('Title'),
+            tableColumns: [
+              LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+            ],
+            tableController: tableController,
             onRefresh: () async {},
           ),
         ),
@@ -267,8 +341,13 @@ void main() {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
 
-      final controller = LayrzScaffoldController();
+      // Open an item so the wide split (with the list panel and its footer)
+      // renders instead of the desktop default table.
+      final controller = LayrzScaffoldController()
+        ..open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       addTearDown(controller.dispose);
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       await pumpThemed(
         tester,
@@ -277,6 +356,11 @@ void main() {
             controller: controller,
             items: _buildItems(),
             itemExtent: 56.0,
+            title: const Text('Title'),
+            tableColumns: [
+              LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+            ],
+            tableController: tableController,
             onRefresh: () async {},
           ),
         ),
@@ -306,6 +390,8 @@ void main() {
 
       final controller = LayrzScaffoldController();
       addTearDown(controller.dispose);
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       final refreshController = LayrzRefreshController();
       addTearDown(refreshController.dispose);
@@ -319,6 +405,11 @@ void main() {
             controller: controller,
             items: _buildItems(),
             itemExtent: 56.0,
+            title: const Text('Title'),
+            tableColumns: [
+              LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+            ],
+            tableController: tableController,
             refreshController: refreshController,
             onRefresh: () async {
               callCount++;

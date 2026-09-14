@@ -55,6 +55,10 @@ class ScaffoldShellSection extends StatefulWidget {
 class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
   late LayrzScaffoldController _controller;
 
+  /// Drives the desktop table's sort/search/column/selection state, exposed so
+  /// the app could observe or drive it from outside the shell.
+  late LayrzTableController<_DemoShellItem> _tableController;
+
   /// Drives the demo shell's footer refresh control, so the "last refreshed"
   /// caption below can be updated in lockstep with the same control a user
   /// would actually press.
@@ -116,12 +120,14 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
   void initState() {
     super.initState();
     _controller = LayrzScaffoldController();
+    _tableController = LayrzTableController<_DemoShellItem>();
     _refreshController = LayrzRefreshController();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _tableController.dispose();
     _refreshController.dispose();
     super.dispose();
   }
@@ -157,9 +163,10 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
     return ShowroomSection(
       title: 'Scaffold Shell',
       description:
-          'LayrzScaffoldShell — an adaptive list-detail container with search, row actions, and '
-          'a list-level refresh affordance (drag-to-refresh on touch, and an always-available footer '
-          'control alongside the timestamp below).',
+          'LayrzScaffoldShell — an adaptive list-detail container. On desktop it opens on a full-width '
+          'table and collapses to the list-detail split once an item is opened; on compact viewports it '
+          'is a list plus a modal detail sheet. Includes search and a list-level refresh affordance '
+          '(drag-to-refresh on touch, and an always-available footer control alongside the timestamp below).',
       child: SizedBox(
         height: 400,
         child: LayrzScaffoldShell<_DemoShellItem>(
@@ -175,6 +182,24 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
               searchableStrings: {item.title},
             );
           }).toList(),
+          // On desktop, the shell opens on this full-width table (DESIGN-216);
+          // pressing a row's "open" button collapses it into the list-detail
+          // split. Compact viewports skip the table entirely.
+          tableController: _tableController,
+          tableColumns: [
+            LayrzColumn<_DemoShellItem>(
+              key: const ValueKey('title'),
+              headerText: 'Title',
+              valueBuilder: (item) => item.title,
+              width: 240,
+            ),
+            LayrzColumn<_DemoShellItem>(
+              key: const ValueKey('description'),
+              headerText: 'Description',
+              valueBuilder: (item) => item.description,
+              width: 420,
+            ),
+          ],
           onItemTap: (item) => _controller.open(
             key: item.key,
             builder: (context) => _buildDetails(item.item),
@@ -240,6 +265,17 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Closing the detail is the app's responsibility (the shell only
+          // cross-fades table<->split off the controller's open state).
+          Align(
+            alignment: Alignment.centerRight,
+            child: LayrzButton(
+              icon: MdiIcons.close,
+              style: LayrzButtonStyle.textFab,
+              labelText: 'Close',
+              onTap: _controller.close,
+            ),
+          ),
           Text(item.title, style: tokens.typography.headline),
           SizedBox(height: tokens.spacing.sp2),
           Text(

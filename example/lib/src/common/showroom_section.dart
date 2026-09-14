@@ -17,7 +17,7 @@ class ShowroomSection extends StatelessWidget {
     required this.title,
     required this.child,
     this.description,
-    this.excludeCard = false,
+    this.excludeCard = true,
   });
 
   /// The section title, rendered prominently at the top.

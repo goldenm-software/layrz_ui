@@ -85,8 +85,7 @@ class MarkdownSection extends StatelessWidget {
               labelText: 'Output',
               child: LayrzMarkdown(
                 data: _markdownSample,
-                onTapLink: (href, title) =>
-                    debugPrint('LayrzMarkdown: tapped link -- href="$href" title="$title"'),
+                onTapLink: (href, title) => debugPrint('LayrzMarkdown: tapped link -- href="$href" title="$title"'),
               ),
             ),
             LayrzTab(

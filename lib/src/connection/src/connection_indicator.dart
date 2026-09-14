@@ -191,10 +191,12 @@ class _LayrzConnectionIndicatorState extends State<LayrzConnectionIndicator> {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(tokens.radius.full),
+        // Chip-like chrome (matching LayrzChip): a rounded-box `r1` radius and
+        // the same compact padding, rather than a tall fully-rounded pill.
+        borderRadius: BorderRadius.circular(tokens.radius.r1),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1),
+        padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1 / 2),
         // Deliberately a hard `DefaultTextStyle`/`IconTheme`, not `.merge`:
         // `.merge` only fills in style fields the descendant left unset, so
         // a caller-supplied `Text(..., style: someStyleWithAColor)` keeps its

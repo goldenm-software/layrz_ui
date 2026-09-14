@@ -33,8 +33,9 @@ LayrzApp(
 ## Key behaviors
 
 - `LayrzScrollbar` is a `StatefulWidget` — the thumb color shifts on hover (`tokens.colors.fg4` at rest, `tokens.colors.fg3` on hover) and the track (`tokens.colors.sf3`) is invisible until hover, tracked via an internal `MouseRegion`. These colors are **not** caller-configurable — there is no `thumbColor`/`trackColor` parameter.
-- The constructor takes only `child` (required) and `controller` (optional) — no `thickness`, `radius`, or visibility parameters are exposed; those are fixed constants (`kLayrzScrollbarThickness`, `kLayrzScrollbarRadius`).
+- The constructor takes `child` (required), `controller` (optional), and `notificationPredicate` (optional) — no `thickness`, `radius`, or visibility parameters are exposed; those are fixed constants (`kLayrzScrollbarThickness`, `kLayrzScrollbarRadius`).
 - `controller` should be the **same** `ScrollController` attached to the wrapped scrollable's `Scrollable` widget. When `null`, it falls back to `PrimaryScrollController`.
+- `notificationPredicate` overrides which `ScrollNotification`s drive the scrollbar — pass a custom predicate when the tracked scrollable is nested inside another one (e.g. a vertical list inside a horizontal scroll view) so it binds to the correct (deeper) axis instead of the outer scrollable's depth-0 notifications.
 - `LayrzScrollBehavior` (the app-wide installer) gates on **platform** (`windows`/`linux`/`macOS` only — Android/iOS/fuchsia get no persistent scrollbar) **and** on **axis** (vertical only).
 
 ---
@@ -76,7 +77,7 @@ ScrollConfiguration(
 
 ## Pitfalls
 
-- **Don't try to pass `thumbColor`/`trackColor`/`thickness`/`radius`** — the current constructor exposes only `child` and `controller`. Any wiki text or older reference implying otherwise is stale; those visuals are fixed constants in `constants/src/scrollbar.dart`.
+- **Don't try to pass `thumbColor`/`trackColor`/`thickness`/`radius`** — the current constructor exposes only `child`, `controller`, and `notificationPredicate`. Any wiki text or older reference implying otherwise is stale; those visuals are fixed constants in `constants/src/scrollbar.dart`.
 - **A mismatched `controller`** (not the same instance attached to the scrollable) silently produces a scrollbar that doesn't track the actual scroll position — always pass the identical `ScrollController` to both the scrollbar and its scrollable.
 - **Don't expect a persistent scrollbar on iOS/Android** — `LayrzScrollBehavior` deliberately returns the plain `child` unchanged on touch platforms; native scroll feedback takes precedence there by design, not by omission.
 - **Don't wrap a horizontal scrollable expecting the same treatment** — `LayrzScrollBehavior` only decorates vertical `Scrollable`s; a horizontal one always renders unchanged regardless of platform.

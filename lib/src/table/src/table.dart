@@ -77,14 +77,18 @@ const double _kTableTopProgressHeight = 2.0;
 /// there is no separate full-table spinner, and the header/body are always
 /// rendered regardless of [isLoading].
 ///
-/// **Column widths**: computed once per [LayoutBuilder] pass from the
-/// available width — fixed-width columns ([LayrzColumn.width] non-null) keep
-/// their own width; the remaining space is split evenly among flex columns
-/// ([LayrzColumn.width] null), floored at [minColumnWidth]. The same
-/// resolved widths are handed to [LayrzTableHeader] (as a `Map<Key, double>`)
-/// and to every [LayrzTableRow] (as a parallel `List<double>`, in the same
-/// order as that row's visible columns), so header and body columns always
-/// agree pixel-for-pixel. The pinned-right actions column, when
+/// **Column widths**: every column has a fixed pixel width — there is no flex
+/// distribution. Each column's effective width is its [LayrzTableController]
+/// resize override when present, otherwise its own [LayrzColumn.width], clamped
+/// to `[minColumnWidth, LayrzColumn.maxWidth]`. When the visible columns sum to
+/// more than the available width the data area scrolls horizontally; when they
+/// sum to less, the surplus is left as trailing whitespace (columns are never
+/// stretched to fill). The same resolved widths are handed to
+/// [LayrzTableHeader] (as a `Map<Key, double>`) and to every [LayrzTableRow]
+/// (as a parallel `List<double>`, in the same order as that row's visible
+/// columns), so header and body columns always agree pixel-for-pixel. Columns
+/// are resizable by dragging the handle on each header cell's right edge (see
+/// [LayrzTableController.setColumnWidth]). The pinned-right actions column, when
 /// [actionsCount] is greater than `0`, is computed the same way — once, and
 /// handed verbatim to both the header and every row — but by a fixed formula
 /// over [actionsCount] rather than by this fixed/flex split; see
@@ -344,6 +348,14 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   List<T>? _searchCacheItems;
   List<LayrzColumn<T>>? _searchCacheColumns;
 
+  /// The controller's column-width override map as of the last
+  /// [_onControllerChanged], used to detect a width-only change so it can
+  /// rebuild (to re-resolve column widths) WITHOUT re-running the full
+  /// filter/sort pipeline — a column resize changes neither the row set nor
+  /// its order, and re-sorting on every drag-update frame would be needless
+  /// (and, on web where the sort runs on the UI thread, janky).
+  Map<Key, double> _lastColumnWidths = const {};
+
   /// `true` while the very first [_recompute] (the one kicked off from
   /// [initState]) has not yet reported through
   /// [LayrzTable.onFilteredCountChanged]. That first recompute runs
@@ -420,7 +432,27 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   /// covers search text, sort column/direction, and column visibility/order
   /// changes (which can change which columns participate in the search).
   void _onControllerChanged() {
+    // A column-width-only change (a header resize drag) changes neither the
+    // filtered row set nor its sort order, so it must not trigger the full
+    // _recompute pipeline — it only needs a rebuild to re-resolve column
+    // widths. Detect it by comparing the controller's override map against the
+    // last-seen snapshot; if that is the ONLY thing that changed, just rebuild.
+    final currentWidths = _controller.columnWidthOverrides;
+    if (!_mapsEqual(currentWidths, _lastColumnWidths)) {
+      _lastColumnWidths = currentWidths;
+      if (mounted) setState(() {});
+      return;
+    }
     _recompute();
+  }
+
+  /// Shallow equality for two `Map<Key, double>` — same keys, same values.
+  static bool _mapsEqual(Map<Key, double> a, Map<Key, double> b) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (b[entry.key] != entry.value) return false;
+    }
+    return true;
   }
 
   /// Runs the filter → sort pipeline for the current [LayrzTable.items],
@@ -600,30 +632,35 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
     ];
   }
 
-  /// Computes each visible column's resolved width for the given
-  /// [availableWidth], per the fixed/flex rule documented on [LayrzTable].
+  /// Computes each visible column's resolved width.
+  ///
+  /// Every column has a fixed pixel width — there is no flex distribution, so
+  /// the available width does not enter here (the table's data area scrolls
+  /// horizontally when the columns sum wider than it). Each column's effective
+  /// width is its [LayrzTableController] override when present, otherwise its
+  /// own [LayrzColumn.width], clamped in both cases to
+  /// `[minColumnWidth, LayrzColumn.maxWidth]` (an absent `maxWidth` means no
+  /// upper bound).
   ///
   /// Returns a `List<double>` parallel to [visibleColumns], which callers use
   /// both to build the `Map<Key, double>` handed to [LayrzTableHeader] and as
   /// the per-row `List<double>` handed to every [LayrzTableRow].
-  List<double> _resolveColumnWidths(List<LayrzColumn<T>> visibleColumns, double availableWidth) {
-    var fixedTotal = 0.0;
-    var flexCount = 0;
-    for (final column in visibleColumns) {
-      final width = column.width;
-      if (width != null) {
-        fixedTotal += width;
-      } else {
-        flexCount++;
-      }
-    }
+  List<double> _resolveColumnWidths(List<LayrzColumn<T>> visibleColumns) {
+    return [
+      for (final column in visibleColumns)
+        _clampColumnWidth(column, _controller.columnWidthOverride(column.key) ?? column.width),
+    ];
+  }
 
-    final remaining = availableWidth - fixedTotal;
-    final flexWidth = flexCount == 0
-        ? widget.minColumnWidth
-        : (remaining / flexCount).clamp(widget.minColumnWidth, double.infinity);
-
-    return [for (final column in visibleColumns) column.width ?? flexWidth];
+  /// Clamps [width] to `[minColumnWidth, column.maxWidth]` — the resize floor
+  /// and the column's own optional ceiling (no ceiling when
+  /// [LayrzColumn.maxWidth] is `null`).
+  double _clampColumnWidth(LayrzColumn<T> column, double width) {
+    final maxWidth = column.maxWidth ?? double.infinity;
+    // Guard against an inverted range if a caller set maxWidth < minColumnWidth:
+    // the floor wins, so the column is at least minColumnWidth wide.
+    final upper = maxWidth < widget.minColumnWidth ? widget.minColumnWidth : maxWidth;
+    return width.clamp(widget.minColumnWidth, upper);
   }
 
   Widget _buildEmptyState(BuildContext context, {required bool isSearchMiss}) {
@@ -741,7 +778,7 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final visibleColumns = _visibleColumns();
-              final widths = _resolveColumnWidths(visibleColumns, constraints.maxWidth);
+              final widths = _resolveColumnWidths(visibleColumns);
               final columnWidths = <Key, double>{
                 for (var i = 0; i < visibleColumns.length; i++) visibleColumns[i].key: widths[i],
               };
@@ -842,7 +879,8 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
                                       // scrollbar must react to the VERTICAL-axis
                                       // notification (the deeper list), not the
                                       // horizontal scrollable's depth-0 one.
-                                      notificationPredicate: (notification) => notification.metrics.axis == Axis.vertical,
+                                      notificationPredicate: (notification) =>
+                                          notification.metrics.axis == Axis.vertical,
                                       child: LayrzScrollbar(
                                         controller: _contentHController,
                                         notificationPredicate: (notification) =>

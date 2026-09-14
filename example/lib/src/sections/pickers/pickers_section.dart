@@ -40,6 +40,9 @@ class PickersSection extends StatefulWidget {
 class _PickersSectionState extends State<PickersSection> {
   late LayrzScaffoldController _controller;
 
+  /// Drives the desktop table's sort/search/column/selection state.
+  late LayrzTableController<InputDemo> _tableController;
+
   /// The canonical registry of all picker component demos.
   /// Ordered by category, then by name within each category.
   static const List<InputDemo> _allDemos = [
@@ -150,11 +153,13 @@ class _PickersSectionState extends State<PickersSection> {
   void initState() {
     super.initState();
     _controller = LayrzScaffoldController();
+    _tableController = LayrzTableController<InputDemo>();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _tableController.dispose();
     super.dispose();
   }
 
@@ -162,10 +167,7 @@ class _PickersSectionState extends State<PickersSection> {
   Widget build(BuildContext context) {
     return LayrzScaffoldShell<InputDemo>(
       title: Text('Pickers Showcase', style: context.tokens.typography.title),
-      // 45.0 (LayrzButton FAB height) + 2 * 10.0 (LayrzRow's pd2 vertical padding
-      // around the row content) = 65.0 is the minimum extent that fits the two
-      // revealed edit/delete FABs without vertical overflow; 68.0 leaves a small
-      // margin of breathing room.
+      // Row height for a single-line tile (avatar + title).
       itemExtent: 41.0,
       items: _allDemos.map((demo) {
         return LayrzScaffoldItem<InputDemo>(
@@ -173,47 +175,24 @@ class _PickersSectionState extends State<PickersSection> {
           item: demo,
           tile: _buildTile(demo),
           searchableStrings: {demo.name, demo.category},
-          actions: [
-            LayrzButton.edit(
-              labelText: 'Edit ${demo.name}',
-              isFab: true,
-              style: .text,
-              onTap: () {
-                LayrzResponsiveModal.show(
-                  context,
-                  semanticLabel: 'Action fired',
-                  builder: (modalContext) {
-                    final tokens = modalContext.tokens;
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      spacing: tokens.spacing.sp2,
-                      children: [
-                        Text(
-                          'Action fired',
-                          style: tokens.typography.title.copyWith(fontWeight: .bold),
-                        ),
-                        Text(
-                          'This is a placeholder for the edit action of the ${demo.name} input component.',
-                          style: tokens.typography.body,
-                        ),
-                      ],
-                    );
-                  },
-                  actions: [
-                    Builder(
-                      builder: (modalContext) => LayrzButton.cancel(
-                        labelText: 'Close',
-                        onTap: () => Navigator.of(modalContext, rootNavigator: true).pop(),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
         );
       }).toList(),
+      // Desktop opens on this table; opening a row collapses to the list-detail split.
+      tableController: _tableController,
+      tableColumns: [
+        LayrzColumn<InputDemo>(
+          key: const ValueKey('name'),
+          headerText: 'Name',
+          valueBuilder: (demo) => demo.name,
+          width: 240,
+        ),
+        LayrzColumn<InputDemo>(
+          key: const ValueKey('category'),
+          headerText: 'Category',
+          valueBuilder: (demo) => demo.category,
+          width: 200,
+        ),
+      ],
       controller: _controller,
       searchable: true,
       onItemTap: (item) => _controller.open(
@@ -266,8 +245,27 @@ class _PickersSectionState extends State<PickersSection> {
   /// inside a [LayrzCard]), so a selected Pickers demo reads structurally
   /// identically to e.g. the Buttons or Alerts section rather than as a bare,
   /// unstyled pane.
-  Widget _buildDetails(InputDemo demo) => ShowroomSection(
-    title: demo.name,
-    child: demo.details,
+  Widget _buildDetails(InputDemo demo) => Stack(
+    children: [
+      ShowroomSection(
+        title: demo.name,
+        child: demo.details,
+      ),
+      // Closing the detail is the app's responsibility (the shell only
+      // cross-fades table<->split off the controller's open state), so the
+      // showcase overlays its own close affordance here. A Stack overlay keeps
+      // ShowroomSection's own SingleChildScrollView as the height-owning child,
+      // rather than a Column that would break its bounded-height contract.
+      Positioned(
+        top: 0,
+        right: 0,
+        child: LayrzButton(
+          icon: MdiIcons.close,
+          style: LayrzButtonStyle.textFab,
+          labelText: 'Close',
+          onTap: _controller.close,
+        ),
+      ),
+    ],
   );
 }

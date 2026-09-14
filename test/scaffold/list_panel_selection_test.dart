@@ -22,8 +22,13 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
 
-        final controller = LayrzScaffoldController();
+        // Open an item (keyless -- there are no items to key against) so the
+        // wide split (with the list panel, and this test's empty-state
+        // caption) renders instead of the desktop default table.
+        final controller = LayrzScaffoldController()..open(builder: (_) => const Text('detail'));
         addTearDown(controller.dispose);
+        final tableController = LayrzTableController<_TestItem>();
+        addTearDown(tableController.dispose);
 
         await pumpThemed(
           tester,
@@ -35,6 +40,16 @@ void main() {
                 controller: controller,
                 items: const <LayrzScaffoldItem<_TestItem>>[],
                 itemExtent: 56.0,
+                title: const Text('Title'),
+                tableColumns: [
+                  LayrzColumn<_TestItem>(
+                    key: const ValueKey('c'),
+                    headerText: 'C',
+                    valueBuilder: (item) => '',
+                    width: 200,
+                  ),
+                ],
+                tableController: tableController,
               ),
             ),
           ),
@@ -53,8 +68,13 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.reset);
 
-        final controller = LayrzScaffoldController();
+        // Open an item (keyless -- there are no items to key against) so the
+        // wide split (with the list panel, and this test's empty-state
+        // caption) renders instead of the desktop default table.
+        final controller = LayrzScaffoldController()..open(builder: (_) => const Text('detail'));
         addTearDown(controller.dispose);
+        final tableController = LayrzTableController<_TestItem>();
+        addTearDown(tableController.dispose);
 
         await pumpThemed(
           tester,
@@ -63,6 +83,16 @@ void main() {
               controller: controller,
               items: const <LayrzScaffoldItem<_TestItem>>[],
               itemExtent: 56.0,
+              title: const Text('Title'),
+              tableColumns: [
+                LayrzColumn<_TestItem>(
+                  key: const ValueKey('c'),
+                  headerText: 'C',
+                  valueBuilder: (item) => '',
+                  width: 200,
+                ),
+              ],
+              tableController: tableController,
             ),
           ),
         );

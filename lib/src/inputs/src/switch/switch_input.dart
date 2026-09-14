@@ -239,17 +239,21 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
     late Color trackColor;
 
     if (isDisabled) {
-      trackColor = tokens.colors.sf3;
+      trackColor = context.isDark ? tokens.colors.sf1 : tokens.colors.sf3;
     } else if (widget.errors.isNotEmpty) {
       final offColor = tokens.colors.danger.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.sf4);
       final onColor = tokens.colors.danger;
       trackColor = Color.lerp(offColor, onColor, animationProgress)!;
     } else if (_states.contains(WidgetState.hovered) || isFocusVisible || _states.contains(WidgetState.pressed)) {
-      final offColor = tokens.colors.sf4;
+      // Interactive off-track surface must read as distinct from the resting
+      // off-track (below) in BOTH themes, so hover/focus/pressed is visible:
+      // dark steps sf1 -> sf2, light steps sf4 -> sf3 (one surface step from
+      // the resting value in each palette).
+      final offColor = context.isDark ? tokens.colors.sf2 : tokens.colors.sf3;
       final onColor = tokens.colors.primary;
       trackColor = Color.lerp(offColor, onColor, animationProgress)!;
     } else {
-      final offColor = tokens.colors.sf3;
+      final offColor = context.isDark ? tokens.colors.sf1 : tokens.colors.sf4;
       final onColor = tokens.colors.primary;
       trackColor = Color.lerp(offColor, onColor, animationProgress)!;
     }
@@ -276,7 +280,7 @@ class _LayrzSwitchInputState extends State<LayrzSwitchInput> with TickerProvider
                 width: thumbSize,
                 height: thumbSize,
                 decoration: BoxDecoration(
-                  color: isDisabled ? tokens.colors.fg4 : tokens.colors.sf1,
+                  color: isDisabled ? tokens.colors.fg4 : (context.isDark ? tokens.colors.sf4 : tokens.colors.sf1),
                   borderRadius: tokens.radius.innerRadius(
                     outerRadius: tokens.radius.r2,
                     spacer: thumbInset,

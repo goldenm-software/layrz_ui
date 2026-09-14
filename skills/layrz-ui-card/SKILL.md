@@ -36,7 +36,7 @@ LayrzCard(
 - `elevation` must be an integer 1–5 inclusive — asserted at construction. Each level maps to a discrete shadow ramp (`tokens.shadow.elevation1`...`elevation5`), not a continuous scale.
 - `onTap: null` (default) makes the card fully inert: no cursor change, no hover/press feedback, not focusable, not announced as a button.
 - `onTap` non-null makes the card interactive: cursor becomes a pointer, hover/focus steps the shadow **up** one level (clamped at 5), press steps it **down** one level (clamped at 1). Geometry (size, padding, radius) never changes during interaction.
-- `backgroundColor: null` (default) resolves to the design system's surface token — pass an explicit `Color` only to override it (e.g. a nested/secondary surface).
+- `backgroundColor: null` (default) resolves to `tokens.colors.sf1` in light mode or `tokens.colors.sf3` in dark mode (via `context.isDark`) — pass an explicit `Color` only to override it (e.g. a nested/secondary surface).
 - The card has no outer margin by design — spacing between cards is the surrounding layout's responsibility.
 
 ---

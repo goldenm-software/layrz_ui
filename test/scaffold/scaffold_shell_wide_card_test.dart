@@ -46,6 +46,8 @@ void main() {
 
       final controller = LayrzScaffoldController();
       addTearDown(controller.dispose);
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       await pumpThemed(
         tester,
@@ -54,6 +56,11 @@ void main() {
             controller: controller,
             items: _buildItems(),
             itemExtent: 56.0,
+            title: const Text('Title'),
+            tableColumns: [
+              LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+            ],
+            tableController: tableController,
           ),
         ),
       );
@@ -84,8 +91,13 @@ void main() {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
 
-      final controller = LayrzScaffoldController();
+      // Open an item so the wide split (with the list panel) renders instead
+      // of the desktop default table.
+      final controller = LayrzScaffoldController()
+        ..open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
       addTearDown(controller.dispose);
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       await pumpThemed(
         tester,
@@ -94,6 +106,11 @@ void main() {
             controller: controller,
             items: _buildItems(),
             itemExtent: 56.0,
+            title: const Text('Title'),
+            tableColumns: [
+              LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+            ],
+            tableController: tableController,
           ),
         ),
       );
@@ -113,6 +130,8 @@ void main() {
 
       final controller = LayrzScaffoldController();
       addTearDown(controller.dispose);
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       await tester.pumpWidget(
         Localizations(
@@ -134,6 +153,16 @@ void main() {
                             controller: controller,
                             items: _buildItems(),
                             itemExtent: 56.0,
+                            title: const Text('Title'),
+                            tableColumns: [
+                              LayrzColumn<_TestItem>(
+                                key: const ValueKey('c'),
+                                headerText: 'C',
+                                valueBuilder: (item) => '',
+                                width: 200,
+                              ),
+                            ],
+                            tableController: tableController,
                           ),
                         ),
                       );
@@ -160,6 +189,8 @@ void main() {
 
       final controller = LayrzScaffoldController();
       addTearDown(controller.dispose);
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       final darkTheme = LayrzThemeData.dark();
 
@@ -170,6 +201,11 @@ void main() {
             controller: controller,
             items: _buildItems(),
             itemExtent: 56.0,
+            title: const Text('Title'),
+            tableColumns: [
+              LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+            ],
+            tableController: tableController,
           ),
         ),
         theme: darkTheme,

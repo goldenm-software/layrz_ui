@@ -2,6 +2,7 @@ export 'src/column.dart' show CellTap, LayrzColumn;
 export 'src/controller.dart' show LayrzTableController;
 export 'src/events.dart'
     show
+        LayrzTableColumnWidthsEvent,
         LayrzTableColumnsEvent,
         LayrzTableEvent,
         LayrzTableRefreshEvent,

@@ -200,6 +200,45 @@ void main() {
       expect(decoration.color, theme.tokens.colors.success);
     });
 
+    guardedTestWidgets('full-mode chrome is chip-shaped (r1 radius, not a fully-rounded pill)', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
+      await pumpThemed(
+        tester,
+        LayrzConnectionIndicator(
+          receivedAt: fixedNow,
+          mode: LayrzConnectionIndicatorMode.full,
+          clock: () => fixedNow,
+          child: const Text('unit-42'),
+        ),
+        theme: theme,
+      );
+
+      final decoration =
+          tester.widget<DecoratedBox>(find.byType(DecoratedBox).first).decoration as BoxDecoration;
+
+      // The chrome must use the chip's rounded-box r1 radius, never the pill
+      // `full` radius — matching LayrzChip so it reads as a chip, not a pill.
+      expect(decoration.borderRadius, BorderRadius.circular(theme.tokens.radius.r1));
+      expect(
+        decoration.borderRadius,
+        isNot(BorderRadius.circular(theme.tokens.radius.full)),
+        reason: 'full mode must not use the fully-rounded pill radius',
+      );
+
+      // And the compact chip vertical padding (sp1 / 2), not the taller sp1.
+      final padding = tester.widget<Padding>(
+        find.descendant(of: find.byType(DecoratedBox).first, matching: find.byType(Padding)).first,
+      );
+      expect(
+        padding.padding,
+        EdgeInsets.symmetric(horizontal: theme.tokens.spacing.sp2, vertical: theme.tokens.spacing.sp1 / 2),
+      );
+    });
+
     guardedTestWidgets('reflects the offline state color when stale', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;

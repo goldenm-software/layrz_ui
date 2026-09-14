@@ -199,8 +199,8 @@ LayrzLayoutController({
 
 | Value | Bands | Description |
 |---|---|---|
-| `.expanded` | md, lg, xl | 178px fixed nav rail beside the body. |
-| `.drawer` | xs, sm | 56px top bar + off-canvas drawer. |
+| `.expanded` | md, lg, xl | 220px fixed nav rail beside the body. |
+| `.drawer` | xs, sm | 64px top bar + off-canvas drawer. |
 
 `resolveLayrzLayoutPresentation({required double width, required LayrzTokens tokens})` resolves the band via `tokens.breakpoints.bandAt(width)` — container-driven (from `LayoutBuilder` constraints), never `MediaQuery`/viewport-driven.
 
@@ -210,9 +210,10 @@ LayrzLayoutController({
 
 | Constant | Value | Notes |
 |---|---|---|
-| `kLayrzLayoutRailWidth` | `178.0` | Expanded presentation's fixed rail width. |
+| `kLayrzLayoutRailWidth` | `220.0` | Expanded presentation's fixed rail width. |
 | `kLayrzLayoutDrawerWidth` | `260.0` | Drawer presentation's off-canvas width. |
-| `kLayrzLayoutTopBarHeight` | `56.0` | Drawer presentation's top bar height. |
+| `kLayrzLayoutTopBarHeight` | `56.0` | Nominal (non-compact) top bar height. In practice the drawer presentation only renders for `xs`/`sm` bands, which are always `isCompact`, so `kLayrzLayoutCompactTopBarHeight` (`64.0`) is what actually applies. |
+| `kLayrzLayoutCompactTopBarHeight` | `64.0` | The top bar height actually used by the drawer presentation (always compact). |
 
 ---
 

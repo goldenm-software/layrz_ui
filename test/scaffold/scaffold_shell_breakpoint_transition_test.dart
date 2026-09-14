@@ -52,6 +52,11 @@ void main() {
 
         final controller = LayrzScaffoldController();
         addTearDown(controller.dispose);
+        final tableController = LayrzTableController<_TestItem>();
+        addTearDown(tableController.dispose);
+        final tableColumns = [
+          LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+        ];
 
         // Pin DPR before physicalSize: ambient DPR is 3.0, so a 1200-wide
         // physical size would resolve to a 400-logical (compact) surface
@@ -67,6 +72,9 @@ void main() {
                 controller: controller,
                 items: _buildItems(),
                 itemExtent: 56.0,
+                title: const Text('Title'),
+                tableColumns: tableColumns,
+                tableController: tableController,
               ),
             ),
           ),
@@ -90,6 +98,9 @@ void main() {
                 controller: controller,
                 items: _buildItems(), // new instance, same keys
                 itemExtent: 56.0,
+                title: const Text('Title'),
+                tableColumns: tableColumns,
+                tableController: tableController,
               ),
             ),
           ),
@@ -121,6 +132,11 @@ void main() {
 
         final controller = LayrzScaffoldController();
         addTearDown(controller.dispose);
+        final tableController = LayrzTableController<_TestItem>();
+        addTearDown(tableController.dispose);
+        final tableColumns = [
+          LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+        ];
 
         tester.view.devicePixelRatio = 1.0;
         tester.view.physicalSize = const Size(1200, 900); // wide (>= 960 logical)
@@ -133,6 +149,9 @@ void main() {
                 controller: controller,
                 items: _buildItems(),
                 itemExtent: 56.0,
+                title: const Text('Title'),
+                tableColumns: tableColumns,
+                tableController: tableController,
               ),
             ),
           ),
@@ -152,6 +171,9 @@ void main() {
                 controller: controller,
                 items: _buildItems(), // new instance, same keys
                 itemExtent: 56.0,
+                title: const Text('Title'),
+                tableColumns: tableColumns,
+                tableController: tableController,
               ),
             ),
           ),

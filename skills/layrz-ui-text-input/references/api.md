@@ -9,10 +9,11 @@ Source: `lib/src/inputs/src/text/text_input.dart`
 ## Examples
 
 ```dart
-// Basic labelled field
+// Basic labelled field — value + onChanged, no controller needed
 LayrzTextInput(
   labelText: 'Email',
   hintText: 'user@example.com',
+  value: email,
   keyboardType: TextInputType.emailAddress,
   onChanged: (value) => email = value,
 )
@@ -28,11 +29,13 @@ LayrzTextInput(
 LayrzTextInput(
   labelText: 'Username',
   isRequired: true,
+  value: username,
   errors: username.isEmpty ? ['Username is required'] : [],
   onChanged: (value) => username = value,
 )
 
-// Read-only picker-style field
+// Read-only picker-style field — a controller is warranted here because the
+// text is set programmatically (by the picker), never typed by the user.
 LayrzTextInput(
   labelText: 'Date',
   readOnly: true,
@@ -40,11 +43,11 @@ LayrzTextInput(
   onTap: () => showDatePicker(),
 )
 
-// Disabled field
+// Disabled field with a fixed value — plain `value`, no controller needed
 LayrzTextInput(
   labelText: 'Locked field',
   disabled: true,
-  controller: TextEditingController(text: 'This field is disabled'),
+  value: 'This field is disabled',
 )
 
 // Obscured (password-shaped) with error list
@@ -52,6 +55,7 @@ LayrzTextInput(
   labelText: 'Password',
   isRequired: true,
   obscureText: true,
+  value: password,
   errors: validatePassword(password),
   onChanged: (value) => password = value,
 )
@@ -78,6 +82,7 @@ LayrzTextInput(
 ```dart
 const LayrzTextInput({
   super.key,
+  this.value,
   this.labelText,
   this.hintText,
   this.isRequired = false,
@@ -142,6 +147,7 @@ underneath. Always supply at least one.
 
 | Property | Type | Default | Notes |
 |---|---|---|---|
+| `value` | `String?` | `null` | Initializes the field's text. **Ignored when `controller` is supplied** — the controller is then the sole source of truth. Combine with `onChanged` for ordinary form fields; prefer this over creating a `TextEditingController` when no programmatic control is needed. |
 | `labelText` | `String?` | `null` | Label above the field. At least one of `labelText`/`hintText` must be non-null. |
 | `hintText` | `String?` | `null` | Placeholder shown when the field is empty and unfocused. |
 | `isRequired` | `bool` | `false` | Renders a red `*` beside the label. |
@@ -163,7 +169,7 @@ underneath. Always supply at least one.
 | `onSubmit` | `ValueChanged<String>?` | `null` | Fires on submit (e.g. Enter / IME done). |
 | `onFocusChanged` | `ValueChanged<bool>?` | `null` | Fires on focus gain/loss. |
 | `onTap` | `VoidCallback?` | `null` | Fires on tap; ignored when `disabled`, fires even when `readOnly`. |
-| `controller` | `TextEditingController?` | `null` | Caller-owned if supplied (never disposed); created+disposed internally otherwise. |
+| `controller` | `TextEditingController?` | `null` | Caller-owned if supplied (never disposed); created+disposed internally otherwise. When supplied, it is the source of truth and `value` is ignored. |
 | `focusNode` | `FocusNode?` | `null` | Same disposal contract as `controller`. |
 | `dense` | `bool` | `false` | Drops internal padding one ramp (`pd2`→`pd1`). No other geometry changes. |
 | `keyboardType` | `TextInputType` | `TextInputType.text` | Soft keyboard type. |
@@ -187,6 +193,7 @@ underneath. Always supply at least one.
 
 ## Behavior notes
 
+- **`value`/`controller` precedence**: when a `controller` is supplied it is always the source of truth and `value` is ignored entirely — including on updates (changing `value` on a widget that already has an external `controller` does nothing). When no `controller` is supplied, the widget's internally-created controller is seeded from `value` on first build and re-synced whenever `value` changes to something the controller's text doesn't already match (so it won't clobber the caret mid-edit if `value` merely echoes the latest `onChanged`).
 - **Interaction-state precedence**: disabled > read-only > error > pressed > hover/focused > default. Geometry (border width, padding, radius) is byte-identical across every state — only color/transparency vary (D15).
 - **Responsive error rendering**: at `md`+ (≥ 960px) errors render inline, joined by `", "`, with the character counter (if `maxLength` set) beside them. Below `md`, the inline slot is hidden and errors move into a tap-triggered `LayrzTooltip` anchored to the error icon, one message per line. This swap is automatic — never opt-in/out from the caller side.
 - **Disposal contract**: a `controller`/`focusNode` supplied by the caller is never disposed by this widget; when omitted, the widget creates and disposes its own.

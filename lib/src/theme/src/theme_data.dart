@@ -246,8 +246,7 @@ class LayrzThemeData {
     return LayrzThemeData(
       tokens: tokens,
       iconTheme: iconTheme,
-      selectionColor:
-          selectionColor ?? tokens.colors.selectionColor.withValues(alpha: tokens.colors.tonalOpacity),
+      selectionColor: selectionColor ?? tokens.colors.selectionColor.withValues(alpha: tokens.colors.tonalOpacity),
       cursorColor: cursorColor ?? tokens.colors.primary,
       extensions: extensionsMap,
       brightness: Brightness.light,
@@ -295,8 +294,7 @@ class LayrzThemeData {
     return LayrzThemeData(
       tokens: tokens,
       iconTheme: iconTheme,
-      selectionColor:
-          selectionColor ?? tokens.colors.selectionColor.withValues(alpha: tokens.colors.tonalOpacity),
+      selectionColor: selectionColor ?? tokens.colors.selectionColor.withValues(alpha: tokens.colors.tonalOpacity),
       cursorColor: cursorColor ?? tokens.colors.primary,
       extensions: extensionsMap,
       brightness: Brightness.dark,

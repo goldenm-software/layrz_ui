@@ -106,4 +106,4 @@ Note: this is a non-`const` constructor (the assert on a runtime-evaluated `tabs
 - **Tap handling**: `_handleTap` is a no-op if the tapped index is already selected; otherwise it calls `setState` and then `onTabChanged?.call(index)` — in that order, so the rebuild is already scheduled before the callback runs.
 - **Pill semantics**: each pill is `Semantics(button: true, selected: ..., label: tab.labelText, onTap: ..., excludeSemantics: true)`, wrapped in `SelectionContainer.disabled` (labels are not drag-selectable body text) and `Focus` for keyboard focus tracking.
 - **Interaction states vary color only, never geometry (D15)** — height, padding, and corner radius are byte-identical across idle/hover/press/selected.
-- **Light mode only**, consistent with the rest of layrz_ui (decision D7).
+- **Theme-aware via tokens**: every color is resolved from `context.tokens` at build time, so it follows light/dark mode (beta — see D78) automatically; there is no hardcoded light-only color in this widget.

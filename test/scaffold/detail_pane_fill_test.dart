@@ -31,6 +31,8 @@ void main() {
 
       final controller = LayrzScaffoldController();
       addTearDown(controller.dispose);
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       final items = [
         const LayrzScaffoldItem(
@@ -48,6 +50,11 @@ void main() {
             controller: controller,
             items: items,
             itemExtent: 56.0,
+            title: const Text('Title'),
+            tableColumns: [
+              LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+            ],
+            tableController: tableController,
           ),
         ),
       );
@@ -85,6 +92,8 @@ void main() {
 
       final controller = LayrzScaffoldController();
       addTearDown(controller.dispose);
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
 
       final items = [
         const LayrzScaffoldItem(
@@ -100,6 +109,11 @@ void main() {
           controller: controller,
           items: items,
           itemExtent: 56.0,
+          title: const Text('Title'),
+          tableColumns: [
+            LayrzColumn<_TestItem>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+          ],
+          tableController: tableController,
         ),
       );
 

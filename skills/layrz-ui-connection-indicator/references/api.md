@@ -96,7 +96,7 @@ const LayrzConnectionIndicator({
 | Value | Description |
 |---|---|
 | `.dot` | Renders a small colored dot (`LayrzBadgeVisual`) wrapped in a `LayrzTooltip` announcing the resolved state plus a humanized "time ago" string (e.g. `"Connected (2 minutes ago)"`). Must not receive a `child`. A `Semantics` wrapper carries the same announcement on the dot. |
-| `.full` | Wraps the given `child` in a colored pill/chrome — background tinted to the resolved state color, foreground/icon color forced to that color's contrast via a hard `DefaultTextStyle`/`IconTheme`. Requires a non-null `child`; the widget never invents its own label/timestamp content in this mode. |
+| `.full` | Wraps the given `child` in a colored chip-like chrome (a rounded-box `r1` radius with compact chip padding, matching `LayrzChip` — not a fully-rounded pill) — background tinted to the resolved state color, foreground/icon color forced to that color's contrast via a hard `DefaultTextStyle`/`IconTheme`. Requires a non-null `child`; the widget never invents its own label/timestamp content in this mode. |
 
 ---
 
@@ -146,5 +146,5 @@ Only `online`/`idle` are configurable — the 30-day offline→disconnected boun
 
 - **Live updates.** A `Timer.periodic` ticks every `kLayrzConnectionIndicatorTickInterval` (1 minute) and calls `setState` so the resolved state stays current without caller polling. Created in `initState`, unconditionally cancelled in `dispose`.
 - **Clock source.** Elapsed time is measured against wall-clock duration only — no timezone-database dependency (`package:timezone`). This keeps the widget dependency-light; only elapsed duration matters for the 5-state boundaries, not calendar-local wall time.
-- **`.full` mode contrast enforcement.** The hard `DefaultTextStyle`/`IconTheme` (not `.merge`) guarantees legibility on every state color, including the dark `fg1` Disconnected pill, even when the caller's `child` carries its own explicit text color.
+- **`.full` mode contrast enforcement.** The hard `DefaultTextStyle`/`IconTheme` (not `.merge`) guarantees legibility on every state color, including the dark `fg1` Disconnected chip, even when the caller's `child` carries its own explicit text color.
 - Downstream packages already modeling connection thresholds via `layrz_models`' `Connection` class are expected to bind their own type to `LayrzConnectionTimes` via an extension method — this conversion is outside `layrz_ui`'s scope.

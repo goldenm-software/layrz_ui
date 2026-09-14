@@ -64,7 +64,7 @@ const LayrzCard({
 |---|---|---|---|
 | `child` | `Widget` | — | **Required.** The content displayed inside the card. |
 | `elevation` | `int` | `1` | Discrete shadow level, 1–5 inclusive. Asserted at construction. Higher values produce a larger drop shadow. |
-| `backgroundColor` | `Color?` | `null` | Background fill. When null, resolves to the design system's surface token (the page canvas background). When provided, overrides the token entirely. |
+| `backgroundColor` | `Color?` | `null` | Background fill. When null, resolves to `tokens.colors.sf1` in light mode or `tokens.colors.sf3` in dark mode (`context.isDark`), not a single fixed token. When provided, overrides that resolution entirely. |
 | `onTap` | `VoidCallback?` | `null` | Tap handler. `null` (default) makes the card fully inert; non-null makes it interactive with hover/press/focus shadow feedback and keyboard activation. |
 
 ---

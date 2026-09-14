@@ -103,6 +103,9 @@ class _TableSectionState extends State<TableSection> {
         case LayrzTableColumnsEvent(columnOrder: final columnOrder, hiddenColumns: final hiddenColumns):
           debugPrint("Columns changed: columnOrder=$columnOrder, hiddenColumns=$hiddenColumns");
           break;
+        case LayrzTableColumnWidthsEvent(columnWidths: final columnWidths):
+          debugPrint("Column widths changed: $columnWidths");
+          break;
         case LayrzTableRefreshEvent _:
           debugPrint("Refresh requested");
           break;
@@ -179,6 +182,7 @@ class _TableSectionState extends State<TableSection> {
       key: const ValueKey('driver'),
       headerText: 'Driver',
       valueBuilder: (vehicle) => vehicle.driver,
+      width: 200,
     ),
     LayrzColumn<_DemoVehicle>(
       key: const ValueKey('odometer'),
@@ -222,6 +226,7 @@ class _TableSectionState extends State<TableSection> {
       headerText: 'Notes',
       valueBuilder: (vehicle) => 'See dispatch log',
       isSortable: false,
+      width: 180,
     ),
   ];
 

@@ -82,14 +82,28 @@ class LayrzColumn<T> {
   /// respond to the sort-toggle tap gesture.
   final bool isSortable;
 
-  /// The fixed width, in logical pixels, of this column.
+  /// The width, in logical pixels, of this column.
   ///
-  /// When `null` (the default), the column is a **flex** column: it shares
-  /// the width remaining after fixed-width columns are subtracted, split
-  /// evenly among all flex columns and floored at the table's configured
-  /// minimum column width. When non-`null`, the column occupies exactly this
-  /// many logical pixels regardless of available space.
-  final double? width;
+  /// Required. Every column has a fixed pixel width — there is no flex/
+  /// share-remaining-space behavior. When the visible columns' widths sum to
+  /// more than the table's available width, the table's data area scrolls
+  /// horizontally rather than shrinking columns to fit.
+  ///
+  /// This is the column's **default** width. A user can resize it by dragging
+  /// the header resize handle, which stores an override on
+  /// `LayrzTableController` (see `LayrzTableController.setColumnWidth`); the
+  /// effective width is the override when present, otherwise this value —
+  /// clamped in both cases to `[LayrzTable.minColumnWidth, maxWidth]`.
+  final double width;
+
+  /// The maximum width, in logical pixels, this column may be resized to, or
+  /// `null` for no maximum.
+  ///
+  /// Bounds the header resize drag: a column can never be dragged wider than
+  /// [maxWidth] (and never narrower than the table's `minColumnWidth`). When
+  /// `null` (the default), the column has no upper bound and can be dragged
+  /// arbitrarily wide, with the table scrolling horizontally to accommodate.
+  final double? maxWidth;
 
   /// Invoked when this column's cell is tapped, for the row whose data is
   /// [item].
@@ -119,17 +133,18 @@ class LayrzColumn<T> {
 
   /// Creates a [LayrzColumn].
   ///
-  /// [key] is required and must be unique across the column set. [headerText]
-  /// and [valueBuilder] are required. All other parameters are optional and
-  /// take the defaults documented on their respective fields.
+  /// [key] is required and must be unique across the column set. [headerText],
+  /// [valueBuilder] and [width] are required. All other parameters are optional
+  /// and take the defaults documented on their respective fields.
   const LayrzColumn({
     required this.key,
     required this.headerText,
     required this.valueBuilder,
+    required this.width,
+    this.maxWidth,
     this.richTextBuilder,
     this.alignment = Alignment.centerLeft,
     this.isSortable = true,
-    this.width,
     this.onTap,
     this.customSort,
   });
@@ -147,6 +162,7 @@ class LayrzColumn<T> {
     Alignment? alignment,
     bool? isSortable,
     double? width,
+    double? maxWidth,
     CellTap<T>? onTap,
     int Function(T a, T b, bool ascending)? customSort,
   }) {
@@ -158,6 +174,7 @@ class LayrzColumn<T> {
       alignment: alignment ?? this.alignment,
       isSortable: isSortable ?? this.isSortable,
       width: width ?? this.width,
+      maxWidth: maxWidth ?? this.maxWidth,
       onTap: onTap ?? this.onTap,
       customSort: customSort ?? this.customSort,
     );

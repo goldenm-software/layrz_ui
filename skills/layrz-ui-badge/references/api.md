@@ -23,7 +23,7 @@ LayrzBadge(
 LayrzBadge(
   label: 'Online',
   type: .success,
-  child: LayrzAvatar(url: user.avatarUrl),
+  child: LayrzAvatar.image(imageSource: user.avatarUrl, semanticLabel: "${user.fullName}'s profile photo"),
 )
 
 // Icon badge
@@ -31,7 +31,7 @@ LayrzBadge(
   label: 'Verified account',
   icon: MdiIcons.checkDecagram,
   type: .info,
-  child: LayrzAvatar(url: user.avatarUrl),
+  child: LayrzAvatar.image(imageSource: user.avatarUrl, semanticLabel: "${user.fullName}'s profile photo"),
 )
 
 // Custom color, bottom-left corner
@@ -40,7 +40,7 @@ LayrzBadge(
   type: .custom,
   color: const Color(0xFF6A0DAD),
   alignment: .bottomLeft,
-  child: LayrzAvatar(url: user.avatarUrl),
+  child: LayrzAvatar.image(imageSource: user.avatarUrl, semanticLabel: "${user.fullName}'s profile photo"),
 )
 
 // Hidden without remounting child
@@ -117,7 +117,7 @@ Mirrors `LayrzChipType`'s vocabulary exactly, so semantic-color selection reads 
 | `.warning` | `tokens.colors.warning` | Cautionary badges. |
 | `.danger` | `tokens.colors.danger` | Destructive/critical badges. **Default** — the conventional color for notification counts. |
 | `.context` | `tokens.colors.contextual` | Context-dependent badges. |
-| `.custom` | `color` param (fallback `tokens.colors.primary.shade500`) | Explicit color override. |
+| `.custom` | `color` param (fallback `tokens.colors.primary`) | Explicit color override. |
 
 ---
 
