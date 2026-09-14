@@ -531,10 +531,30 @@ class _LayrzSelectInputState<T> extends State<LayrzSelectInput<T>> {
                               // plain `Text` inside `child` with no explicit color
                               // resolves to `null` without a real ancestor supplying
                               // one, which the engine then paints solid white.
-                              IgnorePointer(
-                                child: DefaultTextStyle(
-                                  style: context.bodyStyle,
-                                  child: selectedItem.child,
+                              //
+                              // The overlay is bounded to the field via `Positioned.fill`
+                              // and clipped with `ClipRect`, but the child is given
+                              // UNBOUNDED horizontal space via `OverflowBox`: a `child`
+                              // that is a `Row` with an unbounded `Text` would throw a
+                              // `RenderFlex` overflow if handed the field's finite width
+                              // (clipping alone does NOT stop a layout-time overflow — the
+                              // RenderFlex still asserts). Letting it lay out at its natural
+                              // width means it never overflows; `ClipRect` then trims
+                              // whatever paints past the field's right edge. The child is
+                              // left-aligned so it starts at the field's leading edge and
+                              // the overflow (if any) falls off the trailing edge.
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: ClipRect(
+                                    child: OverflowBox(
+                                      alignment: Alignment.centerLeft,
+                                      maxWidth: double.infinity,
+                                      child: DefaultTextStyle(
+                                        style: context.bodyStyle,
+                                        child: selectedItem.child,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
