@@ -164,6 +164,38 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// default.
   final String? showActionLabel;
 
+  /// Whether the wide layout always renders the list-detail split, instead of
+  /// the default full-width table.
+  ///
+  /// When `false` (the default), wide containers (`!context.isCompact`) behave
+  /// exactly as documented on this class: a full-width [LayrzTable] while
+  /// nothing is open, collapsing into the side-by-side split only once
+  /// [LayrzScaffoldController.isOpen] becomes true.
+  ///
+  /// When `true`, the wide layout always renders the split — the table is
+  /// never shown, even with nothing open. In that "nothing open" state the
+  /// detail pane instead renders [dualPaneEmptyState] (or a built-in localized
+  /// placeholder when that is null). This suits apps whose list/detail pair is
+  /// meant to be permanently visible side-by-side, with no table view at all.
+  ///
+  /// The narrow/compact layout ([context.isCompact]) ignores this flag
+  /// entirely: it is always a single-pane list with the detail presented in a
+  /// modal [LayrzBottomSheet], exactly as when this flag is false.
+  final bool preferDualPane;
+
+  /// The widget shown in the detail pane of the enforced dual-pane split when
+  /// no item is selected.
+  ///
+  /// Only meaningful when [preferDualPane] is `true`: it is rendered exactly
+  /// when `preferDualPane` is `true` and [LayrzScaffoldController.isOpen] is
+  /// `false`, in place of [LayrzScaffoldController.openedBuilder]'s content.
+  /// Ignored entirely when [preferDualPane] is `false`, since in that mode the
+  /// split is never shown with nothing open (the table is shown instead).
+  ///
+  /// When null (the default), a built-in localized empty-state placeholder is
+  /// rendered instead.
+  final Widget? dualPaneEmptyState;
+
   /// Creates a new [LayrzScaffoldShell].
   ///
   /// - [items]: The items to display in the list. Required.
@@ -186,6 +218,12 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   ///   shell never disposes it). Idle-but-valid on a compact-only shell.
   /// - [showActionLabel]: Label/tooltip for the desktop table's built-in per-row open
   ///   button. Defaults to null, which uses the localized "Open item" string.
+  /// - [preferDualPane]: Whether the wide layout always renders the list-detail split
+  ///   instead of the default full-width table. Defaults to false. Ignored on the
+  ///   compact/narrow layout, which is unaffected regardless of this value.
+  /// - [dualPaneEmptyState]: The widget shown in the detail pane of the enforced split
+  ///   when no item is selected. Only meaningful when [preferDualPane] is true. Defaults
+  ///   to null, which renders a built-in localized placeholder.
   const LayrzScaffoldShell({
     super.key,
     required this.items,
@@ -201,6 +239,8 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
     required this.tableColumns,
     required this.tableController,
     this.showActionLabel,
+    this.preferDualPane = false,
+    this.dualPaneEmptyState,
   });
 
   @override
@@ -332,10 +372,13 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
 
   /// Builds the wide layout used on wide containers (`!context.isCompact`).
   ///
-  /// Two presentations, per DESIGN-216, chosen by [LayrzScaffoldController.isOpen]:
+  /// Two presentations, per DESIGN-216, chosen by [LayrzScaffoldController.isOpen]
+  /// — unless [LayrzScaffoldShell.preferDualPane] is true, in which case the
+  /// split (see [_buildWideSplit]) is always shown, regardless of [isOpen]:
   ///
   /// - Nothing open → the whole width is a [LayrzTable] default view (see
-  ///   [_buildDefaultTable]).
+  ///   [_buildDefaultTable]), unless [LayrzScaffoldShell.preferDualPane] forces
+  ///   the split instead.
   /// - An item open → the side-by-side split (see [_buildWideSplit]).
   ///
   /// **The table is kept permanently mounted**, with the split layered above it
@@ -355,18 +398,21 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   /// obeying the design system's animation contract — a standard transition
   /// under the 250ms cap, with the standard easing curve.
   Widget _buildWideLayout(BuildContext context, LayrzTokens tokens) {
-    final isOpen = widget.controller.isOpen;
+    // With preferDualPane, the split is shown unconditionally — even with
+    // nothing open — so the table is never the view in that mode.
+    final showSplit = widget.controller.isOpen || widget.preferDualPane;
 
     return Stack(
       fit: StackFit.expand,
       children: [
         // The table is always mounted (never disposed on open/close); it is
-        // simply covered by the split while an item is open. It stops taking
-        // input and stops contributing semantics while covered.
+        // simply covered by the split while an item is open (or, under
+        // preferDualPane, permanently). It stops taking input and stops
+        // contributing semantics while covered.
         IgnorePointer(
-          ignoring: isOpen,
+          ignoring: showSplit,
           child: ExcludeSemantics(
-            excluding: isOpen,
+            excluding: showSplit,
             child: _buildDefaultTable(context, tokens),
           ),
         ),
@@ -378,7 +424,7 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
           duration: tokens.motion.dTransition,
           switchInCurve: tokens.motion.easing,
           switchOutCurve: tokens.motion.easing,
-          child: isOpen
+          child: showSplit
               ? KeyedSubtree(
                   key: const ValueKey('layrz-scaffold-wide-split'),
                   child: _buildWideSplit(context, tokens),
@@ -406,6 +452,19 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   /// stays mounted BEHIND it (see [_buildWideLayout]) — without an opaque
   /// backing the table would show through the gutter around the detail card and
   /// any gap the list panel does not itself cover.
+  ///
+  /// **Detail pane while nothing is open:** [DetailPane] itself already has a
+  /// "nothing selected" placeholder slot for a null builder; this passes
+  /// [LayrzScaffoldShell.dualPaneEmptyState] straight into it as
+  /// [DetailPane.emptyState]. Under the default `preferDualPane == false`, the
+  /// split is never shown with nothing open (the table is shown instead), so
+  /// this only actually surfaces once [LayrzScaffoldShell.preferDualPane]
+  /// keeps the split up as a permanent steady state.
+  ///
+  /// **List panel header, no close button:** unlike this class's own
+  /// (currently stale) doc, the list panel's header renders [title] as-is with
+  /// no close button in either mode today — there is nothing for
+  /// [preferDualPane] to hide here.
   Widget _buildWideSplit(BuildContext context, LayrzTokens tokens) {
     return ColoredBox(
       color: tokens.colors.sf1,
@@ -432,6 +491,7 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
                 elevation: 1,
                 child: DetailPane(
                   builder: widget.controller.openedBuilder,
+                  emptyState: widget.dualPaneEmptyState,
                 ),
               ),
             ),

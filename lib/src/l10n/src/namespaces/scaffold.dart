@@ -21,6 +21,18 @@ mixin LayrzUiL10nScaffoldMixin {
   /// English default: "Open item"
   String get scaffoldOpenItem => 'Open item';
 
+  /// Localized placeholder message shown in `LayrzScaffoldShell`'s detail pane
+  /// (`DetailPane`) whenever it is rendered with no selection — i.e. no
+  /// `LayrzScaffoldController.openedBuilder`.
+  ///
+  /// Used as the built-in default whenever the detail pane's own caller
+  /// supplies no override for that slot — e.g. `LayrzScaffoldShell`'s
+  /// `dualPaneEmptyState`, consumed only while `preferDualPane` keeps the
+  /// split shown with nothing open.
+  ///
+  /// English default: "No item selected"
+  String get scaffoldNoSelection => 'No item selected';
+
   /// Localized label for `LayrzApp`'s automatic debug-mode watermark.
   ///
   /// Used as the default `LayrzAppBanner.labelText` that `LayrzApp` installs
