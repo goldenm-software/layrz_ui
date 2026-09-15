@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- Fixed `LayrzScaffoldShell` not rendering its `title` in wide/desktop table (listing) mode — previously the title was only visible once an item was opened.
+- Fixed `LayrzScaffoldShell` not syncing the table's filtered/visible count to `LayrzScaffoldController` in wide/table mode, so consumers reading only the scaffold controller now get correct counts (previously only the narrow list path published counts).
+
 ## 1.0.0
 
 First stable release. This release carries breaking changes to `LayrzScaffoldShell`, `LayrzScaffoldItem`, and `LayrzColumn`.

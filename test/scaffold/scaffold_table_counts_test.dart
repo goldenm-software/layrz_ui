@@ -102,7 +102,11 @@ void main() {
       expect(controller.totalCount.value, 3);
       expect(controller.filteredCount.value, 3);
 
+      // LayrzSearchInput debounces onSearch by 300ms with a bare Timer, which
+      // does not itself schedule a frame -- pumpAndSettle() alone is not a
+      // reliable way to wait out a plain Timer, so pump past it explicitly.
       await tester.enterText(_tableSearchField(), "Al");
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
 
       // Proves the SCAFFOLD controller (not just the table controller)
@@ -121,21 +125,18 @@ void main() {
       await _pumpTableShell(tester, items: items, controller: controller, tableController: tableController);
       await tester.pump();
 
+      // LayrzSearchInput debounces onSearch by 300ms with a bare Timer, which
+      // does not itself schedule a frame -- pumpAndSettle() only pumps while
+      // hasScheduledFrame is true, so it is not a reliable way to wait out a
+      // plain Timer. Pump past the debounce window explicitly instead.
       await tester.enterText(_tableSearchField(), "Al");
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
       expect(controller.filteredCount.value, 1);
-      // ignore: avoid_print
-      print("DEBUG after Al: tableController.searchText=${tableController.searchText}");
 
       await tester.enterText(_tableSearchField(), "");
-      // ignore: avoid_print
-      print("DEBUG right after enterText(''): tableController.searchText=${tableController.searchText}");
-      await tester.pump();
-      // ignore: avoid_print
-      print("DEBUG after one pump: tableController.searchText=${tableController.searchText}");
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
-      // ignore: avoid_print
-      print("DEBUG after settle: tableController.searchText=${tableController.searchText}");
 
       expect(controller.totalCount.value, 3);
       expect(controller.filteredCount.value, 3);
