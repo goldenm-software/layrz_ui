@@ -135,17 +135,20 @@ void main() {
           LayrzPickersDayGrid(displayedMonth: DateTime(2026, 9), onDayTap: (_) {}),
         );
 
-        // The compact cell for "September 15, 2026" carries an enabled,
-        // tappable button semantics node.
+        // The compact cell for "September 10, 2026" carries an enabled,
+        // tappable button semantics node. A non-today date is used on purpose:
+        // the grid derives "today" from DateTime.now() and appends a ", Today"
+        // suffix to that cell's a11y label, which would break this exact-label
+        // match whenever the suite runs on the asserted date.
         final finder = find.byWidgetPredicate(
-          (widget) => widget is Semantics && (widget.properties.label?.contains('September 15, 2026') ?? false),
+          (widget) => widget is Semantics && (widget.properties.label?.contains('September 10, 2026') ?? false),
         );
         expect(finder, findsOneWidget);
 
         expect(
           tester.getSemantics(finder),
           matchesSemantics(
-            label: 'Tuesday, September 15, 2026',
+            label: 'Thursday, September 10, 2026',
             isButton: true,
             hasEnabledState: true,
             isEnabled: true,
