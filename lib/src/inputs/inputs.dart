@@ -10,6 +10,7 @@ export 'src/login/password_strength.dart';
 export 'src/login/password_strength_meter.dart';
 export 'src/login/username_input.dart';
 export 'src/number/number_input.dart';
+export 'src/otp/otp_input.dart';
 export 'src/radio/radio_input.dart';
 export 'src/search/search_input.dart';
 export 'src/search/search_input_mode.dart';
