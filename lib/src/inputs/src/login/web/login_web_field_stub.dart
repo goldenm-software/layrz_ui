@@ -55,6 +55,10 @@ class LayrzLoginWebField extends StatefulWidget implements LayrzLoginWebFieldCon
   /// contract.
   final ValueChanged<String>? onSubmit;
 
+  /// Fired with the new focus state whenever the underlying DOM `<input>` gains or loses
+  /// focus, on the web implementation. Unused here beyond satisfying the shared contract.
+  final ValueChanged<bool>? onFocusChanged;
+
   /// The `AutofillHints`-style hint strings translated into the DOM `autocomplete`
   /// value on the web implementation. Unused here beyond satisfying the shared
   /// contract.
@@ -90,6 +94,7 @@ class LayrzLoginWebField extends StatefulWidget implements LayrzLoginWebFieldCon
     this.errors = const [],
     this.onChanged,
     this.onSubmit,
+    this.onFocusChanged,
     this.autofillHints = const [],
     this.formId,
     this.disabled = false,

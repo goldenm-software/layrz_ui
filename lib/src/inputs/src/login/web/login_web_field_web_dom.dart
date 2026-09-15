@@ -47,6 +47,12 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
   void _registerViewFactory() {
     ui_web.platformViewRegistry.registerViewFactory(_viewType, (int viewId) {
       final isPassword = widget.kind == LayrzLoginFieldKind.password;
+      // The one-time-code field renders no chrome of its own: `LayrzOtpInput` paints six
+      // digit slots on top of it and this `<input>` only needs to exist, in-flow and
+      // real-sized, for the browser's autofill machinery to find and fill — see
+      // [LayrzLoginFieldKind.oneTimeCode]'s doc comment and `otp_input_web.dart`'s own
+      // overlay documentation for the full mechanism.
+      final isOtp = widget.kind == LayrzLoginFieldKind.oneTimeCode;
       final cssFontFamily = _resolveCssFontFamily();
       final tokens = widget.tokens;
       final density = widget.dense ? tokens.spacing.sp1 : tokens.spacing.sp2;
@@ -79,24 +85,36 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       container.style.boxSizing = 'border-box';
       container.style.display = 'flex';
       container.style.alignItems = 'center';
-      container.style.borderRadius = '${tokens.radius.r2}px';
-      container.style.background = fillColor;
-      container.style.border = colors.borderWidthPx > 0
-          ? '${colors.borderWidthPx}px solid ${colors.borderColor}'
-          : 'none';
-      container.style.padding = '${density}px';
-      container.style.setProperty('gap', '${tokens.spacing.sp2}px');
+      // The one-time-code field paints no fill, border, or radius of its own — six
+      // `OtpSlot`s painted on top by `LayrzOtpInput`/`otp_input_web.dart` supply the
+      // entire visible chrome; this `<input>` only needs to be real, in-flow, and
+      // opaque-sized for autofill purposes (see [LayrzLoginFieldKind.oneTimeCode]).
+      if (!isOtp) {
+        container.style.borderRadius = '${tokens.radius.r2}px';
+        container.style.background = fillColor;
+        container.style.border = colors.borderWidthPx > 0
+            ? '${colors.borderWidthPx}px solid ${colors.borderColor}'
+            : 'none';
+        container.style.padding = '${density}px';
+        container.style.setProperty('gap', '${tokens.spacing.sp2}px');
+      }
 
       // Icon sits in its own fixed-height cell centered against the FULL field height.
-      final iconSlot = web.document.createElement('div') as web.HTMLDivElement;
-      iconSlot.style.display = 'flex';
-      iconSlot.style.alignItems = 'center';
-      iconSlot.style.justifyContent = 'center';
-      iconSlot.style.alignSelf = 'stretch';
-      iconSlot.style.setProperty('flex-shrink', '0');
-      final prefixIconPath = isPassword ? kShieldKeyIconPath : kShieldAccountIconPath;
-      final prefixIcon = buildLoginIconSvg(prefixIconPath, iconColor);
-      iconSlot.appendChild(prefixIcon.svg);
+      // Skipped entirely for the one-time-code field — there is no equivalent glyph and
+      // the painted slots leave no room for one.
+      if (!isOtp) {
+        final iconSlot = web.document.createElement('div') as web.HTMLDivElement;
+        iconSlot.style.display = 'flex';
+        iconSlot.style.alignItems = 'center';
+        iconSlot.style.justifyContent = 'center';
+        iconSlot.style.alignSelf = 'stretch';
+        iconSlot.style.setProperty('flex-shrink', '0');
+        final prefixIconPath = isPassword ? kShieldKeyIconPath : kShieldAccountIconPath;
+        final prefixIcon = buildLoginIconSvg(prefixIconPath, iconColor);
+        iconSlot.appendChild(prefixIcon.svg);
+        container.appendChild(iconSlot);
+        _prefixIconPathElement = prefixIcon.path;
+      }
 
       // Stack occupying the full field height: the placeholder sits absolutely
       // positioned in the SAME box the `<input>` occupies (mirroring
@@ -121,38 +139,56 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       // controller is empty). Never focusable, never editable, and excluded from
       // accessibility (the accessible label lives on the `<input>` itself via
       // `aria-label`, set below) so assistive tech never announces two labels for one
-      // field.
-      final placeholder = web.document.createElement('span') as web.HTMLSpanElement;
-      placeholder.textContent = widget.labelText ?? '';
-      placeholder.style.position = 'absolute';
-      placeholder.style.left = '0';
-      placeholder.style.right = '0';
-      placeholder.style.fontFamily = cssFontFamily;
-      placeholder.style.fontWeight = 'inherit';
-      placeholder.style.color = placeholderColor;
-      placeholder.style.userSelect = 'none';
-      placeholder.style.setProperty('pointer-events', 'none');
-      placeholder.style.setProperty('line-height', '1.3');
-      placeholder.style.setProperty('white-space', 'nowrap');
-      placeholder.style.setProperty('overflow', 'hidden');
-      placeholder.style.setProperty('text-overflow', 'ellipsis');
-      placeholder.style.fontSize = '${bodyFontSize}px';
-      placeholder.setAttribute('aria-hidden', 'true');
-      placeholder.style.display = widget.value.isEmpty ? 'block' : 'none';
+      // field. Skipped for the one-time-code field: its "empty" look is six empty
+      // `OtpSlot`s painted on top, not an in-box hint string.
+      web.HTMLSpanElement? placeholder;
+      if (!isOtp) {
+        placeholder = web.document.createElement('span') as web.HTMLSpanElement;
+        placeholder.textContent = widget.labelText ?? '';
+        placeholder.style.position = 'absolute';
+        placeholder.style.left = '0';
+        placeholder.style.right = '0';
+        placeholder.style.fontFamily = cssFontFamily;
+        placeholder.style.fontWeight = 'inherit';
+        placeholder.style.color = placeholderColor;
+        placeholder.style.userSelect = 'none';
+        placeholder.style.setProperty('pointer-events', 'none');
+        placeholder.style.setProperty('line-height', '1.3');
+        placeholder.style.setProperty('white-space', 'nowrap');
+        placeholder.style.setProperty('overflow', 'hidden');
+        placeholder.style.setProperty('text-overflow', 'ellipsis');
+        placeholder.style.fontSize = '${bodyFontSize}px';
+        placeholder.setAttribute('aria-hidden', 'true');
+        placeholder.style.display = widget.value.isEmpty ? 'block' : 'none';
+      }
 
       final input = web.document.createElement('input') as web.HTMLInputElement;
-      input.type = isPassword ? 'password' : 'text';
-      input.autocomplete = isPassword ? 'current-password' : 'username';
-      // `name` stays the plain, semantic `'username'`/`'password'` — what a password
-      // manager's own heuristics read (alongside `autocomplete`/`type`) to classify the
-      // field's ROLE.
-      input.name = isPassword ? 'password' : 'username';
+      if (isOtp) {
+        // One-time-code: plain text input (browsers have no dedicated OTP `type`),
+        // `autocomplete="one-time-code"` is the actual signal password managers and
+        // mobile keyboards key off of, and `inputmode="numeric"` requests the numeric
+        // keypad on touch devices without changing `type` (which would otherwise
+        // disable text-selection affordances some browsers reserve for `type="number"`).
+        input.type = 'text';
+        input.autocomplete = 'one-time-code';
+        input.inputMode = 'numeric';
+        input.name = 'one-time-code';
+        input.maxLength = 6;
+        input.setAttribute('pattern', '[0-9]*');
+      } else {
+        input.type = isPassword ? 'password' : 'text';
+        input.autocomplete = isPassword ? 'current-password' : 'username';
+        // `name` stays the plain, semantic `'username'`/`'password'` — what a password
+        // manager's own heuristics read (alongside `autocomplete`/`type`) to classify the
+        // field's ROLE.
+        input.name = isPassword ? 'password' : 'username';
+      }
       // Extra autocomplete tokens from [widget.autofillHints] (translated from the
       // Flutter-style hint strings a caller would otherwise pass to `LayrzTextInput`)
       // are appended space-separated, per the HTML living standard's autocomplete
       // grammar, which allows multiple tokens (e.g. `"username email"`) — this is how
       // `AutofillHints.email` reaches the DOM `autocomplete` value alongside the base
-      // `username`/`current-password` pairing [kind] already selects.
+      // `username`/`current-password`/`one-time-code` pairing [kind] already selects.
       final extraHints = widget.autofillHints
           .map(_autofillHintToAutocompleteToken)
           .whereType<String>()
@@ -166,6 +202,23 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       // guaranteed unique per field instance and stable for its entire lifetime) rather
       // than minting a second derived string.
       input.id = _selectionClass;
+      // Dashlane SAWF (Simple Autofill Website Framework) PER-INPUT field-role
+      // annotation — the counterpart to the `data-form-type="login"` on the group
+      // `<form>` (`login_web_group_web.dart`). This bypasses Dashlane's ML field
+      // classifier, which is the documented fix (https://dashlane.github.io/SAWF/) for
+      // Dashlane failing to detect/offer a field — especially the one-time-code field,
+      // whose own text is transparent and gives the classifier nothing to read. Without
+      // it, `autocomplete`/`name`/`id`/`<form>` association alone are not enough for
+      // Dashlane to fire on web. `'otp'` is SAWF's own documented value for a one-time
+      // password field. Additive to `autocomplete`/`type`/`name`, none of which it
+      // replaces. (Ported from `layrz_session`'s working implementation, where dropping
+      // this attribute was the reason autofill did not fire — see decision D82.)
+      final String sawfFieldType = isOtp
+          ? 'otp'
+          : isPassword
+          ? 'password'
+          : 'username';
+      input.setAttribute('data-form-type', sawfFieldType);
       input.value = widget.value;
       input.disabled = widget.disabled;
       // An ordinary flex child of `stack` now — not absolutely positioned — since
@@ -185,9 +238,22 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       input.style.fontSize = '${bodyFontSize}px';
       input.style.fontWeight = 'inherit';
       input.style.setProperty('line-height', '1.3');
-      input.style.color = textColor;
+      // The one-time-code field's own glyphs, caret, and text-selection highlight are
+      // fully transparent — `LayrzOtpInput` paints the six visible digits itself, on
+      // top, via `OtpSlot`. This is TEXT-color transparency, not element opacity: the
+      // `<input>` itself stays fully opaque and real-sized (see the honeypot-avoidance
+      // note below and on [LayrzLoginFieldKind.oneTimeCode]), so password managers still
+      // see and can fill a normal, visible-to-them form field.
+      final effectiveTextColor = isOtp ? 'transparent' : textColor;
+      input.style.color = effectiveTextColor;
+      input.style.setProperty('caret-color', isOtp ? 'transparent' : 'auto');
       input.style.padding = '0';
       input.style.margin = '0';
+      if (isOtp) {
+        // Text-align center matches the centered digit slots painted on top, so the
+        // (invisible) native caret/selection geometry roughly tracks the visible one.
+        input.style.textAlign = 'center';
+      }
       // Sets the accessible name directly on the input (the placeholder is
       // `aria-hidden`, so this is the ONLY accessible name source for the field, on top
       // of the static label row `login_web_field_web.dart`'s `build()` renders in
@@ -211,27 +277,45 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       input.className = _selectionClass;
 
       // Forces the text's fill color so the browser's autofill yellow/blue background
-      // tint can't also recolor the typed text.
-      input.style.setProperty('-webkit-text-fill-color', textColor);
+      // tint can't also recolor the typed text. Kept transparent on the one-time-code
+      // field, matching `input.style.color` above.
+      input.style.setProperty('-webkit-text-fill-color', effectiveTextColor);
 
       // 33% alpha (hex `55`) tint of the accent color, used as the `::selection`
       // background so a selection visibly reads as "selected" without hiding the text
-      // underneath.
-      final selectionBackground = '${accentHex}55';
+      // underneath. The one-time-code field selects transparently too — there is no
+      // visible text underneath to reveal, and the six painted `OtpSlot`s show the
+      // focused position instead.
+      final selectionBackground = isOtp ? 'transparent' : '${accentHex}55';
 
+      // The `<style>` element carries both the `::selection` rule and the autofill-override
+      // rule, built together by `_buildStyleSheet` (see its doc comment in
+      // `login_web_field_web_theme.dart`). Building them in one place is load-bearing:
+      // `_applyThemeStyles` rewrites this element's contents on every restyle, so if the two
+      // rules were not built together, a restyle would erase the autofill override and let
+      // the password manager's fill styling reappear.
       final selectionStyle = web.document.createElement('style') as web.HTMLStyleElement;
-      selectionStyle.textContent =
-          '.$_selectionClass::selection { background: $selectionBackground; color: $textColor; }';
+      selectionStyle.textContent = _buildStyleSheet(
+        selectionBackground: selectionBackground,
+        selectionTextColor: effectiveTextColor,
+        colors: colors,
+        isOtp: isOtp,
+      );
 
       // `placeholder` is absolutely positioned so it overlays `input` in the same cell
       // (append order doesn't matter for stacking since `position: absolute` already
       // takes it out of flex flow), and it is only ever visible while `input` is empty
-      // — see `applyPlaceholderVisibility` below.
-      stack.appendChild(placeholder);
+      // — see `applyPlaceholderVisibility` below. Null for the one-time-code field,
+      // which has no in-box placeholder — see where it is (conditionally) created above.
+      if (placeholder != null) {
+        stack.appendChild(placeholder);
+      }
       stack.appendChild(input);
 
       container.appendChild(selectionStyle);
-      container.appendChild(iconSlot);
+      // `iconSlot` is only appended here for username/password — see where it is
+      // (conditionally) created and appended above for the one-time-code field, which
+      // has no prefix icon.
       container.appendChild(stack);
 
       web.HTMLSpanElement? suffixButton;
@@ -343,12 +427,24 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       /// is therefore never set anywhere in this file — the element simply keeps the
       /// browser's default (fully opaque) at all times.
       void applyPlaceholderVisibility() {
-        placeholder.style.display = input.value.isEmpty ? 'block' : 'none';
+        placeholder?.style.display = input.value.isEmpty ? 'block' : 'none';
       }
 
       input.addEventListener(
         'input',
         (web.Event event) {
+          if (isOtp) {
+            // Strips anything that isn't a digit (a paste, an IME composition, or a
+            // password manager filling non-numeric junk) before it ever reaches
+            // `onChanged` — mirrors `LayrzOtpInput`'s own native
+            // `FilteringTextInputFormatter.digitsOnly` behavior, since this DOM `<input>`
+            // has no formatter pipeline of its own. `maxLength`/`pattern` above are
+            // browser-side hints only; this is the actual enforcement.
+            final digitsOnly = input.value.replaceAll(RegExp(r'[^0-9]'), '');
+            if (digitsOnly != input.value) {
+              input.value = digitsOnly;
+            }
+          }
           widget.onChanged?.call(input.value);
           // Autofill (and other programmatic value changes) can populate the field and
           // fire `input` without ever dispatching a user-driven `focus` first, so the
@@ -390,6 +486,7 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
         (web.Event event) {
           _isFocused = true;
           _applyThemeStyles();
+          widget.onFocusChanged?.call(true);
         }.toJS,
       );
       input.addEventListener(
@@ -397,6 +494,7 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
         (web.Event event) {
           _isFocused = false;
           _applyThemeStyles();
+          widget.onFocusChanged?.call(false);
         }.toJS,
       );
 
@@ -408,7 +506,9 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       _applyPlaceholderVisibility = applyPlaceholderVisibility;
       _containerElement = container;
       _placeholderElement = placeholder;
-      _prefixIconPathElement = prefixIcon.path;
+      // `_prefixIconPathElement` is already assigned above, inside the `!isOtp` branch
+      // that creates `prefixIcon` — there is no prefix icon (and no `prefixIcon` local)
+      // for the one-time-code field.
       _selectionStyleElement = selectionStyle;
       // Re-derives colors from the CURRENT widget (rather than trusting the
       // `fillColor`/`iconColor`/etc. locals already assigned above during this same
@@ -435,9 +535,10 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
   /// `autocomplete` token, or `null` when there is no direct equivalent.
   ///
   /// Only hints relevant to a login credential pair are mapped — this field is
-  /// deliberately not a general Flutter-hint-to-HTML-token translator (see the "no
-  /// parallel input engine" hard constraint: this widget renders exactly two credential
-  /// fields). `AutofillHints.email` is the concrete case the implementation plan calls
+  /// deliberately not a general Flutter-hint-to-HTML-token translator (see
+  /// [LayrzLoginFieldKind]'s doc comment: this widget renders exactly the three
+  /// authentication field kinds). `AutofillHints.email` is the concrete case the
+  /// implementation plan calls
   /// out (dossier `layrz_session` commit `a421381`: "added `AutofillHints.email` which
   /// Dashlane needs to match the field"), so it is the one mapped; `AutofillHints
   /// .username`/`.password` are already covered by the base [kind] pairing and are

@@ -51,9 +51,14 @@
 ///  - `layrz_logging`'s `Log.info`/`Log.warning` are replaced with [debugPrint]
 ///    (`package:flutter/foundation.dart`, re-exported by `widgets.dart`) — see
 ///    `login_web_field_web_form.dart`.
-///  - `NativeAutofillFieldKind.oneTimeCode` and its `digitsOnly` support are DROPPED
-///    entirely — this sub-module renders exactly `{ username, password }` per the "no
-///    parallel input engine" hard constraint; there is no third kind and no OTP path.
+///  - `NativeAutofillFieldKind.oneTimeCode` and its `digitsOnly` support were DROPPED
+///    during this initial U6 port — at the time, this sub-module rendered exactly
+///    `{ username, password }`. Decision D82 (`engineering/decisions.md`) restores it as
+///    [LayrzLoginFieldKind.oneTimeCode]: a one-time code is a first-class authentication
+///    field, the same category as username/password, and this engine exists precisely to
+///    give authentication fields reliable password-manager support — see
+///    `login_web_field.dart`'s module doc for the full rationale. The restored digit
+///    filtering lives in `login_web_field_web_dom.dart`'s `input` listener.
 ///  - The visual chrome (colors, border, radius, padding, font) is redirected to read
 ///    live from [LayrzTokens]/[LayrzInputStyleSpec] instead of `layrz_session`'s
 ///    hardcoded `ThemedInputBorder`-derived CSS constants — see
@@ -135,6 +140,17 @@ class LayrzLoginWebField extends StatefulWidget implements LayrzLoginWebFieldCon
   /// keydown / form submission).
   final ValueChanged<String>? onSubmit;
 
+  /// Fired with the new focus state whenever the underlying DOM `<input>` gains or
+  /// loses real browser focus.
+  ///
+  /// Optional and null by default: the username/password fields resolve their own
+  /// focus chrome internally (via [_isFocused]/[states]) and do not need this. It
+  /// exists for callers like `LayrzOtpInput`'s web path, which paint their own
+  /// per-slot focus highlight on top of this field and therefore need the DOM focus
+  /// state surfaced to Dart. Fired in addition to — not instead of — this field's own
+  /// internal focus-chrome handling.
+  final ValueChanged<bool>? onFocusChanged;
+
   /// The `AutofillHints`-style hint strings the caller would pass to `LayrzTextInput`
   /// on native; translated into the DOM `autocomplete` value this field assigns, in
   /// addition to the base pairing [kind] already selects.
@@ -167,6 +183,7 @@ class LayrzLoginWebField extends StatefulWidget implements LayrzLoginWebFieldCon
     this.errors = const [],
     this.onChanged,
     this.onSubmit,
+    this.onFocusChanged,
     this.autofillHints = const [],
     this.formId,
     this.disabled = false,
