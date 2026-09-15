@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1
+
+- `LayrzButtonGroup` row mode now supports per-entry icon-only FAB buttons and per-entry button styles via new `LayrzDropdownEntry.isFab` and `LayrzDropdownEntry.style` fields, so groups with many actions fit on a single line instead of wrapping.
+
 ## 1.1.0
 
 - **New component `LayrzOtpInput`** — a 6-digit one-time-passcode input with separated, animated digit slots. Digits are entered across six boxes with auto-advance and backspace navigation; the value is exposed as a plain digit string via `onChanged`, and `onCompleted` fires once when all six slots are filled. Standard input contract applies (`labelText`, `isRequired`, `disabled`, `readOnly`, `errors`, `helperText`, `hideDetails`, `autofocus`, `onFocusChanged`, `controller`, `focusNode`), and the field carries `AutofillHints.oneTimeCode` for platform autofill.
