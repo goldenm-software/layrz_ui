@@ -443,6 +443,10 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
 
   /// Builds the desktop default full-width [LayrzTable] view (DESIGN-216).
   ///
+  /// Renders [LayrzScaffoldShell.title] above the table, matching the title's
+  /// presence in the wide split's [ListPanel] header — otherwise the title is
+  /// only ever visible once an item is open, never in this default table mode.
+  ///
   /// The table's rows are the items' own data objects — `widget.items` unwrapped
   /// via [LayrzScaffoldItem.item] — since each [LayrzColumn.valueBuilder] reads
   /// off [T] directly. No per-item cell data lives on [LayrzScaffoldItem].
@@ -454,6 +458,16 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   /// [LayrzScaffoldShell.onItemTap] — the same callback the list rows use — so
   /// the app opens the detail exactly as it does from the list, collapsing the
   /// shell into the split.
+  ///
+  /// The table's [LayrzTable.onFilteredCountChanged] is wired straight into
+  /// [LayrzScaffoldShell.controller] (the SCAFFOLD controller, not
+  /// [LayrzScaffoldShell.tableController]) via [_publishTableCounts], so a
+  /// consumer observing only [LayrzScaffoldController.totalCount]/
+  /// [LayrzScaffoldController.filteredCount] sees correct counts in table mode
+  /// too — mirroring what [ListPanel] already does for the narrow/split layout.
+  /// `LayrzTable` itself defers its very first report to a post-frame callback
+  /// and never calls back synchronously during build, so no extra initial
+  /// publish is needed here.
   Widget _buildDefaultTable(BuildContext context, LayrzTokens tokens) {
     final openLabel = widget.showActionLabel ?? context.l10n.scaffoldOpenItem;
 
@@ -463,21 +477,55 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     // the table does not re-run its off-thread sort on every rebuild.
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp3),
-      child: LayrzTable<T>(
-        items: _cachedTableRows,
-        columns: widget.tableColumns,
-        controller: widget.tableController,
-        canSearch: widget.searchable,
-        actionsCount: 1,
-        actionsBuilder: (data) => [
-          LayrzTableAction(
-            icon: MdiIcons.eyeOutline,
-            labelText: openLabel,
-            onTap: () => _openFromTable(data),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: tokens.spacing.sp1,
+        children: [
+          widget.title,
+          Expanded(
+            child: LayrzTable<T>(
+              items: _cachedTableRows,
+              columns: widget.tableColumns,
+              controller: widget.tableController,
+              canSearch: widget.searchable,
+              actionsCount: 1,
+              actionsBuilder: (data) => [
+                LayrzTableAction(
+                  icon: MdiIcons.eyeOutline,
+                  labelText: openLabel,
+                  onTap: () => _openFromTable(data),
+                ),
+              ],
+              onFilteredCountChanged: _publishTableCounts,
+            ),
           ),
         ],
       ),
     );
+  }
+
+  /// Publishes the desktop table's filtered row [count] to
+  /// [LayrzScaffoldShell.controller] (the scaffold controller), so a consumer
+  /// using only [LayrzScaffoldController] — not
+  /// [LayrzScaffoldShell.tableController] — still gets correct
+  /// [LayrzScaffoldController.totalCount]/[LayrzScaffoldController.filteredCount]
+  /// values while the wide/table layout is showing.
+  ///
+  /// [count] is [LayrzTable]'s own filtered+sorted row count; [total] is always
+  /// [_cachedTableRows]'s length, which is `widget.items.length` unwrapped
+  /// one-to-one (no filtering applied), so it matches exactly what
+  /// [ListPanel] reports as `total` for the narrow/split layout — keeping the
+  /// reported total consistent across both layouts.
+  ///
+  /// `LayrzTable` never invokes [LayrzTable.onFilteredCountChanged]
+  /// synchronously during its owner's build (it defers its first report to a
+  /// post-frame callback internally), so this can call
+  /// [LayrzScaffoldController.updateCounts] directly; the `mounted` guard only
+  /// protects against this shell having been unmounted by the time the
+  /// callback runs.
+  void _publishTableCounts(int count) {
+    if (!mounted) return;
+    widget.controller.updateCounts(total: _cachedTableRows.length, filtered: count);
   }
 
   /// Resolves the table row's data object [data] back to its owning
