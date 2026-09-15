@@ -6,12 +6,14 @@ import 'snackbar_type.dart';
 /// An immutable transient feedback payload for the `LayrzSnackbarMessenger`.
 ///
 /// [LayrzSnackbar] carries everything needed to render one white-card toast —
-/// mandatory title/description text, a severity [type] (icon + accent color,
-/// resolved from tokens), an optional [duration] override, an optional [onTap]
-/// whole-card action, and optional below-content [actions] buttons. It is pure
-/// data: it holds no [BuildContext], no animation state, and no overlay
-/// knowledge. The messenger (`LayrzSnackbarMessenger`, U4) is responsible for
-/// showing, queueing, animating, and dismissing it.
+/// a mandatory title (plain [titleText] or rich [titleRich]) and description
+/// (plain [descriptionText] or rich [descriptionRich]), a severity [type]
+/// (icon + accent color, resolved from tokens), an optional [duration]
+/// override, an optional [onTap] whole-card action, and optional
+/// below-content [actions] buttons. It is pure data: it holds no
+/// [BuildContext], no animation state, and no overlay knowledge. The
+/// messenger (`LayrzSnackbarMessenger`, U4) is responsible for showing,
+/// queueing, animating, and dismissing it.
 ///
 /// Construct one and pass it to `LayrzSnackbarMessenger.of(context).show(...)`:
 /// ```dart
@@ -20,6 +22,27 @@ import 'snackbar_type.dart';
 ///     titleText: 'Saved',
 ///     descriptionText: 'Your changes were saved successfully.',
 ///     type: LayrzSnackbarType.success,
+///   ),
+/// );
+/// ```
+///
+/// **Plain-text vs. rich-text contract:** [titleText]/[titleRich] are
+/// mutually exclusive — supply exactly one of the two (debug asserted) — and
+/// the same holds independently for [descriptionText]/[descriptionRich]. Use
+/// the rich variant only when the line needs mixed styling a plain [String]
+/// cannot express:
+/// ```dart
+/// LayrzSnackbarMessenger.of(context).show(
+///   LayrzSnackbar(
+///     titleRich: TextSpan(
+///       children: [
+///         const TextSpan(text: 'Device '),
+///         TextSpan(text: deviceName, style: const TextStyle(fontWeight: FontWeight.bold)),
+///         const TextSpan(text: ' went offline'),
+///       ],
+///     ),
+///     descriptionText: 'Last seen 5 minutes ago.',
+///     type: LayrzSnackbarType.warning,
 ///   ),
 /// );
 /// ```
@@ -36,19 +59,55 @@ import 'snackbar_type.dart';
 /// `isDismissible` field — see [isPersistent] and [isAutoDismiss].
 @immutable
 class LayrzSnackbar {
-  /// The title text of the snackbar.
+  /// The plain-text title of the snackbar.
   ///
-  /// Required. Displayed as the bold first line of the card (design spec:
+  /// Exactly one of [titleText] or [titleRich] must be supplied (debug
+  /// asserted) — this is the plain-text alternative to a rich [titleRich]
+  /// span. Displayed as the bold first line of the card (design spec:
   /// 13px/500 weight). The messenger's live-region announcement reads this
-  /// together with [descriptionText].
-  final String titleText;
+  /// (or [titleRich]'s plain-text form) together with [descriptionText] (or
+  /// [descriptionRich]'s).
+  final String? titleText;
 
-  /// The description text of the snackbar.
+  /// The plain-text description of the snackbar.
   ///
-  /// Required. Displayed as the second line of the card (design spec: 12px,
-  /// line-height 1.4, at 78% opacity over the filled surface). The
-  /// messenger's live-region announcement reads this together with [titleText].
-  final String descriptionText;
+  /// Exactly one of [descriptionText] or [descriptionRich] must be supplied
+  /// (debug asserted) — this is the plain-text alternative to a rich
+  /// [descriptionRich] span. Displayed as the second line of the card
+  /// (design spec: 12px, line-height 1.4, at 78% opacity over the filled
+  /// surface). The messenger's live-region announcement reads this (or
+  /// [descriptionRich]'s plain-text form) together with [titleText] (or
+  /// [titleRich]'s).
+  final String? descriptionText;
+
+  /// The rich-text title of the snackbar, as an alternative to plain
+  /// [titleText].
+  ///
+  /// Exactly one of [titleText] or [titleRich] must be supplied (debug
+  /// asserted). Use this when the title needs mixed styling — different
+  /// weights or colors within the same line — that a plain [String] cannot
+  /// express. Rendered via `Text.rich`, with the card's own computed title
+  /// style applied as the base style for any span that does not override it.
+  ///
+  /// Deliberately typed as [TextSpan], not the broader `InlineSpan` — a
+  /// `WidgetSpan` would break find-in-page and text prediction for this
+  /// content, so only plain/styled text spans are supported here.
+  final TextSpan? titleRich;
+
+  /// The rich-text description of the snackbar, as an alternative to plain
+  /// [descriptionText].
+  ///
+  /// Exactly one of [descriptionText] or [descriptionRich] must be supplied
+  /// (debug asserted). Use this when the description needs mixed styling —
+  /// different weights or colors within the same line — that a plain
+  /// [String] cannot express. Rendered via `Text.rich`, with the card's own
+  /// computed description style applied as the base style for any span that
+  /// does not override it.
+  ///
+  /// Deliberately typed as [TextSpan], not the broader `InlineSpan` — a
+  /// `WidgetSpan` would break find-in-page and text prediction for this
+  /// content, so only plain/styled text spans are supported here.
+  final TextSpan? descriptionRich;
 
   /// The semantic type of the snackbar.
   ///
@@ -128,9 +187,15 @@ class LayrzSnackbar {
   /// exactly when [type] is [LayrzSnackbarType.custom]:
   /// - `type == custom` ⇒ [icon] and [color] must both be non-null.
   /// - `type != custom` ⇒ [icon] and [color] must both be null.
+  ///
+  /// Also debug-asserts that exactly one of [titleText]/[titleRich] is
+  /// supplied, and separately that exactly one of
+  /// [descriptionText]/[descriptionRich] is supplied.
   const LayrzSnackbar({
-    required this.titleText,
-    required this.descriptionText,
+    this.titleText,
+    this.titleRich,
+    this.descriptionText,
+    this.descriptionRich,
     this.type = LayrzSnackbarType.success,
     this.icon,
     this.color,
@@ -142,6 +207,14 @@ class LayrzSnackbar {
              (type != LayrzSnackbarType.custom && icon == null && color == null),
          'LayrzSnackbar: when type is LayrzSnackbarType.custom, both icon and color '
          'must be supplied; for every other type, both icon and color must be null.',
+       ),
+       assert(
+         (titleText == null) != (titleRich == null),
+         'LayrzSnackbar: supply exactly one of titleText or titleRich.',
+       ),
+       assert(
+         (descriptionText == null) != (descriptionRich == null),
+         'LayrzSnackbar: supply exactly one of descriptionText or descriptionRich.',
        );
 
   /// Whether this snackbar is persistent — i.e. never auto-dismisses.
@@ -181,6 +254,31 @@ class LayrzSnackbar {
   /// assert(persistent.isPersistent);
   /// ```
   ///
+  /// **Title/description text-vs-rich contract:** [titleText] and [titleRich]
+  /// (and, separately, [descriptionText] and [descriptionRich]) are mutually
+  /// exclusive, so `??`-style copying cannot express either "clear this slot"
+  /// or "switch from text to rich (or back)". Each of the four parameters
+  /// therefore also uses the private [_unset] sentinel, exactly like
+  /// [duration]:
+  /// - Omit all four of a pair's parameters to keep the current title (or
+  ///   description) pair unchanged.
+  /// - Pass a non-null [titleText] to switch to plain text for that call —
+  ///   [titleRich] is dropped (reset to `null`) automatically, so the result
+  ///   never fails the constructor's mutual-exclusion assertion. Passing
+  ///   [titleRich] switches the other way, dropping [titleText] the same way.
+  /// - The same two rules apply independently to
+  ///   [descriptionText]/[descriptionRich].
+  ///
+  /// ```dart
+  /// // Switch the title to a rich span; description pair is untouched:
+  /// final copy = snackbar.copyWith(titleRich: TextSpan(text: 'Hi'));
+  /// assert(copy.titleText == null);
+  ///
+  /// // Switch it back to plain text:
+  /// final back = copy.copyWith(titleText: 'Hi');
+  /// assert(back.titleRich == null);
+  /// ```
+  ///
   /// Note: because [icon] and [color] are only valid together with a matching
   /// [type], changing [type] via `copyWith` without also updating [icon]/[color]
   /// can produce a combination that fails the constructor's debug assertion if
@@ -188,8 +286,10 @@ class LayrzSnackbar {
   /// re-validate — construct a fresh [LayrzSnackbar] directly if type and
   /// icon/color must change together.
   LayrzSnackbar copyWith({
-    String? titleText,
-    String? descriptionText,
+    Object? titleText = _unset,
+    Object? titleRich = _unset,
+    Object? descriptionText = _unset,
+    Object? descriptionRich = _unset,
     LayrzSnackbarType? type,
     IconData? icon,
     Color? color,
@@ -197,9 +297,37 @@ class LayrzSnackbar {
     VoidCallback? onTap,
     List<LayrzButton>? actions,
   }) {
+    final String? resolvedTitleText;
+    final TextSpan? resolvedTitleRich;
+    if (!identical(titleText, _unset)) {
+      resolvedTitleText = titleText as String?;
+      resolvedTitleRich = null;
+    } else if (!identical(titleRich, _unset)) {
+      resolvedTitleText = null;
+      resolvedTitleRich = titleRich as TextSpan?;
+    } else {
+      resolvedTitleText = this.titleText;
+      resolvedTitleRich = this.titleRich;
+    }
+
+    final String? resolvedDescriptionText;
+    final TextSpan? resolvedDescriptionRich;
+    if (!identical(descriptionText, _unset)) {
+      resolvedDescriptionText = descriptionText as String?;
+      resolvedDescriptionRich = null;
+    } else if (!identical(descriptionRich, _unset)) {
+      resolvedDescriptionText = null;
+      resolvedDescriptionRich = descriptionRich as TextSpan?;
+    } else {
+      resolvedDescriptionText = this.descriptionText;
+      resolvedDescriptionRich = this.descriptionRich;
+    }
+
     return LayrzSnackbar(
-      titleText: titleText ?? this.titleText,
-      descriptionText: descriptionText ?? this.descriptionText,
+      titleText: resolvedTitleText,
+      titleRich: resolvedTitleRich,
+      descriptionText: resolvedDescriptionText,
+      descriptionRich: resolvedDescriptionRich,
       type: type ?? this.type,
       icon: icon ?? this.icon,
       color: color ?? this.color,
@@ -215,7 +343,9 @@ class LayrzSnackbar {
       other is LayrzSnackbar &&
           runtimeType == other.runtimeType &&
           titleText == other.titleText &&
+          titleRich == other.titleRich &&
           descriptionText == other.descriptionText &&
+          descriptionRich == other.descriptionRich &&
           type == other.type &&
           icon == other.icon &&
           color == other.color &&
@@ -226,7 +356,9 @@ class LayrzSnackbar {
   @override
   int get hashCode => Object.hash(
     titleText,
+    titleRich,
     descriptionText,
+    descriptionRich,
     type,
     icon,
     color,

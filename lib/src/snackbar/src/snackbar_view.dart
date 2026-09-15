@@ -35,8 +35,9 @@ import 'snackbar_style_spec.dart';
 /// `onTap` and is rendered as-is — tapping one runs that button's callback
 /// only, never [onCardTap] and never an implicit dismiss.
 class LayrzSnackbarView extends StatefulWidget {
-  /// The snackbar payload to render — supplies [LayrzSnackbar.titleText],
-  /// [LayrzSnackbar.descriptionText], [LayrzSnackbar.actions], and
+  /// The snackbar payload to render — supplies [LayrzSnackbar.titleText] (or
+  /// [LayrzSnackbar.titleRich]), [LayrzSnackbar.descriptionText] (or
+  /// [LayrzSnackbar.descriptionRich]), [LayrzSnackbar.actions], and
   /// [LayrzSnackbar.isAutoDismiss] (which gates whether the progress bar and
   /// close affordance are shown).
   final LayrzSnackbar snackbar;
@@ -101,6 +102,22 @@ class _LayrzSnackbarViewState extends State<LayrzSnackbarView> {
 
     final icon = snackbar.type.icon ?? snackbar.icon;
 
+    // The token style stays the DEFAULT style for both the plain-text and
+    // rich-text branches: Text.rich applies its `style` as the base for any
+    // span that does not override it, so passing the same computed style
+    // here preserves today's look for callers that don't opt into rich text.
+    final titleRich = snackbar.titleRich;
+    final titleStyle = tokens.typography.body.copyWith(
+      fontWeight: tokens.typography.title.fontWeight,
+      fontVariations: tokens.typography.title.fontVariations,
+      color: style.titleColor,
+    );
+
+    final descriptionRich = snackbar.descriptionRich;
+    final descriptionStyle = tokens.typography.body.copyWith(
+      color: style.descriptionColor,
+    );
+
     final content = Padding(
       padding: EdgeInsets.fromLTRB(tokens.spacing.sp3, tokens.spacing.sp3, tokens.spacing.sp2, tokens.spacing.sp3),
       child: Column(
@@ -119,21 +136,15 @@ class _LayrzSnackbarViewState extends State<LayrzSnackbarView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      snackbar.titleText,
-                      style: tokens.typography.body.copyWith(
-                        fontWeight: tokens.typography.title.fontWeight,
-                        fontVariations: tokens.typography.title.fontVariations,
-                        color: style.titleColor,
-                      ),
-                    ),
+                    if (titleRich != null)
+                      Text.rich(titleRich, style: titleStyle)
+                    else
+                      Text(snackbar.titleText!, style: titleStyle),
                     SizedBox(height: tokens.spacing.sp1 / 2),
-                    Text(
-                      snackbar.descriptionText,
-                      style: tokens.typography.body.copyWith(
-                        color: style.descriptionColor,
-                      ),
-                    ),
+                    if (descriptionRich != null)
+                      Text.rich(descriptionRich, style: descriptionStyle)
+                    else
+                      Text(snackbar.descriptionText!, style: descriptionStyle),
                   ],
                 ),
               ),
@@ -189,7 +200,9 @@ class _LayrzSnackbarViewState extends State<LayrzSnackbarView> {
       ),
     );
 
-    final announcement = '${l10n.snackbarAnnouncementPrefix}. ${snackbar.titleText}. ${snackbar.descriptionText}';
+    final titlePlainText = snackbar.titleText ?? titleRich!.toPlainText();
+    final descriptionPlainText = snackbar.descriptionText ?? descriptionRich!.toPlainText();
+    final announcement = '${l10n.snackbarAnnouncementPrefix}. $titlePlainText. $descriptionPlainText';
 
     final semanticCard = Semantics(
       liveRegion: true,

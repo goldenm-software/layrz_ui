@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.2
+
+- `LayrzSnackbar` now accepts rich text for its title and description: `titleText` and `descriptionText` are now nullable (`String?`), and two new `TextSpan?` slots `titleRich` and `descriptionRich` were added. Exactly one of `titleText`/`titleRich` and one of `descriptionText`/`descriptionRich` must be supplied (enforced by assertion).
+
 ## 1.0.1
 
 - Fixed `LayrzScaffoldShell` not rendering its `title` in wide/desktop table (listing) mode — previously the title was only visible once an item was opened.

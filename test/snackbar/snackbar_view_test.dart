@@ -68,6 +68,91 @@ void main() {
 
         expect(find.byType(Icon), findsWidgets);
       });
+
+      testWidgets('renders a rich titleRich span as findable plain text', (tester) async {
+        setWideViewport(tester);
+        const snackbar = LayrzSnackbar(
+          titleRich: TextSpan(
+            children: [
+              TextSpan(text: 'Device '),
+              TextSpan(text: 'offline'),
+            ],
+          ),
+          descriptionText: 'Last seen 5 minutes ago.',
+        );
+
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) => LayrzSnackbarView(
+              snackbar: snackbar,
+              style: resolveSpec(context, snackbar.type),
+              progress: 1.0,
+            ),
+          ),
+        );
+
+        expect(find.byType(Text), findsWidgets);
+        final richTitle = tester.widget<Text>(
+          find.descendant(of: find.byType(LayrzSnackbarView), matching: find.byType(Text)).first,
+        );
+        expect(richTitle.textSpan, isNotNull);
+        expect(richTitle.textSpan!.toPlainText(), equals('Device offline'));
+        expect(find.text('Last seen 5 minutes ago.'), findsOneWidget);
+      });
+
+      testWidgets('renders a rich descriptionRich span as findable plain text', (tester) async {
+        setWideViewport(tester);
+        const snackbar = LayrzSnackbar(
+          titleText: 'Device offline',
+          descriptionRich: TextSpan(
+            children: [
+              TextSpan(text: 'Last seen '),
+              TextSpan(text: '5 minutes ago.'),
+            ],
+          ),
+        );
+
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) => LayrzSnackbarView(
+              snackbar: snackbar,
+              style: resolveSpec(context, snackbar.type),
+              progress: 1.0,
+            ),
+          ),
+        );
+
+        expect(find.text('Device offline'), findsOneWidget);
+        final texts = tester.widgetList<Text>(
+          find.descendant(of: find.byType(LayrzSnackbarView), matching: find.byType(Text)),
+        );
+        final richDescription = texts.firstWhere((t) => t.textSpan != null);
+        expect(richDescription.textSpan!.toPlainText(), equals('Last seen 5 minutes ago.'));
+      });
+
+      testWidgets('a plain-text snackbar still renders as before (no regression)', (tester) async {
+        setWideViewport(tester);
+        const snackbar = LayrzSnackbar(
+          titleText: 'Saved',
+          descriptionText: 'Your changes were saved successfully.',
+        );
+
+        await pumpThemed(
+          tester,
+          Builder(
+            builder: (context) => LayrzSnackbarView(
+              snackbar: snackbar,
+              style: resolveSpec(context, snackbar.type),
+              progress: 1.0,
+            ),
+          ),
+        );
+
+        expect(find.text('Saved'), findsOneWidget);
+        expect(find.text('Your changes were saved successfully.'), findsOneWidget);
+      });
     });
 
     group('White-card surface', () {
@@ -643,6 +728,50 @@ void main() {
           handle.dispose();
         }
       });
+
+      testWidgets(
+        'live region announces the plain-text extraction of titleRich/descriptionRich',
+        (tester) async {
+          final handle = tester.ensureSemantics();
+          try {
+            setWideViewport(tester);
+            const snackbar = LayrzSnackbar(
+              titleRich: TextSpan(
+                children: [
+                  TextSpan(text: 'Device '),
+                  TextSpan(text: 'offline'),
+                ],
+              ),
+              descriptionRich: TextSpan(
+                children: [
+                  TextSpan(text: 'Last seen '),
+                  TextSpan(text: '5 minutes ago.'),
+                ],
+              ),
+            );
+
+            await pumpThemed(
+              tester,
+              Builder(
+                builder: (context) => LayrzSnackbarView(
+                  snackbar: snackbar,
+                  style: resolveSpec(context, snackbar.type),
+                  progress: 1.0,
+                ),
+              ),
+            );
+
+            final semanticsNode = tester.getSemantics(
+              find.descendant(of: find.byType(LayrzSnackbarView), matching: find.byType(Semantics)).first,
+            );
+
+            expect(semanticsNode.label, contains('Device offline'));
+            expect(semanticsNode.label, contains('Last seen 5 minutes ago.'));
+          } finally {
+            handle.dispose();
+          }
+        },
+      );
 
       testWidgets('card exposes button semantics when onCardTap is provided', (tester) async {
         final handle = tester.ensureSemantics();

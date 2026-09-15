@@ -222,6 +222,84 @@ void main() {
       });
     });
 
+    group('titleText / titleRich mutual exclusion', () {
+      test('titleText alone (titleRich null) constructs normally', () {
+        expect(
+          () => const LayrzSnackbar(titleText: 'Title', descriptionText: 'Description'),
+          returnsNormally,
+        );
+      });
+
+      test('titleRich alone (titleText null) constructs normally', () {
+        expect(
+          () => const LayrzSnackbar(
+            titleRich: TextSpan(text: 'Title'),
+            descriptionText: 'Description',
+          ),
+          returnsNormally,
+        );
+      });
+
+      test('supplying both titleText and titleRich throws in debug mode', () {
+        // Not `const` here: a const expression that fails a constructor assert
+        // is a compile-time error, not the runtime AssertionError this test
+        // exercises — so this must be a plain (non-const) invocation.
+        expect(
+          () => LayrzSnackbar(
+            titleText: 'Title',
+            titleRich: const TextSpan(text: 'Title'),
+            descriptionText: 'Description',
+          ),
+          throwsAssertionError,
+        );
+      });
+
+      test('supplying neither titleText nor titleRich throws in debug mode', () {
+        expect(
+          () => LayrzSnackbar(descriptionText: 'Description'),
+          throwsAssertionError,
+        );
+      });
+    });
+
+    group('descriptionText / descriptionRich mutual exclusion', () {
+      test('descriptionText alone (descriptionRich null) constructs normally', () {
+        expect(
+          () => const LayrzSnackbar(titleText: 'Title', descriptionText: 'Description'),
+          returnsNormally,
+        );
+      });
+
+      test('descriptionRich alone (descriptionText null) constructs normally', () {
+        expect(
+          () => const LayrzSnackbar(
+            titleText: 'Title',
+            descriptionRich: TextSpan(text: 'Description'),
+          ),
+          returnsNormally,
+        );
+      });
+
+      test('supplying both descriptionText and descriptionRich throws in debug mode', () {
+        // Not `const` here — see the matching titleText/titleRich case above.
+        expect(
+          () => LayrzSnackbar(
+            titleText: 'Title',
+            descriptionText: 'Description',
+            descriptionRich: const TextSpan(text: 'Description'),
+          ),
+          throwsAssertionError,
+        );
+      });
+
+      test('supplying neither descriptionText nor descriptionRich throws in debug mode', () {
+        expect(
+          () => LayrzSnackbar(titleText: 'Title'),
+          throwsAssertionError,
+        );
+      });
+    });
+
     group('copyWith', () {
       test('replaces only the given fields', () {
         const snackbar = LayrzSnackbar(titleText: 'Title', descriptionText: 'Description');
@@ -296,6 +374,76 @@ void main() {
         expect(copy.type, equals(LayrzSnackbarType.warning));
         expect(copy.actions, equals([action]));
       });
+
+      test('omitting title/description params keeps the current text pair unchanged', () {
+        const snackbar = LayrzSnackbar(titleText: 'Title', descriptionText: 'Description');
+
+        final copy = snackbar.copyWith(type: LayrzSnackbarType.danger);
+
+        expect(copy.titleText, equals('Title'));
+        expect(copy.titleRich, isNull);
+        expect(copy.descriptionText, equals('Description'));
+        expect(copy.descriptionRich, isNull);
+      });
+
+      test('passing titleRich switches the title to rich and drops titleText', () {
+        const snackbar = LayrzSnackbar(titleText: 'Title', descriptionText: 'Description');
+
+        final copy = snackbar.copyWith(titleRich: const TextSpan(text: 'Rich title'));
+
+        expect(copy.titleText, isNull);
+        expect(copy.titleRich, equals(const TextSpan(text: 'Rich title')));
+        expect(copy.descriptionText, equals('Description'));
+      });
+
+      test('passing titleText back switches the title from rich to plain and drops titleRich', () {
+        const richSnackbar = LayrzSnackbar(
+          titleRich: TextSpan(text: 'Rich title'),
+          descriptionText: 'Description',
+        );
+
+        final copy = richSnackbar.copyWith(titleText: 'Plain title');
+
+        expect(copy.titleRich, isNull);
+        expect(copy.titleText, equals('Plain title'));
+      });
+
+      test('passing descriptionRich switches the description to rich and drops descriptionText', () {
+        const snackbar = LayrzSnackbar(titleText: 'Title', descriptionText: 'Description');
+
+        final copy = snackbar.copyWith(descriptionRich: const TextSpan(text: 'Rich description'));
+
+        expect(copy.descriptionText, isNull);
+        expect(copy.descriptionRich, equals(const TextSpan(text: 'Rich description')));
+        expect(copy.titleText, equals('Title'));
+      });
+
+      test(
+        'passing descriptionText back switches the description from rich to plain and drops '
+        'descriptionRich',
+        () {
+          const richSnackbar = LayrzSnackbar(
+            titleText: 'Title',
+            descriptionRich: TextSpan(text: 'Rich description'),
+          );
+
+          final copy = richSnackbar.copyWith(descriptionText: 'Plain description');
+
+          expect(copy.descriptionRich, isNull);
+          expect(copy.descriptionText, equals('Plain description'));
+        },
+      );
+
+      test('flipping title to rich and back to text round-trips to the original plain value', () {
+        const snackbar = LayrzSnackbar(titleText: 'Title', descriptionText: 'Description');
+
+        final toRich = snackbar.copyWith(titleRich: const TextSpan(text: 'Rich'));
+        final backToText = toRich.copyWith(titleText: 'Title');
+
+        expect(backToText.titleText, equals('Title'));
+        expect(backToText.titleRich, isNull);
+        expect(backToText, equals(snackbar));
+      });
     });
 
     group('equality', () {
@@ -366,6 +514,70 @@ void main() {
           titleText: 'Title',
           descriptionText: 'Description',
           actions: [action],
+        );
+
+        expect(a, isNot(equals(b)));
+      });
+
+      test('two snackbars built from the same titleRich span are equal', () {
+        const a = LayrzSnackbar(
+          titleRich: TextSpan(text: 'Rich title'),
+          descriptionText: 'Description',
+        );
+        const b = LayrzSnackbar(
+          titleRich: TextSpan(text: 'Rich title'),
+          descriptionText: 'Description',
+        );
+
+        expect(a, equals(b));
+        expect(a.hashCode, equals(b.hashCode));
+      });
+
+      test('snackbars differing by titleRich content are not equal', () {
+        const a = LayrzSnackbar(
+          titleRich: TextSpan(text: 'Rich title A'),
+          descriptionText: 'Description',
+        );
+        const b = LayrzSnackbar(
+          titleRich: TextSpan(text: 'Rich title B'),
+          descriptionText: 'Description',
+        );
+
+        expect(a, isNot(equals(b)));
+      });
+
+      test('a plain titleText snackbar is not equal to an equivalent titleRich one', () {
+        const a = LayrzSnackbar(titleText: 'Title', descriptionText: 'Description');
+        const b = LayrzSnackbar(
+          titleRich: TextSpan(text: 'Title'),
+          descriptionText: 'Description',
+        );
+
+        expect(a, isNot(equals(b)));
+      });
+
+      test('two snackbars built from the same descriptionRich span are equal', () {
+        const a = LayrzSnackbar(
+          titleText: 'Title',
+          descriptionRich: TextSpan(text: 'Rich description'),
+        );
+        const b = LayrzSnackbar(
+          titleText: 'Title',
+          descriptionRich: TextSpan(text: 'Rich description'),
+        );
+
+        expect(a, equals(b));
+        expect(a.hashCode, equals(b.hashCode));
+      });
+
+      test('snackbars differing by descriptionRich content are not equal', () {
+        const a = LayrzSnackbar(
+          titleText: 'Title',
+          descriptionRich: TextSpan(text: 'Rich description A'),
+        );
+        const b = LayrzSnackbar(
+          titleText: 'Title',
+          descriptionRich: TextSpan(text: 'Rich description B'),
         );
 
         expect(a, isNot(equals(b)));
