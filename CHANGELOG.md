@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0
+
+- **New component `LayrzOtpInput`** — a 6-digit one-time-passcode input with separated, animated digit slots. Digits are entered across six boxes with auto-advance and backspace navigation; the value is exposed as a plain digit string via `onChanged`, and `onCompleted` fires once when all six slots are filled. Standard input contract applies (`labelText`, `isRequired`, `disabled`, `readOnly`, `errors`, `helperText`, `hideDetails`, `autofocus`, `onFocusChanged`, `controller`, `focusNode`), and the field carries `AutofillHints.oneTimeCode` for platform autofill.
+- **`LayrzOtpInput` web autofill.** On web the field renders six real, password-manager-visible HTML `<input>` boxes so a password manager (Dashlane in particular) detects and fills the one-time code, distributing it across the slots. Wrap the field in a `LayrzForm` to participate in credential/one-time-code autofill grouping, exactly as with `LayrzUsernameInput`/`LayrzPasswordInput`.
+- **Fixed password-manager autofill styling** on `LayrzUsernameInput`, `LayrzPasswordInput`, and `LayrzOtpInput` on web: an autofilled field now repaints to the design-token theme instead of showing the browser/manager's light-yellow background (which was unreadable in dark mode), and each field carries a `data-form-type` annotation so a password manager reliably detects it.
+- `LayrzOtpInput` adds a `formId` parameter for explicit web `<form>` association (default `null`, no effect on native).
+
 ## 1.0.2
 
 - `LayrzSnackbar` now accepts rich text for its title and description: `titleText` and `descriptionText` are now nullable (`String?`), and two new `TextSpan?` slots `titleRich` and `descriptionRich` were added. Exactly one of `titleText`/`titleRich` and one of `descriptionText`/`descriptionRich` must be supplied (enforced by assertion).

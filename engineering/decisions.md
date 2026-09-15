@@ -5683,3 +5683,155 @@ Two adjacent changes landed in the same pass:
   a case, so exhaustive switches over it must handle `LayrzTableColumnWidthsEvent`.
 - Foldable devices lose the dedicated two-pane seam-aware split; this was judged an acceptable trade
   for removing a fragile, crash-prone subsystem now that desktop is table-first.
+
+## D82: `LayrzOtpInput` Restores `oneTimeCode` to the Auth Password-Manager Engine on Web
+
+**Date**: 2026-09-15  
+**Status**: Decided  
+**Category**: Architecture / Accessibility / Web
+
+### Context
+
+`LayrzUsernameInput` and `LayrzPasswordInput` render a real HTML `<input>` on web (via
+`LayrzLoginWebField`, `lib/src/inputs/src/login/web/`) instead of Flutter's own text-editing stack.
+This machinery exists for one specific, deliberate reason: **browser/OS password-manager support for
+authentication fields is business-critical, and incomplete password-manager support has been one of
+the most-criticized aspects of the company's apps.** Flutter web's own framework-managed autofill is
+the underlying reason a workaround is needed at all — its hidden autofill-proxy `<input>` is
+zero-sized while unfocused and gets torn down mid-fill (flutter/flutter#174773, flutter/flutter#105485),
+so password managers frequently cannot see or reliably fill it. `LayrzLoginWebField` sidesteps this by
+rendering a genuine, real-sized, in-flow, never-hidden `<input>` via a platform view instead.
+
+The three fields that belong to this category are the credential identifier (username/email), the
+credential secret (password), and the one-time verification code (OTP) — the standard authentication
+trio. When this engine was first ported from `layrz_session` (U6), `NativeAutofillFieldKind
+.oneTimeCode` and its digit-filtering support were **dropped**, not omitted by design: at that point
+`LayrzOtpInput` did not exist yet in `layrz_ui`, so the sub-module's `LayrzLoginFieldKind` enum was
+closed at `{ username, password }` and documented as "deliberately closed" against a third kind.
+
+`LayrzOtpInput` has since been built, natively pixel-correct (six painted `OtpSlot`s over a fully
+transparent `EditableText`), but its native path gives a password manager (Dashlane, specifically)
+nothing to detect on web — Flutter's own text-editing stack renders no real DOM element for one to
+find, exactly the same underlying problem `LayrzLoginWebField` already solves for username/password.
+Leaving OTP out is not "OTP was never in scope" — it is the one auth field of the three that has not
+yet been connected to the engine built specifically to cover it.
+
+### Decision
+
+**Restore `LayrzLoginFieldKind.oneTimeCode` as the third and last member of the closed set this engine
+covers — `{ username, password, oneTimeCode }` — completing authentication field coverage, not
+opening the enum to new categories.**
+
+Each web box renders HTML `type="text"`, `inputmode="numeric"`, `autocomplete="one-time-code"` (on the
+first box only — see below), and Dashlane's `data-form-type="otp"` SAWF annotation. There is no
+dedicated browser OTP input type; `autocomplete` is the actual signal password managers and mobile
+keyboards key off of, and the per-input `data-form-type` SAWF annotation (https://dashlane.github.io/SAWF/)
+is the documented bypass of Dashlane's ML field classifier — without it Dashlane does not reliably
+detect the field. That per-input `data-form-type` (`username`/`password`/`otp`) was present in the
+`layrz_session` original and had been **dropped** in the U6 port; it is restored for all three kinds in
+the same pass, which is what actually makes Dashlane fire.
+
+**The web presentation is SIX real, visible DOM `<input>` boxes, one per digit — NOT a single hidden
+input under painted slots.** An earlier draft of this work rendered one transparent `LayrzLoginWebField`
+(kind `oneTimeCode`) with the six native `OtpSlot`s overlaid on top; that was abandoned because a
+password manager anchors its own affordance (fill icon, autofill background) to the single field it
+fills, which then spilled around and behind the painted slots. Rendering six genuine boxes keeps the
+manager's UI aligned to the boxes the user sees. The implementation lives in a dedicated web sub-module,
+`lib/src/inputs/src/otp/web/` (`otp_web_field.dart` selector + `otp_web_field_stub.dart` +
+`otp_web_field_web.dart`), exposing `LayrzOtpWebField` — it does **not** reuse `LayrzLoginWebField`,
+which is built around exactly one `<input>`.
+
+- **Only box 0 is the autofill target** (`autocomplete="one-time-code"` + `data-form-type="otp"`); boxes
+  1–5 are `autocomplete="off"`. Confirmed empirically via live DOM logging: a password manager fills the
+  **whole** code into every field it recognizes as `one-time-code`, so six recognized fields produce six
+  copies of the same value. With one recognized field, Dashlane fills the full code into box 0, and box
+  0's `input` listener spreads it across all six (`_distribute`).
+- **Dashlane re-injection guard.** Live logging also revealed that after the initial correct full-code
+  fill into box 0, Dashlane goes back and re-injects into each box individually with *shifted* digits,
+  scrambling the distributed result. `_distribute` records what it wrote (`_distributedDigits`) and sets
+  a ~1s guard window (`_distributeGuardUntilMs`); a per-box `input` during that window whose value
+  disagrees with the distributed digit is a spurious re-injection and is reverted. This is what makes the
+  final autofilled code correct.
+- Auto-advance on typing, backspace-to-previous on an empty box, arrow-key navigation, and paste
+  distribution (the `paste` listener reads the clipboard directly, bypassing `maxlength`) are all handled
+  in the box `<input>` listeners. Boxes 1–5 are `maxlength="1"`; box 0 is uncapped so the full autofilled
+  code reaches its `input` listener intact. Value aggregation (`_aggregate`) drives `onChanged`, and
+  `onCompleted` fires on the same empty/partial-to-full transition rule as the native `_wasComplete`
+  latch.
+- **Autofill styling is repainted to the token theme.** A password manager (Dashlane confirmed) sets its
+  light-yellow `background` and a text color as **inline** styles on the filled `<input>` (it does NOT
+  use the browser's `:-webkit-autofill` pseudo-class). An inline style is beaten only by an author
+  `!important` rule, so each field injects an unconditional `!important` class rule that repaints the box
+  with the token fill (inset `box-shadow` + `background-color`) and token text
+  (`color`/`-webkit-text-fill-color`) — an autofilled field then reads exactly like a normal token-styled
+  one in light and dark mode. For the login fields, this rule is built together with the `::selection`
+  rule by a shared `_buildStyleSheet` helper called from BOTH the initial build and `_applyThemeStyles`,
+  because `_applyThemeStyles` rewrites the `<style>` element on every restyle and would otherwise erase
+  the autofill rule.
+- `LayrzOtpInput` gained one new, fully-documented, default-`null` parameter, `formId`, purely for web
+  form association (mirrors `LayrzUsernameInput.formId`/`LayrzPasswordInput.formId`); it has no effect
+  on native.
+- **The native path is unchanged in its widget tree, state logic, and semantics** — the `kIsWeb` branch
+  is a purely additive `if (kIsWeb) { return _buildWeb(...); }` at the top of `build()`, exactly
+  mirroring how `LayrzUsernameInput`/`LayrzPasswordInput` isolate their own web branch. Two small,
+  separately-approved native fixes landed in the same pass (not part of the web work itself): the
+  painted `OtpSlot` row is now wrapped in `ExcludeSemantics` (it was leaking a digit-per-line label
+  onto the hidden field's semantics node), and `_handleControllerChanged` now gates `onChanged`/
+  `onCompleted` on the digits actually changing since the last emission, so a bare focus gain (a
+  selection-only controller notification) no longer spuriously fires `onChanged("")`.
+
+### Rationale
+
+- **This is about restoring auth coverage, not loosening a rule.** The engine's whole reason to exist
+  is password-manager reliability for authentication fields specifically — not a general web-input
+  framework, and not an invitation for other `layrz_ui` inputs to grow a DOM path. A one-time code is
+  as much an authentication field as a password; it belongs in the same category as the two kinds
+  already there, and its absence was an artifact of build order (OTP didn't exist yet at U6), not a
+  considered exclusion.
+- Keeping the DOM `<input>` real-sized, in-flow, and opaque-as-an-element while making only its TEXT
+  transparent preserves every honeypot-avoidance property `login_web_field_web_dom.dart` already
+  documents for username/password — this is a new state of an existing mechanism, not a new mechanism.
+- Digit filtering happens on the DOM side (not left to `pattern`/`maxLength`, which are browser-side
+  hints only) so a paste, IME composition, or non-numeric autofill can never leave non-digit
+  characters in the value `LayrzOtpInput` mirrors into its slots.
+
+### Consequences
+
+- `LayrzLoginFieldKind` is `{ username, password, oneTimeCode }` and stays closed at exactly these
+  three authentication kinds. A non-authentication kind (email, search, etc.) is still out of scope and
+  needs its own decision record — this entry restores what belongs to the category the engine was
+  built for; it does not reopen the enum generally.
+- `LayrzOtpInput` gained the `formId` parameter (additive, default `null`, no native effect).
+  `LayrzOtpWebField` and its sub-module (`lib/src/inputs/src/otp/web/`) are new internal plumbing, not
+  exported from any barrel — same visibility posture as `login_web_field_web.dart`/
+  `login_web_group_web.dart`.
+- The per-input `data-form-type` SAWF annotation restored in `login_web_field_web_dom.dart` also benefits
+  `LayrzUsernameInput`/`LayrzPasswordInput` — it makes Dashlane's per-field detection more reliable for
+  them too, not just OTP.
+- The `!important` autofill-repaint rule and the shared `_buildStyleSheet` helper apply to
+  `LayrzUsernameInput`/`LayrzPasswordInput` as well: their autofilled fields now repaint to the token
+  theme instead of showing the password manager's light-yellow background (which was unreadable in dark
+  mode).
+- The two native-path fixes (`ExcludeSemantics` on the slot row; the `onChanged` change-gate) tightened
+  three existing tests in `test/inputs/otp/` that had documented the old leaking/spurious-emission
+  behavior as a known workaround; those tests now assert the corrected behavior directly instead of
+  working around it. All 36 native tests in `test/inputs/otp/` stayed green.
+- The web-only DOM code (`otp_web_field_web.dart`, the login `_web.dart` files) is not compiled by
+  `flutter test`/`flutter analyze` (it is behind the `dart.library.js_interop` conditional export), so it
+  is verified separately with `flutter build web` — kept green across this work.
+
+### Review Trigger — This Whole Engine Is a Workaround, Not a Preferred Design
+
+**`LayrzLoginWebField`/`LayrzLoginWebGroup` and every kind built on them (`username`, `password`, and
+now `oneTimeCode`) exist ONLY because Flutter's own framework-managed autofill on web is unreliable**
+(flutter/flutter#174773, flutter/flutter#105485 — the hidden proxy `<input>` can be zero-sized while
+unfocused and gets torn down mid-fill, which password managers cannot see through). Rendering a real
+DOM `<input>` via a platform view is a deliberate, hard-written workaround for that upstream gap, not
+an architecture this package would choose if Flutter's own autofill worked.
+
+**When the Flutter team fixes web autofill upstream, this entire DOM engine should be removed** —
+`LayrzLoginWebField`, `LayrzLoginWebGroup`, and the `username`/`password`/`oneTimeCode` web paths all
+go away, and `LayrzUsernameInput`, `LayrzPasswordInput`, and `LayrzOtpInput` collapse back to plain
+Flutter widgets using `autofillHints`, the same way every other `layrz_ui` input already works. Do not
+keep extending this DOM engine past that point — restoring `oneTimeCode` here completes its intended
+scope; it does not commit to growing the workaround further once the upstream fix lands.

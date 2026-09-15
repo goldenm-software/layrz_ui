@@ -143,11 +143,17 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
     if (container == null) return;
 
     final colors = _resolveThemeColors();
+    // The one-time-code field paints no fill/border/text/selection of its own — see
+    // `_registerViewFactory`'s `isOtp` branch — so a later theme change must not
+    // reintroduce any of it here either.
+    final isOtp = widget.kind == LayrzLoginFieldKind.oneTimeCode;
 
-    container.style.background = colors.fillColor;
-    container.style.border = colors.borderWidthPx > 0
-        ? '${colors.borderWidthPx}px solid ${colors.borderColor}'
-        : 'none';
+    if (!isOtp) {
+      container.style.background = colors.fillColor;
+      container.style.border = colors.borderWidthPx > 0
+          ? '${colors.borderWidthPx}px solid ${colors.borderColor}'
+          : 'none';
+    }
 
     _placeholderElement?.style.color = colors.labelColor;
     _placeholderElement?.textContent = widget.labelText ?? '';
@@ -161,7 +167,7 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
     _errorIconSlotElement?.style.display = hasErrors ? 'flex' : 'none';
 
     final input = _inputElement;
-    if (input != null) {
+    if (input != null && !isOtp) {
       input.style.color = colors.textColor;
       input.style.setProperty('-webkit-text-fill-color', colors.textColor);
     }
@@ -170,10 +176,55 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
     // ring accent (`tokens.colors.primary`, via [LayrzInputStyleSpec.resolve]'s focused
     // branch) used here as the text-selection highlight instead, since a DOM `<input>`
     // has no separate "focus ring" concept distinct from its own border (already
-    // recolored above by [_resolveThemeColors]'s border branch).
-    final selectionBackground = '${colors.accentHex}55';
-    _selectionStyleElement?.textContent =
-        '.$_selectionClass::selection { background: $selectionBackground; color: ${colors.textColor}; }';
+    // recolored above by [_resolveThemeColors]'s border branch). Transparent on the
+    // one-time-code field, matching its initial construction.
+    final selectionBackground = isOtp ? 'transparent' : '${colors.accentHex}55';
+    final selectionTextColor = isOtp ? 'transparent' : colors.textColor;
+    _selectionStyleElement?.textContent = _buildStyleSheet(
+      selectionBackground: selectionBackground,
+      selectionTextColor: selectionTextColor,
+      colors: colors,
+      isOtp: isOtp,
+    );
+  }
+
+  /// Builds the full contents of this field's injected `<style>` element: the
+  /// `::selection` rule AND, for username/password, the autofill-override rule.
+  ///
+  /// Both `_registerViewFactory` (initial build) and [_applyThemeStyles] (every restyle)
+  /// call this, so the two rules are ALWAYS written together. This is load-bearing:
+  /// [_applyThemeStyles] runs on the first focus/theme-apply, and if it wrote only the
+  /// `::selection` rule it would silently ERASE the autofill override, letting the password
+  /// manager's fill styling come back — the confirmed cause of the "autofill still shows
+  /// yellow" bug.
+  ///
+  /// The autofill rule is an UNCONDITIONAL `!important` rule on the input's own class
+  /// (not scoped to `:-webkit-autofill`, which a password manager like Dashlane does not
+  /// trigger — it sets `background`/`color` as inline styles on the element instead). An
+  /// author `!important` rule beats an inline style, so this repaints the field with the
+  /// token fill (inset `box-shadow` + `background-color`) and token text
+  /// (`color`/`-webkit-text-fill-color`), making an autofilled field read exactly like a
+  /// normal token-styled one in both light and dark mode. It is safe to apply
+  /// unconditionally because these ARE the field's resting colors, so a non-autofilled
+  /// field is unchanged. Omitted for the one-time-code field, which paints its own boxes.
+  String _buildStyleSheet({
+    required String selectionBackground,
+    required String selectionTextColor,
+    required _LoginFieldColors colors,
+    required bool isOtp,
+  }) {
+    final selectionRule =
+        '.$_selectionClass::selection { background: $selectionBackground; color: $selectionTextColor; }';
+    if (isOtp) return selectionRule;
+    final autofillRule =
+        '.$_selectionClass {'
+        '-webkit-box-shadow: inset 0 0 0 1000px ${colors.fillColor} !important;'
+        'box-shadow: inset 0 0 0 1000px ${colors.fillColor} !important;'
+        'background-color: ${colors.fillColor} !important;'
+        'color: ${colors.textColor} !important;'
+        '-webkit-text-fill-color: ${colors.textColor} !important;'
+        'caret-color: ${colors.textColor} !important; }';
+    return '$selectionRule$autofillRule';
   }
 
   /// Unique class name used to scope this instance's `::selection` rule — derived from
