@@ -790,6 +790,156 @@ void main() {
     });
   });
 
+  group('LayrzDropdownEntry.isFab / style (row-mode-only fields)', () {
+    test('default constructor defaults isFab to false and style to null', () {
+      final entry = LayrzDropdownEntry(
+        labelText: 'Plain',
+        onTap: () {},
+      );
+
+      expect(entry.isFab, isFalse);
+      expect(entry.style, isNull);
+    });
+
+    test('default constructor threads isFab and style through', () {
+      final entry = LayrzDropdownEntry(
+        labelText: 'Plain',
+        onTap: () {},
+        icon: MdiIcons.checkCircleOutline,
+        isFab: true,
+        style: LayrzDropdownEntryStyle.outlined,
+      );
+
+      expect(entry.isFab, isTrue);
+      expect(entry.style, LayrzDropdownEntryStyle.outlined);
+    });
+
+    test('default constructor throws assertion when isFab is true without icon', () {
+      expect(
+        () => LayrzDropdownEntry(
+          labelText: 'No Icon',
+          onTap: () {},
+          isFab: true,
+        ),
+        throwsAssertionError,
+      );
+    });
+
+    test('save factory defaults isFab to false and style to null', () {
+      final entry = LayrzDropdownEntry.save(labelText: 'Save', onTap: () {});
+      expect(entry.isFab, isFalse);
+      expect(entry.style, isNull);
+    });
+
+    test('save factory threads isFab and style through', () {
+      final entry = LayrzDropdownEntry.save(
+        labelText: 'Save',
+        onTap: () {},
+        isFab: true,
+        style: LayrzDropdownEntryStyle.text,
+      );
+      expect(entry.isFab, isTrue);
+      expect(entry.style, LayrzDropdownEntryStyle.text);
+    });
+
+    test('cancel factory defaults isFab to false and style to null', () {
+      final entry = LayrzDropdownEntry.cancel(labelText: 'Cancel', onTap: () {});
+      expect(entry.isFab, isFalse);
+      expect(entry.style, isNull);
+    });
+
+    test('cancel factory threads isFab and style through', () {
+      final entry = LayrzDropdownEntry.cancel(
+        labelText: 'Cancel',
+        onTap: () {},
+        isFab: true,
+        style: LayrzDropdownEntryStyle.outlined,
+      );
+      expect(entry.isFab, isTrue);
+      expect(entry.style, LayrzDropdownEntryStyle.outlined);
+    });
+
+    test('info factory defaults isFab to false and style to null', () {
+      final entry = LayrzDropdownEntry.info(labelText: 'Info', onTap: () {});
+      expect(entry.isFab, isFalse);
+      expect(entry.style, isNull);
+    });
+
+    test('info factory threads isFab and style through', () {
+      final entry = LayrzDropdownEntry.info(
+        labelText: 'Info',
+        onTap: () {},
+        isFab: true,
+        style: LayrzDropdownEntryStyle.filled,
+      );
+      expect(entry.isFab, isTrue);
+      expect(entry.style, LayrzDropdownEntryStyle.filled);
+    });
+
+    test('show factory defaults isFab to false and style to null', () {
+      final entry = LayrzDropdownEntry.show(labelText: 'Show', onTap: () {});
+      expect(entry.isFab, isFalse);
+      expect(entry.style, isNull);
+    });
+
+    test('show factory threads isFab and style through', () {
+      final entry = LayrzDropdownEntry.show(
+        labelText: 'Show',
+        onTap: () {},
+        isFab: true,
+        style: LayrzDropdownEntryStyle.outlined,
+      );
+      expect(entry.isFab, isTrue);
+      expect(entry.style, LayrzDropdownEntryStyle.outlined);
+    });
+
+    test('edit factory defaults isFab to false and style to null', () {
+      final entry = LayrzDropdownEntry.edit(labelText: 'Edit', onTap: () {});
+      expect(entry.isFab, isFalse);
+      expect(entry.style, isNull);
+    });
+
+    test('edit factory threads isFab and style through', () {
+      final entry = LayrzDropdownEntry.edit(
+        labelText: 'Edit',
+        onTap: () {},
+        isFab: true,
+        style: LayrzDropdownEntryStyle.text,
+      );
+      expect(entry.isFab, isTrue);
+      expect(entry.style, LayrzDropdownEntryStyle.text);
+    });
+
+    test('delete factory defaults isFab to false and style to null', () {
+      final entry = LayrzDropdownEntry.delete(labelText: 'Delete', onTap: () {});
+      expect(entry.isFab, isFalse);
+      expect(entry.style, isNull);
+    });
+
+    test('delete factory threads isFab and style through', () {
+      final entry = LayrzDropdownEntry.delete(
+        labelText: 'Delete',
+        onTap: () {},
+        isFab: true,
+        style: LayrzDropdownEntryStyle.outlined,
+      );
+      expect(entry.isFab, isTrue);
+      expect(entry.style, LayrzDropdownEntryStyle.outlined);
+    });
+
+    test('semantic factories still have a preset icon, so isFab: true alone does not assert', () {
+      // Semantic factories preset an icon, so isFab: true is safe without passing icon explicitly.
+      expect(
+        () => LayrzDropdownEntry.save(labelText: 'Save', onTap: () {}, isFab: true),
+        returnsNormally,
+      );
+      expect(
+        () => LayrzDropdownEntry.delete(labelText: 'Delete', onTap: () {}, isFab: true),
+        returnsNormally,
+      );
+    });
+  });
+
   group('formatLayrzShortcut', () {
     test('formats control + shift on macOS correctly', () {
       final shortcut = {LogicalKeyboardKey.control, LogicalKeyboardKey.shift, LogicalKeyboardKey.keyS};

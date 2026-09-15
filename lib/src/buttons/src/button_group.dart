@@ -22,9 +22,12 @@ import 'button_type.dart';
 ///
 /// Items are expected to be [LayrzDropdownItem] instances. In dropdown mode, all items
 /// (both entries and labels) pass through to [LayrzDropdownMenu] unchanged. In row mode,
-/// only [LayrzDropdownEntry] items are rendered as labelled [LayrzButton] instances;
-/// [LayrzDropdownLabel] items are silently skipped. An entry's [LayrzDropdownEntry.onTap]
-/// is called both in row and dropdown modes. Dropdown entries close the menu automatically after tapping.
+/// only [LayrzDropdownEntry] items are rendered as [LayrzButton] instances — labelled by
+/// default, or icon-only FAB buttons when [LayrzDropdownEntry.isFab] is set, letting many
+/// actions fit on a single line instead of wrapping; [LayrzDropdownEntry.style] selects the
+/// button's base visual style. [LayrzDropdownLabel] items are silently skipped. An entry's
+/// [LayrzDropdownEntry.onTap] is called both in row and dropdown modes. Dropdown entries
+/// close the menu automatically after tapping.
 class LayrzButtonGroup extends StatelessWidget {
   /// The items rendered by this group, in order.
   ///
@@ -183,11 +186,25 @@ class LayrzButtonGroup extends StatelessWidget {
   ///
   /// The entry's label, icon, enabled state, and accent colour are converted to button properties.
   /// Shortcuts are dropped (LayrzButton has no shortcut field).
-  /// The resulting button is labelled (non-Fab) and uses [LayrzButtonType.custom] with
-  /// the entry's resolved accent colour (if present) as the button colour.
-  /// For semantic factories, the semantic colour from [tokens] is resolved and passed through.
+  /// The resulting button uses [LayrzButtonType.custom] with the entry's resolved accent
+  /// colour (if present) as the button colour. For semantic factories, the semantic colour
+  /// from [tokens] is resolved and passed through.
+  ///
+  /// The button's style is resolved from [LayrzDropdownEntry.style] (`filled` when null,
+  /// unchanged default) and then promoted to its FAB variant via [LayrzButtonStyle.asFab]
+  /// when [LayrzDropdownEntry.isFab] is true, rendering the action as an icon-only button.
+  /// [LayrzButton] auto-derives a tooltip from [LayrzButton.labelText] for FAB styles, so the
+  /// accessible name is preserved without extra work here.
   static LayrzButton _entryToButton(LayrzDropdownEntry entry, LayrzTokens tokens) {
     final isDisabled = !entry.enabled;
+
+    final base = switch (entry.style) {
+      LayrzDropdownEntryStyle.filled => LayrzButtonStyle.filled,
+      LayrzDropdownEntryStyle.outlined => LayrzButtonStyle.outlined,
+      LayrzDropdownEntryStyle.text => LayrzButtonStyle.text,
+      null => LayrzButtonStyle.filled,
+    };
+    final resolved = entry.isFab ? base.asFab : base;
 
     return LayrzButton(
       labelText: entry.labelText,
@@ -196,7 +213,7 @@ class LayrzButtonGroup extends StatelessWidget {
       isDisabled: isDisabled,
       type: LayrzButtonType.custom,
       color: entry.resolveAccent(tokens),
-      style: LayrzButtonStyle.filled,
+      style: resolved,
     );
   }
 }

@@ -262,6 +262,171 @@ void main() {
       });
     });
 
+    group('Row-mode isFab and style mapping', () {
+      testWidgets('plain entry maps to a filled (non-fab) button by default', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup(
+            triggerHintText: 'Actions',
+            items: [
+              LayrzDropdownEntry(labelText: 'Save', onTap: () {}),
+            ],
+            useDropdown: false,
+          ),
+        );
+
+        final button = tester.widget<LayrzButton>(find.byType(LayrzButton));
+        expect(button.style, LayrzButtonStyle.filled);
+        expect(button.style.isFab, isFalse);
+      });
+
+      testWidgets('isFab: true maps to filledFab when no style is given', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup(
+            triggerHintText: 'Actions',
+            items: [
+              LayrzDropdownEntry(
+                labelText: 'Save',
+                onTap: () {},
+                icon: MdiIcons.contentSaveOutline,
+                isFab: true,
+              ),
+            ],
+            useDropdown: false,
+          ),
+        );
+
+        final button = tester.widget<LayrzButton>(find.byType(LayrzButton));
+        expect(button.style, LayrzButtonStyle.filledFab);
+        expect(button.style.isFab, isTrue);
+      });
+
+      testWidgets('style: outlined maps to LayrzButtonStyle.outlined', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup(
+            triggerHintText: 'Actions',
+            items: [
+              LayrzDropdownEntry(
+                labelText: 'Save',
+                onTap: () {},
+                style: LayrzDropdownEntryStyle.outlined,
+              ),
+            ],
+            useDropdown: false,
+          ),
+        );
+
+        final button = tester.widget<LayrzButton>(find.byType(LayrzButton));
+        expect(button.style, LayrzButtonStyle.outlined);
+      });
+
+      testWidgets('style: outlined combined with isFab: true maps to outlinedFab', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup(
+            triggerHintText: 'Actions',
+            items: [
+              LayrzDropdownEntry(
+                labelText: 'Save',
+                onTap: () {},
+                icon: MdiIcons.contentSaveOutline,
+                isFab: true,
+                style: LayrzDropdownEntryStyle.outlined,
+              ),
+            ],
+            useDropdown: false,
+          ),
+        );
+
+        final button = tester.widget<LayrzButton>(find.byType(LayrzButton));
+        expect(button.style, LayrzButtonStyle.outlinedFab);
+      });
+
+      testWidgets('style: text maps to LayrzButtonStyle.text', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup(
+            triggerHintText: 'Actions',
+            items: [
+              LayrzDropdownEntry(
+                labelText: 'Save',
+                onTap: () {},
+                style: LayrzDropdownEntryStyle.text,
+              ),
+            ],
+            useDropdown: false,
+          ),
+        );
+
+        final button = tester.widget<LayrzButton>(find.byType(LayrzButton));
+        expect(button.style, LayrzButtonStyle.text);
+      });
+
+      testWidgets('different entries in one group render with independent styles', (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          LayrzButtonGroup(
+            triggerHintText: 'Actions',
+            items: [
+              LayrzDropdownEntry(labelText: 'Filled', onTap: () {}),
+              LayrzDropdownEntry(
+                labelText: 'Outlined',
+                onTap: () {},
+                style: LayrzDropdownEntryStyle.outlined,
+              ),
+              LayrzDropdownEntry(
+                labelText: 'Text',
+                onTap: () {},
+                style: LayrzDropdownEntryStyle.text,
+              ),
+              LayrzDropdownEntry(
+                labelText: 'Fab',
+                onTap: () {},
+                icon: MdiIcons.plusCircleOutline,
+                isFab: true,
+              ),
+            ],
+            useDropdown: false,
+          ),
+        );
+
+        final buttons = tester.widgetList<LayrzButton>(find.byType(LayrzButton)).toList();
+        expect(buttons, hasLength(4));
+
+        final byLabel = {for (final b in buttons) b.labelText: b.style};
+        expect(byLabel['Filled'], LayrzButtonStyle.filled);
+        expect(byLabel['Outlined'], LayrzButtonStyle.outlined);
+        expect(byLabel['Text'], LayrzButtonStyle.text);
+        expect(byLabel['Fab'], LayrzButtonStyle.filledFab);
+      });
+    });
+
     group('Dropdown mode', () {
       testWidgets('renders single trigger in dropdown mode', (tester) async {
         await pumpThemed(

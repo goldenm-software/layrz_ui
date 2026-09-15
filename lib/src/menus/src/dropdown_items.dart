@@ -54,6 +54,26 @@ Color? _resolveEntryAccent(
   LayrzTokens tokens,
 ) => color ?? semanticType.resolveColor(tokens);
 
+/// Base visual style a [LayrzDropdownEntry] maps onto when rendered as a button
+/// by [LayrzButtonGroup] in row (display-button) mode.
+///
+/// This enum is intentionally menus-local and does not reference any button-module
+/// type, to avoid a module import cycle (`buttons` already imports `menus`). The
+/// mapping to a concrete button style lives in `LayrzButtonGroup._entryToButton`.
+///
+/// This has no effect on dropdown-menu rendering — an entry always renders as a
+/// normal menu row there, regardless of [LayrzDropdownEntry.style].
+enum LayrzDropdownEntryStyle {
+  /// Solid, high-emphasis fill — the default row-mode button appearance.
+  filled,
+
+  /// Bordered, medium-emphasis appearance with a transparent fill.
+  outlined,
+
+  /// Text-only, low-emphasis appearance with no fill or border.
+  text,
+}
+
 /// Base class for items that a [LayrzDropdownMenu] can render.
 ///
 /// Only two concrete types are allowed: [LayrzDropdownEntry] and [LayrzDropdownLabel].
@@ -205,6 +225,29 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// hint is hidden entirely regardless (no reserved space).
   final Set<LogicalKeyboardKey>? shortcut;
 
+  /// Whether this entry renders as an icon-only FAB button in row mode.
+  ///
+  /// **Row-mode only.** This field only affects [LayrzButtonGroup] row
+  /// (display-button) mode, where it selects the FAB variant of the resolved
+  /// [LayrzDropdownEntryStyle] (see [LayrzButtonGroup]'s entry-to-button mapping)
+  /// so the action renders as a compact icon-only button instead of a full
+  /// labelled one. It is ignored entirely when this entry renders inside a
+  /// [LayrzDropdownMenu] — there it always renders as a normal menu row with its
+  /// full label. Defaults to `false`.
+  ///
+  /// Requires [icon] to be non-null: an icon-only FAB entry with no icon would
+  /// render invisibly, so this is enforced by an assertion in debug mode.
+  final bool isFab;
+
+  /// The base button style this entry maps onto in row mode.
+  ///
+  /// **Row-mode only.** This field only affects [LayrzButtonGroup] row
+  /// (display-button) mode, where it selects the button's base visual style
+  /// before [isFab] is applied. It is ignored entirely when this entry renders
+  /// inside a [LayrzDropdownMenu] — there it always renders as a normal menu row.
+  /// When null, row mode defaults to [LayrzDropdownEntryStyle.filled].
+  final LayrzDropdownEntryStyle? style;
+
   /// Private field tracking the semantic type, used to resolve token colors at build time.
   ///
   /// When a semantic factory is used (e.g., `.save()`, `.delete()`), this field is set
@@ -217,6 +260,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   ///
   /// The [labelText], [onTap], and [key] parameters are required.
   /// [icon], [enabled], [color], and [shortcut] are optional.
+  /// [isFab] and [style] are optional and affect row mode only (see their docs).
   const LayrzDropdownEntry({
     required this.labelText,
     required this.onTap,
@@ -224,8 +268,14 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     this.enabled = true,
     this.color,
     this.shortcut,
+    this.isFab = false,
+    this.style,
     super.key,
-  }) : _semanticType = _SemanticType.none;
+  }) : _semanticType = _SemanticType.none,
+       assert(
+         !isFab || icon != null,
+         'A FAB-style LayrzDropdownEntry must have an icon (isFab: true requires icon != null)',
+       );
 
   /// Private named constructor for semantic factories.
   ///
@@ -238,10 +288,16 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     required this.enabled,
     this.color,
     this.shortcut,
+    required this.isFab,
+    this.style,
     required _SemanticType semanticType,
     super.key,
     // ignore: prefer_initializing_formals
-  }) : _semanticType = semanticType;
+  }) : _semanticType = semanticType,
+       assert(
+         !isFab || icon != null,
+         'A FAB-style LayrzDropdownEntry must have an icon (isFab: true requires icon != null)',
+       );
 
   /// Creates a save entry with success accent and icon.
   ///
@@ -252,6 +308,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// The [labelText], [onTap], and [key] parameters are required.
   /// All other parameters are optional and behave the same as the main constructor.
   /// The [icon] and [color] parameters can override the preset values if desired.
+  /// [isFab] and [style] are optional and affect row mode only (see their docs).
   factory LayrzDropdownEntry.save({
     required String labelText,
     required VoidCallback onTap,
@@ -259,6 +316,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     bool enabled = true,
     Color? color,
     Set<LogicalKeyboardKey>? shortcut,
+    bool isFab = false,
+    LayrzDropdownEntryStyle? style,
     Key? key,
   }) {
     return LayrzDropdownEntry._semantic(
@@ -269,6 +328,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
       enabled: enabled,
       color: color,
       shortcut: shortcut,
+      isFab: isFab,
+      style: style,
       semanticType: _SemanticType.success,
     );
   }
@@ -282,6 +343,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// The [labelText], [onTap], and [key] parameters are required.
   /// All other parameters are optional and behave the same as the main constructor.
   /// The [icon] and [color] parameters can override the preset values if desired.
+  /// [isFab] and [style] are optional and affect row mode only (see their docs).
   factory LayrzDropdownEntry.cancel({
     required String labelText,
     required VoidCallback onTap,
@@ -289,6 +351,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     bool enabled = true,
     Color? color,
     Set<LogicalKeyboardKey>? shortcut,
+    bool isFab = false,
+    LayrzDropdownEntryStyle? style,
     Key? key,
   }) {
     return LayrzDropdownEntry._semantic(
@@ -299,6 +363,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
       enabled: enabled,
       color: color,
       shortcut: shortcut,
+      isFab: isFab,
+      style: style,
       semanticType: _SemanticType.danger,
     );
   }
@@ -312,6 +378,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// The [labelText], [onTap], and [key] parameters are required.
   /// All other parameters are optional and behave the same as the main constructor.
   /// The [icon] and [color] parameters can override the preset values if desired.
+  /// [isFab] and [style] are optional and affect row mode only (see their docs).
   factory LayrzDropdownEntry.info({
     required String labelText,
     required VoidCallback onTap,
@@ -319,6 +386,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     bool enabled = true,
     Color? color,
     Set<LogicalKeyboardKey>? shortcut,
+    bool isFab = false,
+    LayrzDropdownEntryStyle? style,
     Key? key,
   }) {
     return LayrzDropdownEntry._semantic(
@@ -329,6 +398,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
       enabled: enabled,
       color: color,
       shortcut: shortcut,
+      isFab: isFab,
+      style: style,
       semanticType: _SemanticType.info,
     );
   }
@@ -342,6 +413,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// The [labelText], [onTap], and [key] parameters are required.
   /// All other parameters are optional and behave the same as the main constructor.
   /// The [icon] and [color] parameters can override the preset values if desired.
+  /// [isFab] and [style] are optional and affect row mode only (see their docs).
   factory LayrzDropdownEntry.show({
     required String labelText,
     required VoidCallback onTap,
@@ -349,6 +421,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     bool enabled = true,
     Color? color,
     Set<LogicalKeyboardKey>? shortcut,
+    bool isFab = false,
+    LayrzDropdownEntryStyle? style,
     Key? key,
   }) {
     return LayrzDropdownEntry._semantic(
@@ -359,6 +433,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
       enabled: enabled,
       color: color,
       shortcut: shortcut,
+      isFab: isFab,
+      style: style,
       semanticType: _SemanticType.info,
     );
   }
@@ -372,6 +448,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// The [labelText], [onTap], and [key] parameters are required.
   /// All other parameters are optional and behave the same as the main constructor.
   /// The [icon] and [color] parameters can override the preset values if desired.
+  /// [isFab] and [style] are optional and affect row mode only (see their docs).
   factory LayrzDropdownEntry.edit({
     required String labelText,
     required VoidCallback onTap,
@@ -379,6 +456,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     bool enabled = true,
     Color? color,
     Set<LogicalKeyboardKey>? shortcut,
+    bool isFab = false,
+    LayrzDropdownEntryStyle? style,
     Key? key,
   }) {
     return LayrzDropdownEntry._semantic(
@@ -389,6 +468,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
       enabled: enabled,
       color: color,
       shortcut: shortcut,
+      isFab: isFab,
+      style: style,
       semanticType: _SemanticType.warning,
     );
   }
@@ -402,6 +483,7 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
   /// The [labelText], [onTap], and [key] parameters are required.
   /// All other parameters are optional and behave the same as the main constructor.
   /// The [icon] and [color] parameters can override the preset values if desired.
+  /// [isFab] and [style] are optional and affect row mode only (see their docs).
   factory LayrzDropdownEntry.delete({
     required String labelText,
     required VoidCallback onTap,
@@ -409,6 +491,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
     bool enabled = true,
     Color? color,
     Set<LogicalKeyboardKey>? shortcut,
+    bool isFab = false,
+    LayrzDropdownEntryStyle? style,
     Key? key,
   }) {
     return LayrzDropdownEntry._semantic(
@@ -419,6 +503,8 @@ final class LayrzDropdownEntry extends LayrzDropdownItem {
       enabled: enabled,
       color: color,
       shortcut: shortcut,
+      isFab: isFab,
+      style: style,
       semanticType: _SemanticType.danger,
     );
   }
