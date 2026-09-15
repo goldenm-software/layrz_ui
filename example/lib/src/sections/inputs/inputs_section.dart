@@ -16,6 +16,7 @@ import 'demos/combobox_input_demo.dart';
 import 'demos/select_input_demo.dart';
 import 'demos/duration_input_demo.dart';
 import 'demos/login_input_demo.dart';
+import 'demos/otp_input_demo.dart';
 
 /// A list-detail showcase of all input components in the layrz_ui design system.
 ///
@@ -133,6 +134,13 @@ class _InputsSectionState extends State<InputsSection> {
       category: 'Login',
       details: LoginInputDemo(),
       icon: MdiIcons.formTextboxPassword,
+    ),
+    InputDemo(
+      id: 'otp-input',
+      name: 'OTP Input',
+      category: 'Login',
+      details: OtpInputDemo(),
+      icon: MdiIcons.numeric,
     ),
   ];
 
