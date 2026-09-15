@@ -443,6 +443,10 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
 
   /// Builds the desktop default full-width [LayrzTable] view (DESIGN-216).
   ///
+  /// Renders [LayrzScaffoldShell.title] above the table, matching the title's
+  /// presence in the wide split's [ListPanel] header — otherwise the title is
+  /// only ever visible once an item is open, never in this default table mode.
+  ///
   /// The table's rows are the items' own data objects — `widget.items` unwrapped
   /// via [LayrzScaffoldItem.item] — since each [LayrzColumn.valueBuilder] reads
   /// off [T] directly. No per-item cell data lives on [LayrzScaffoldItem].
@@ -463,17 +467,26 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     // the table does not re-run its off-thread sort on every rebuild.
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp3),
-      child: LayrzTable<T>(
-        items: _cachedTableRows,
-        columns: widget.tableColumns,
-        controller: widget.tableController,
-        canSearch: widget.searchable,
-        actionsCount: 1,
-        actionsBuilder: (data) => [
-          LayrzTableAction(
-            icon: MdiIcons.eyeOutline,
-            labelText: openLabel,
-            onTap: () => _openFromTable(data),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: tokens.spacing.sp1,
+        children: [
+          widget.title,
+          Expanded(
+            child: LayrzTable<T>(
+              items: _cachedTableRows,
+              columns: widget.tableColumns,
+              controller: widget.tableController,
+              canSearch: widget.searchable,
+              actionsCount: 1,
+              actionsBuilder: (data) => [
+                LayrzTableAction(
+                  icon: MdiIcons.eyeOutline,
+                  labelText: openLabel,
+                  onTap: () => _openFromTable(data),
+                ),
+              ],
+            ),
           ),
         ],
       ),
