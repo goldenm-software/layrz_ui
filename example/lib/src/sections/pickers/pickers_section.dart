@@ -169,6 +169,7 @@ class _PickersSectionState extends State<PickersSection> {
       title: Text('Pickers Showcase', style: context.tokens.typography.title),
       // Row height for a single-line tile (avatar + title).
       itemExtent: 41.0,
+      preferDualPane: true,
       items: _allDemos.map((demo) {
         return LayrzScaffoldItem<InputDemo>(
           key: ValueKey(demo.id),
@@ -198,6 +199,23 @@ class _PickersSectionState extends State<PickersSection> {
       onItemTap: (item) => _controller.open(
         key: item.key,
         builder: (context) => _buildDetails(item.item),
+      ),
+      dualPaneEmptyState: Column(
+        mainAxisAlignment: .center,
+        crossAxisAlignment: .center,
+        children: [
+          SizedBox(
+            width: 100,
+            height: 100,
+            child: AvatarLayo(emotion: .mrLayo),
+          ),
+          context.tokens.spacing.sb2,
+          Text(
+            'Select a picker demo from the list to see its variants.',
+            style: context.tokens.typography.body,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
