@@ -252,8 +252,17 @@ void main() {
     });
   });
 
-  group('LayrzDialog stacking guard', () {
-    testWidgets('opening a second LayrzDialog while one is open throws', (tester) async {
+  group('LayrzDialog stacking', () {
+    /// Pumps a [LayrzApp] whose home page opens a first [LayrzDialog], whose
+    /// own body can open a second, nested [LayrzDialog] -- the
+    /// `LayrzSelectInput`-inside-a-dialog shape this stacking support exists
+    /// for. Both dialogs are dismissible (no `actions`), so barrier-tap
+    /// dismissal on each is exercised too.
+    Future<void> pumpNestedDialogs(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(
         LayrzApp(
           theme: LayrzThemeData.light(),
@@ -280,20 +289,110 @@ void main() {
         ),
       );
       await tester.pump();
+    }
+
+    testWidgets('a second LayrzDialog opened from inside another stacks without throwing', (tester) async {
+      await pumpNestedDialogs(tester);
 
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
-      expect(find.text('Open second'), findsOneWidget);
+      expect(find.text('Open second'), findsOneWidget, reason: 'the first (outer) dialog must be open');
 
-      // The assertion in LayrzDialog.show throws synchronously inside the
-      // onTap handler invoked by the gesture recognizer, so it surfaces
-      // through FlutterError reporting / takeException rather than through
-      // the Future returned by tester.tap() itself.
       await tester.tap(find.text('Open second'));
+      await tester.pumpAndSettle();
+
       expect(
         tester.takeException(),
-        isA<FlutterError>(),
-        reason: 'LayrzDialog.show must refuse to stack a second dialog over an already-open one',
+        isNull,
+        reason: 'stacking a second LayrzDialog over an already-open one must not throw',
+      );
+      expect(
+        find.text('Open second'),
+        findsOneWidget,
+        reason: 'the outer dialog panel must still be present once the inner one is open',
+      );
+      expect(
+        find.text('Second dialog'),
+        findsOneWidget,
+        reason: 'the inner (stacked) dialog panel must be present alongside the outer one',
+      );
+    });
+
+    testWidgets('the nested dialog paints no second colored barrier scrim', (tester) async {
+      await pumpNestedDialogs(tester);
+
+      final overlayColor = LayrzThemeData.light().tokens.colors.overlay.withValues(alpha: 0.5);
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      // Exactly one colored scrim while only the outer dialog is open.
+      // Container(color: ...) with no other BoxDecoration fields builds a
+      // bare ColoredBox internally (see Container.build), so the scrim is
+      // found there rather than on a DecoratedBox/BoxDecoration.
+      final barriersBeforeNesting = find.byWidgetPredicate(
+        (widget) => widget is ColoredBox && widget.color == overlayColor,
+      );
+      expect(barriersBeforeNesting, findsOneWidget);
+
+      await tester.tap(find.text('Open second'));
+      await tester.pumpAndSettle();
+
+      // Still exactly one colored scrim once a second dialog is stacked on
+      // top -- the nested route's own barrier ColoredBox must be transparent,
+      // not a second overlayColor layer compounding on top of the first.
+      final barriersAfterNesting = find.byWidgetPredicate(
+        (widget) => widget is ColoredBox && widget.color == overlayColor,
+      );
+      expect(
+        barriersAfterNesting,
+        findsOneWidget,
+        reason:
+            'a stacked dialog must not paint its own colored scrim on top of the outer one -- '
+            'page darkness must stay constant at every stack depth',
+      );
+
+      // The nested route does still paint *a* barrier ColoredBox (the
+      // transparent tap-catcher that keeps barrier-tap dismissal working for
+      // the top dialog) -- fully transparent, distinct from the outer
+      // dialog's opaque one.
+      final transparentBarriers = find.byWidgetPredicate(
+        (widget) => widget is ColoredBox && widget.color == const Color(0x00000000),
+      );
+      expect(
+        transparentBarriers,
+        findsOneWidget,
+        reason: 'the nested dialog must still render a transparent barrier ColoredBox for its tap-catcher',
+      );
+    });
+
+    testWidgets('a barrier tap on the top stacked dialog dismisses only that dialog', (tester) async {
+      await pumpNestedDialogs(tester);
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Open second'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Second dialog'), findsOneWidget, reason: 'both dialogs must be open before the tap');
+      expect(find.text('Open second'), findsOneWidget);
+
+      // A point far outside both centered panels -- lands on the top
+      // (nested) dialog's own transparent tap-catcher, which sits above the
+      // outer dialog's panel in the Stack.
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('Second dialog'),
+        findsNothing,
+        reason: 'the top (nested) dialog must be dismissed by the barrier tap',
+      );
+      expect(
+        find.text('Open second'),
+        findsOneWidget,
+        reason: 'the outer dialog must remain open -- the barrier tap must not have popped past it',
       );
     });
   });

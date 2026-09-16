@@ -156,10 +156,12 @@ class LayrzDialog {
   ///   false` alongside `canDismiss: true` keeps every other dismissal route open while
   ///   simply not drawing the icon.
   ///
-  /// **Stacking**: opening a second [LayrzDialog] while one is already open is not
-  /// supported in this version — an assertion fires rather than silently stacking two
-  /// barriers into one visually-compounded overlay. Dismiss the current dialog before
-  /// opening another.
+  /// **Stacking**: opening a second [LayrzDialog] from within another one's body is
+  /// supported -- e.g. a [LayrzSelectInput] inside a dialog opening its own dialog on
+  /// tap. The nested dialog paints no colored scrim of its own (the outer dialog's
+  /// barrier already dims the page, so stacking further does not darken it further),
+  /// but still gets a transparent tap-catcher when dismissible, so tapping outside the
+  /// top dialog dismisses only that one. See [_DialogRoute.suppressBarrier].
   static Future<T?> show<T>(
     BuildContext context, {
     Widget? title,
@@ -183,23 +185,14 @@ class LayrzDialog {
 
     final navigator = Navigator.of(context, rootNavigator: true);
 
-    // Stacking guard: a second LayrzDialog opened while one is already the
-    // current route would compound two semi-transparent barriers into one
-    // visually darker layer (each Stack paints its own scrim), which is
-    // confusing and was called out explicitly as something to avoid rather
-    // than leave undefined. v1 does not support dialog-over-dialog, so this
-    // fails loudly instead of silently rendering it.
-    assert(() {
-      final current = ModalRoute.of(context);
-      if (current is _DialogRoute) {
-        throw FlutterError(
-          'LayrzDialog.show was called while a LayrzDialog is already open. '
-          'Stacking dialogs is not supported in this version — dismiss the '
-          'current dialog before opening another.',
-        );
-      }
-      return true;
-    }());
+    // Dialogs are stackable: a LayrzDialog opened from inside another
+    // LayrzDialog's body (e.g. a LayrzSelectInput's own dialog surface) is a
+    // supported case, not a guarded one. Captured here, before the push,
+    // because at this point `context`'s nearest ModalRoute is the dialog
+    // being stacked on top of (if any) -- see `suppressBarrier`'s doc on
+    // _DialogRoute for how this bool prevents the new dialog's own scrim from
+    // visually compounding with the one already painted underneath it.
+    final isNestedDialog = ModalRoute.of(context) is _DialogRoute;
 
     // Single source of truth for every non-action dismissal route (barrier,
     // Escape, the X icon, and the system/Android back gesture) -- see [show]'s
@@ -216,6 +209,7 @@ class LayrzDialog {
         child: child,
         dismissible: effectiveCanDismiss,
         showCloseIcon: showCloseIcon,
+        suppressBarrier: isNestedDialog,
         barrierLabel: context.l10n.dialogsBarrierLabel,
         semanticLabel: semanticLabel,
         maxWidth: maxWidth,
@@ -264,6 +258,20 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
   /// of [dismissible] itself.
   final bool showCloseIcon;
 
+  /// Whether this route was pushed while another [_DialogRoute] was already the
+  /// current route -- computed once in [LayrzDialog.show], before the push, via
+  /// `ModalRoute.of(context) is _DialogRoute` at the call site's `context` (which at
+  /// that moment resolves to the dialog being stacked on top of, if any).
+  ///
+  /// When `true`, [transitionBuilder] paints no colored scrim for this route: the
+  /// outer dialog already painted one, and a second semi-transparent layer on top of
+  /// it would compound (0.5 over 0.5 ≈ 0.75 alpha), visibly darkening the page a
+  /// second time for no reason -- the page's darkness should stay constant no matter
+  /// how many dialogs are stacked. The dismissible tap-catcher is kept regardless (as
+  /// a transparent, full-bleed [GestureDetector]) so barrier-tap dismissal still
+  /// closes only this (the top) dialog.
+  final bool suppressBarrier;
+
   /// Optional semantic label for screen readers (caller-supplied).
   final String? semanticLabel;
 
@@ -281,6 +289,7 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
     required this.child,
     required this.dismissible,
     required this.showCloseIcon,
+    required this.suppressBarrier,
     required super.barrierLabel,
     required this.semanticLabel,
     required this.maxWidth,
@@ -303,8 +312,16 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
          barrierColor: const Color(0x00000000), // Transparent initially; real color painted below.
          transitionDuration: const Duration(milliseconds: 200),
          transitionBuilder: (context, animation, secondaryAnimation, pageChild) {
-           final barrierColor = context.tokens.colors.overlay.withValues(alpha: 0.5);
            final effectiveAnimation = LayrzModalRoute.resolveAnimation(context, animation);
+
+           // A stacked dialog paints no scrim of its own -- see
+           // [suppressBarrier]'s doc for why compounding it with the barrier
+           // already painted by the dialog underneath would double-darken the
+           // page. The outermost dialog (suppressBarrier == false) keeps the
+           // exact colored scrim this always painted.
+           final barrierColor = suppressBarrier
+               ? const Color(0x00000000)
+               : context.tokens.colors.overlay.withValues(alpha: 0.5);
 
            return Stack(
              children: [
@@ -314,6 +331,11 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
                // the dismiss transition (the barrier stays mounted and
                // hit-testable for the whole exit animation) cannot pop the
                // route underneath this one. See LayrzModalRoute.popIfCurrent.
+               //
+               // When suppressBarrier is true, barrierColor above is already
+               // transparent, so this still paints (dismiss-by-tap keeps
+               // working for the top dialog) but adds no visible darkening on
+               // top of the outer dialog's own scrim.
                if (dismissible)
                  GestureDetector(
                    behavior: HitTestBehavior.opaque,
@@ -325,7 +347,10 @@ class _DialogRoute<T> extends LayrzModalRoute<T> {
                else
                  // Non-dismissible barrier: still painted (the page behind
                  // must read as non-interactive) but does not itself handle
-                 // taps, so a stray click does not need a guard at all.
+                 // taps, so a stray click does not need a guard at all. When
+                 // suppressBarrier is also true, this paints transparently --
+                 // the outer dialog's own non-dismissible/dismissible barrier
+                 // (whichever it has) already conveys the page is inert.
                  IgnorePointer(
                    child: Container(color: barrierColor),
                  ),
