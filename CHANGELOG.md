@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2
+
+- `LayrzScaffoldShell` gains `preferDualPane` (default `false`): when `true`, wide viewports always render the list-detail split instead of the full-width table, even before an item is opened. A new `dualPaneEmptyState` widget customizes the detail pane's no-selection placeholder, and its previously hardcoded "No item selected" text is now localized.
+- `Layo` and `AvatarLayo` gain `followCursor` (default `false`): when enabled, the mascot's facial features subtly track the mouse pointer for `LayoEmotion.mrLayo`, `angry`, and `question`. Cursor tracking is opt-in at the app level via the new `LayrzApp.enableLayoCursorTracking` (default `false`); a debug assertion fires if `followCursor` is enabled without it.
+
 ## 1.1.1
 
 - `LayrzButtonGroup` row mode now supports per-entry icon-only FAB buttons and per-entry button styles via new `LayrzDropdownEntry.isFab` and `LayrzDropdownEntry.style` fields, so groups with many actions fit on a single line instead of wrapping.
