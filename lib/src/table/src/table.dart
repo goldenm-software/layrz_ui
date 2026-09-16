@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
@@ -356,18 +357,13 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   /// (and, on web where the sort runs on the UI thread, janky).
   Map<Key, double> _lastColumnWidths = const {};
 
-  /// `true` while the very first [_recompute] (the one kicked off from
-  /// [initState]) has not yet reported through
-  /// [LayrzTable.onFilteredCountChanged]. That first recompute runs
-  /// synchronously up to its first `await` — which never executes when no
-  /// sort column is active — so it can finish, and therefore try to notify,
-  /// while this widget's owner is still inside its own `build()`. Notifying
-  /// synchronously at that point calls the consumer's callback mid-build; if
-  /// that callback calls `setState` (the obvious, expected thing to do with
-  /// a "count changed" notification) Flutter throws "setState() or
-  /// markNeedsBuild() called during build". So the first notification is
-  /// deferred to a post-frame callback instead of being dropped.
-  bool _pendingInitialNotify = true;
+  /// The most recent filtered count [_notifyFilteredCountChanged] deferred
+  /// to a post-frame callback because the scheduler was mid-build/layout/
+  /// paint at report time (see that method). `null` while no deferred report
+  /// is pending. Re-read at post-frame-callback fire time (rather than
+  /// captured by the deferred closure) so a rapid sequence of changes within
+  /// the same frame delivers the latest count, not a stale intermediate one.
+  int? _pendingNotifyCount;
 
   @override
   void initState() {
@@ -569,18 +565,44 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
   }
 
   /// Reports [count] through [LayrzTable.onFilteredCountChanged], deferring
-  /// the very first report (the one produced by the [initState]-triggered
-  /// recompute) to a post-frame callback so it never runs while this
-  /// widget's owner is mid-`build()` — see [_pendingInitialNotify]. Every
-  /// later report (search, sort, or item/column changes triggered from
-  /// outside the build phase) is delivered synchronously as before. Guards
-  /// against notifying after [dispose] in both paths.
+  /// the call to a post-frame callback whenever the scheduler is mid-build,
+  /// mid-layout, or mid-paint at report time, and calling it synchronously
+  /// only when the scheduler is idle.
+  ///
+  /// [_recompute] can finish — and therefore try to notify — from several
+  /// call sites that are themselves inside the framework's build/layout
+  /// phase: the [initState]-triggered first recompute (which runs
+  /// synchronously up to its first `await`, never reached when no sort
+  /// column is active, so it can complete while this widget's *owner* is
+  /// still inside its own `build()`), and [didUpdateWidget]'s synchronous
+  /// `_recompute()` call, which the framework itself invokes from within
+  /// `performLayout` of an ancestor such as a `LayoutBuilder`. Notifying
+  /// synchronously in either case calls the consumer's callback mid-build;
+  /// if that callback calls `setState` (the obvious, expected thing to do
+  /// with a "count changed" notification) Flutter throws "setState() or
+  /// markNeedsBuild() called during build". So any report attempted during
+  /// [SchedulerPhase.persistentCallbacks] (build/layout/paint),
+  /// [SchedulerPhase.midFrameMicrotasks], or [SchedulerPhase.transientCallbacks]
+  /// is deferred to a post-frame callback instead; only
+  /// [SchedulerPhase.idle] is safe for a synchronous call.
+  ///
+  /// A deferred report always delivers the *latest* [_pendingNotifyCount] at
+  /// callback-fire time rather than the value captured when it was
+  /// scheduled, so a rapid sequence of changes within one frame collapses
+  /// into a single, up-to-date notification instead of stale intermediate
+  /// ones. Guards against notifying after [dispose] in both paths.
   void _notifyFilteredCountChanged(int count) {
-    if (_pendingInitialNotify) {
-      _pendingInitialNotify = false;
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase != SchedulerPhase.idle) {
+      final alreadyScheduled = _pendingNotifyCount != null;
+      _pendingNotifyCount = count;
+      if (alreadyScheduled) return;
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        widget.onFilteredCountChanged?.call(count);
+        final latest = _pendingNotifyCount;
+        _pendingNotifyCount = null;
+        if (!mounted || latest == null) return;
+        widget.onFilteredCountChanged?.call(latest);
       });
       return;
     }
