@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.3
+
+- `LayrzDialog` can now be stacked (dialog-over-dialog), matching `LayrzBottomSheet`: a picker input such as `LayrzSelectInput` placed inside a dialog body no longer crashes when its own picker opens as a dialog on wide viewports. A dialog opened on top of another paints no additional barrier scrim, so the page dims exactly once at any stack depth.
+- Fixed a `setState() called during build` crash when a `LayrzTable`'s `items` changed after first build inside a `LayrzScaffoldShell`. `onFilteredCountChanged` is now deferred to a post-frame callback when reported during a build or layout phase, instead of firing synchronously.
+
 ## 1.1.2
 
 - `LayrzScaffoldShell` gains `preferDualPane` (default `false`): when `true`, wide viewports always render the list-detail split instead of the full-width table, even before an item is opened. A new `dualPaneEmptyState` widget customizes the detail pane's no-selection placeholder, and its previously hardcoded "No item selected" text is now localized.
