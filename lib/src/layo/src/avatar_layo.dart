@@ -163,14 +163,26 @@ class AvatarLayo extends StatelessWidget {
   /// The [width] parameter is optional; when null, [AvatarLayo] fills the
   /// width its parent provides (see the class doc comment for the sizing
   /// contract this requires). The [animate] parameter is optional and
-  /// defaults to `true`, passed straight through to the inner [Layo].
+  /// defaults to `true`, passed straight through to the inner [Layo]. The
+  /// [followCursor] parameter is optional and defaults to `false`, passed
+  /// straight through to the inner [Layo] — see [followCursor]'s own doc
+  /// comment for the full contract, including the same
+  /// [LayoEmotion]-support assertion [Layo.followCursor] itself carries.
   const AvatarLayo({
     this.shape = LayoAvatarShape.circle,
     this.emotion = LayoEmotion.mrLayo,
     this.width,
     this.animate = true,
+    this.followCursor = false,
     super.key,
-  });
+  }) : assert(
+         !followCursor ||
+             emotion == LayoEmotion.mrLayo ||
+             emotion == LayoEmotion.angry ||
+             emotion == LayoEmotion.question,
+         'AvatarLayo.followCursor is only supported for LayoEmotion.mrLayo, LayoEmotion.angry, and '
+         'LayoEmotion.question.',
+       );
 
   /// Which silhouette [AvatarLayo] clips itself to.
   ///
@@ -209,6 +221,39 @@ class AvatarLayo extends StatelessWidget {
   /// this flag.
   final bool animate;
 
+  /// Whether the inner [Layo]'s facial features shift slightly toward the
+  /// mouse pointer, tracked anywhere on screen.
+  ///
+  /// Passed straight through to [Layo.followCursor]; defaults to `false`.
+  /// Carries the exact same [LayoEmotion]-support constraint as
+  /// [Layo.followCursor] — only [LayoEmotion.mrLayo], [LayoEmotion.angry],
+  /// and [LayoEmotion.question] support it, and this constructor's own
+  /// `assert` (mirroring [Layo]'s) fails immediately, at the [AvatarLayo]
+  /// layer, for any other [emotion]. See [Layo.followCursor]'s own doc
+  /// comment for the full contract, including the app-level opt-in
+  /// (`LayrzApp.enableLayoCursorTracking`) this depends on and the debug-mode
+  /// `assert` that fires (never a thrown exception) when that opt-in is
+  /// missing — that second `assert` fires from inside the inner [Layo]
+  /// itself once it is mounted, not from this constructor, since it depends
+  /// on an ancestor lookup ([LayoCursorScope.maybeOf]) that only becomes
+  /// available once this widget's subtree is actually built.
+  ///
+  /// **Feature travel is clamped identically to plain [Layo]** — the same
+  /// [LayoPainter.featureOffset] fraction of the dark face-screen window's
+  /// own extent, computed in the mascot artwork's own (pre-crop) coordinate
+  /// space. Because [AvatarLayo] renders the inner [Layo] larger than the
+  /// avatar frame itself and then crops it (see this class's own doc
+  /// comment), that same absolute travel reads as **visually larger** inside
+  /// the cropped avatar than it does in an uncropped [Layo] of the same
+  /// rendered width — the crop magnifies the head, and the feature shift
+  /// scales right along with it. This was checked against
+  /// [_kLayoWidthFraction]'s own 70%-of-frame sizing and found to stay
+  /// comfortably within the visible cropped circle/rounded-box at every
+  /// avatar size: the features never approach the frame's own edge, let
+  /// alone get clipped by it, so no separate clamp was needed for the avatar
+  /// case.
+  final bool followCursor;
+
   /// Fraction of the avatar's rendered side length used as the fixed border
   /// stroke width, so the ring scales with the avatar instead of staying a
   /// constant logical-pixel thickness at every size.
@@ -237,7 +282,8 @@ class AvatarLayo extends StatelessWidget {
           shape: shape,
           fillColor: avatarBackgroundFor(emotion),
           ringColor: avatarRingFor(emotion),
-          mascotBuilder: (layoWidth) => Layo(width: layoWidth, emotion: emotion, animate: animate),
+          mascotBuilder: (layoWidth) =>
+              Layo(width: layoWidth, emotion: emotion, animate: animate, followCursor: followCursor),
         );
       },
     );

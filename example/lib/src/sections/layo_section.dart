@@ -124,6 +124,12 @@ class LayoSection extends StatelessWidget {
           Text('TransitionedAvatarLayo — bg + ring transition alongside the face', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
           const _TransitionedAvatarDemo(),
+
+          SizedBox(height: tokens.spacing.sp4),
+
+          Text('Layo with followCursor', style: tokens.typography.title),
+          SizedBox(height: tokens.spacing.sp3),
+          const _FollowCursorDemo(),
         ],
       ),
     );
@@ -363,6 +369,120 @@ class _TransitionedAvatarDemoState extends State<_TransitionedAvatarDemo> {
               ),
             );
           }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+/// Demonstrates [Layo.followCursor]: the mascot's facial features shift
+/// toward the mouse pointer anywhere on the page (this app's [LayrzApp] sets
+/// `enableLayoCursorTracking: true`), rather than staying in its fixed idle
+/// pose.
+///
+/// [Layo.followCursor] is only supported for [LayoEmotion.mrLayo],
+/// [LayoEmotion.angry], and [LayoEmotion.question] — passing `true` alongside
+/// any other emotion trips a debug assertion in [Layo] itself. This demo's
+/// emotion selector therefore offers only those three values, which makes
+/// `followCursor: true` unconditionally safe here: there is no way for
+/// [_emotion] to ever hold an unsupported value, so the two never pair up
+/// incorrectly.
+///
+/// Starts with the effect already turned on (rather than defaulting to off,
+/// as [Layo.followCursor] itself does) since the whole point of opening this
+/// demo is to see the head-tilt in action without an extra tap first.
+class _FollowCursorDemo extends StatefulWidget {
+  /// Creates a new [_FollowCursorDemo].
+  const _FollowCursorDemo();
+
+  @override
+  State<_FollowCursorDemo> createState() => _FollowCursorDemoState();
+}
+
+/// State for [_FollowCursorDemo]: tracks the selected [LayoEmotion] and
+/// whether [Layo.followCursor] is currently enabled.
+class _FollowCursorDemoState extends State<_FollowCursorDemo> {
+  /// Which [LayoEmotion] the demo's [Layo] renders. Restricted by the chip
+  /// row below to the three emotions [Layo.followCursor] supports, so this
+  /// can never drift into a value that would trip [Layo]'s own assertion.
+  LayoEmotion _emotion = LayoEmotion.mrLayo;
+
+  /// Whether the demo's [Layo] is currently built with `followCursor: true`.
+  /// Starts `true` so the effect is visible immediately, since
+  /// [_emotion]'s default ([LayoEmotion.mrLayo]) always supports it.
+  bool _followCursor = true;
+
+  /// The only [LayoEmotion] values [Layo.followCursor] supports — mirrors
+  /// `_kFollowCursorSupportedEmotions` in `lib/src/layo/src/layo.dart`. Kept
+  /// as the complete set of chips offered below on purpose: offering any
+  /// other emotion here would let the demo construct an unsupported
+  /// `emotion`/`followCursor: true` pairing.
+  static const _supportedEmotions = [LayoEmotion.mrLayo, LayoEmotion.angry, LayoEmotion.question];
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.tokens;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: tokens.spacing.sp4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 240),
+                  child: Layo(emotion: _emotion, followCursor: _followCursor),
+                ),
+                SizedBox(width: tokens.spacing.sp4),
+                // Same followCursor effect, shown cropped inside an
+                // AvatarLayo frame — the feature shift is identical in
+                // absolute terms but reads larger here since the crop
+                // magnifies the head relative to the full-body Layo above.
+                AvatarLayo(width: 96, emotion: _emotion, followCursor: _followCursor),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: tokens.spacing.sp3),
+        LayrzRow(
+          spacing: tokens.spacing.sp2,
+          children: _supportedEmotions.map((emotion) {
+            return LayrzCol(
+              xs: 6,
+              sm: 3,
+              md: 2,
+              child: LayrzButton(
+                labelText: emotion.name,
+                style: _emotion == emotion ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
+                onTap: () => setState(() => _emotion = emotion),
+              ),
+            );
+          }).toList(),
+        ),
+        SizedBox(height: tokens.spacing.sp2),
+        LayrzRow(
+          spacing: tokens.spacing.sp2,
+          children: [
+            LayrzCol(
+              xs: 12,
+              sm: 6,
+              md: 3,
+              child: LayrzButton(
+                labelText: _followCursor ? 'Follow cursor: on' : 'Follow cursor: off',
+                style: _followCursor ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
+                onTap: () => setState(() => _followCursor = !_followCursor),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: tokens.spacing.sp2),
+        Text(
+          'Move your mouse anywhere — desktop only.',
+          style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
         ),
       ],
     );

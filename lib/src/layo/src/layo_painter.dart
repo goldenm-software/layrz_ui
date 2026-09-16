@@ -302,6 +302,7 @@ class LayoPainter extends CustomPainter {
     this.pomPomSwayT = 0.0,
     this.confettiT = 0.0,
     this.pomPomBobT = 0.0,
+    this.featureOffset = Offset.zero,
   });
 
   /// Which face this painter draws: the shared base (including the bow-tie,
@@ -865,6 +866,38 @@ class LayoPainter extends CustomPainter {
   /// renders the pom-pom at its own resting position.
   final double pomPomBobT;
 
+  /// The translation applied to the face's own screen glyphs (eyes, mouth,
+  /// and every emotion-specific stand-in painted by [_paintEmotionGlyphs])
+  /// **alone**, in source units (pre-[_kOf] scale) — the head shell, body,
+  /// ears, antenna, tie, and every overlay/backdrop/chest-insignia layer are
+  /// unaffected and stay exactly where the static artwork places them.
+  ///
+  /// [paint] wraps only the [_paintEmotionGlyphs] call in a
+  /// `canvas.save()`/`canvas.translate(...)`/`canvas.restore()`, so this is a
+  /// pure translation of the facial features — never a rotation, never a
+  /// scale — applied around no particular pivot, since a plain translate has
+  /// none. Backs [Layo.followCursor]'s "features look toward the pointer"
+  /// effect: the caller derives this offset from the normalized gaze
+  /// direction (`dx`, `dy`, each in `[-1, 1]`) scaled by a fixed maximum
+  /// shift, clamped so the moved features never approach the edge of the
+  /// dark screen window behind them (see `_kFeatureMaxShiftFraction` in
+  /// `layo.dart` for the exact fraction and how it was chosen against
+  /// [_screenRect]'s own bounds).
+  ///
+  /// Supported uniformly for every [emotion] this painter draws — there is
+  /// no per-emotion special-casing here, only a single `canvas.translate`
+  /// wrapping the shared glyph dispatch — though in practice [Layo] only
+  /// ever supplies a non-zero value for [LayoEmotion.mrLayo],
+  /// [LayoEmotion.angry], and [LayoEmotion.question] (the same three
+  /// `followCursor` itself supports), leaving every other emotion always at
+  /// [Offset.zero].
+  ///
+  /// Defaults to [Offset.zero] — no translation — so a default-constructed
+  /// [LayoPainter] paints byte-identical to a [LayoPainter] built before this
+  /// field existed. [shouldRepaint] compares this value directly so an
+  /// unchanged offset never forces an extra repaint.
+  final Offset featureOffset;
+
   /// The uniform scale factor mapping the SVG source's `396.15`-wide
   /// coordinate space onto a painted [Size] of the given [width].
   double _kOf(double width) => width / 396.15;
@@ -1001,7 +1034,14 @@ class LayoPainter extends CustomPainter {
     _paintEars(canvas, k);
     _paintHeadShell(canvas, k);
     _paintEmotionOverlay(canvas, k);
-    _paintEmotionGlyphs(canvas, k);
+    if (featureOffset == Offset.zero) {
+      _paintEmotionGlyphs(canvas, k);
+    } else {
+      canvas.save();
+      canvas.translate(featureOffset.dx * k, featureOffset.dy * k);
+      _paintEmotionGlyphs(canvas, k);
+      canvas.restore();
+    }
     if (_hasAntenna) {
       _paintAntennaTip(canvas, k);
     }
@@ -1731,7 +1771,8 @@ class LayoPainter extends CustomPainter {
         (snowT != oldDelegate.snowT && emotion == LayoEmotion.christmas) ||
         (pomPomSwayT != oldDelegate.pomPomSwayT && emotion == LayoEmotion.christmas) ||
         (confettiT != oldDelegate.confettiT && emotion == LayoEmotion.party) ||
-        (pomPomBobT != oldDelegate.pomPomBobT && emotion == LayoEmotion.party);
+        (pomPomBobT != oldDelegate.pomPomBobT && emotion == LayoEmotion.party) ||
+        featureOffset != oldDelegate.featureOffset;
   }
 }
 

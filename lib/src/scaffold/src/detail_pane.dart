@@ -43,20 +43,31 @@ class DetailPane extends StatelessWidget {
   /// class doc.
   final WidgetBuilder? builder;
 
+  /// The widget shown in place of the built-in empty-state message when
+  /// [builder] is null.
+  ///
+  /// When null (the default), a built-in message using the localized
+  /// `LayrzUiL10n.scaffoldNoSelection` ("No item selected") string is shown
+  /// instead. Ignored entirely when [builder] is non-null.
+  final Widget? emptyState;
+
   /// Creates a new [DetailPane].
   ///
   /// - [builder]: Builds the detail pane's content, or null. Defaults to null, which
   ///   shows the empty state.
+  /// - [emptyState]: Widget shown in place of the built-in message when [builder] is
+  ///   null. Defaults to null, which uses the localized "No item selected" default.
   const DetailPane({
     super.key,
     this.builder,
+    this.emptyState,
   });
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
 
-    return builder == null ? _buildEmptyState(tokens) : _buildSelectableContent(context, builder!);
+    return builder == null ? _buildEmptyState(context, tokens) : _buildSelectableContent(context, builder!);
   }
 
   Widget _buildSelectableContent(BuildContext context, WidgetBuilder builder) {
@@ -135,10 +146,20 @@ class DetailPane extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(LayrzTokens tokens) {
+  /// Builds the "nothing selected" placeholder shown when [builder] is null.
+  ///
+  /// Renders [emptyState] verbatim when supplied; otherwise falls back to a
+  /// built-in message using the localized `LayrzUiL10n.scaffoldNoSelection`
+  /// default, mirroring how `ListPanel`'s own `emptyState` resolves its
+  /// localized fallback.
+  Widget _buildEmptyState(BuildContext context, LayrzTokens tokens) {
+    if (emptyState != null) {
+      return emptyState!;
+    }
+
     return Center(
       child: Text(
-        "No item selected",
+        context.l10n.scaffoldNoSelection,
         style: TextStyle(fontSize: 13, color: tokens.colors.fg3),
       ),
     );

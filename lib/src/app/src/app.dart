@@ -5,6 +5,7 @@ import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/find_in_page/find_in_page.dart';
 import 'package:layrz_ui/src/keyboard/keyboard.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
+import 'package:layrz_ui/src/layo/layo.dart';
 import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
 import 'package:layrz_ui/src/snackbar/snackbar.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
@@ -261,6 +262,36 @@ class LayrzApp extends StatefulWidget {
   /// specific customer build) out entirely.
   final bool enableFindInPage;
 
+  // ── Layo cursor tracking (opt-in) ───────────────────────────────────
+
+  /// Whether this app installs a single, app-wide pointer-position source
+  /// that any descendant `Layo`/`AvatarLayo` with `followCursor: true` can
+  /// read to track the cursor anywhere on screen, not only while directly
+  /// hovering that particular mascot.
+  ///
+  /// Defaults to **`false`** — this is opt-**in**, unlike [enableFindInPage]:
+  /// installing a [MouseRegion] high in the tree is a real, if small, cost
+  /// (one extra hit-testable layer and one `onHover` callback per pointer
+  /// move for the whole app), so an app that never uses
+  /// `Layo.followCursor`/`AvatarLayo.followCursor` pays nothing for it unless
+  /// it explicitly asks.
+  ///
+  /// When `true`, [_LayrzAppState._wrapWithTheme] wraps the app's content in
+  /// a [MouseRegion] whose `onHover` writes the live global pointer position
+  /// into a [ValueNotifier]`<Offset?>` owned by [_LayrzAppState] itself
+  /// (created once in `initState`, disposed in `dispose` — never recreated
+  /// per build), and exposes that notifier to every descendant via a single
+  /// `LayoCursorScope`. **No `setState` is ever called from the `onHover`
+  /// callback** — the notifier is the only channel a pointer move travels
+  /// through, so a pointer moving over the app never rebuilds anything above
+  /// whichever `Layo` instances are individually listening to that notifier
+  /// (see `LayoCursorScope`'s own doc comment for the full "why" of this
+  /// design). The notifier's value becomes `null` (not stale) whenever the
+  /// pointer leaves the app's content or this is a touch platform with no
+  /// mouse to report, so every listening `Layo` eases back to its neutral
+  /// rest position rather than freezing at a last-known position.
+  final bool enableLayoCursorTracking;
+
   /// ## Required web setup: disable the browser's native context menu
   ///
   /// **On web, if you use page-wide text selection (the default
@@ -339,6 +370,7 @@ class LayrzApp extends StatefulWidget {
     this.restorationScopeId,
     this.pageTransitionType = LayrzTransitionType.fade,
     this.enableFindInPage = true,
+    this.enableLayoCursorTracking = false,
   }) : routerConfig = null,
        routerDelegate = null,
        routeInformationParser = null,
@@ -377,6 +409,7 @@ class LayrzApp extends StatefulWidget {
     this.restorationScopeId,
     this.pageTransitionType = LayrzTransitionType.fade,
     this.enableFindInPage = true,
+    this.enableLayoCursorTracking = false,
   }) : home = null,
        routes = null,
        onGenerateRoute = null,
@@ -447,15 +480,35 @@ List<LocalizationsDelegate<dynamic>> buildLayrzUiL10nDelegates(
 }
 
 class _LayrzAppState extends State<LayrzApp> with WidgetsBindingObserver {
+  /// The single, app-wide pointer-position notifier backing
+  /// [LayrzApp.enableLayoCursorTracking] — created once here (never per
+  /// build) and disposed in [dispose]. `null` until the very first
+  /// `onHover`/`onExit` event fires; every write goes through
+  /// [ValueNotifier.value], never `setState`, so a pointer move never
+  /// rebuilds this [State] or anything above whichever descendant `Layo`
+  /// instances listen to it directly (see `LayoCursorScope`'s own doc
+  /// comment for the full rationale).
+  ///
+  /// Only ever allocated when [LayrzApp.enableLayoCursorTracking] is `true`
+  /// at `initState` time — this flag is not expected to change at runtime on
+  /// a live [LayrzApp] (there is no code path that reacts to it changing
+  /// after the first build), matching how [LayrzApp.theme] is documented as
+  /// immutable at runtime too.
+  ValueNotifier<Offset?>? _cursorNotifier;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (widget.enableLayoCursorTracking) {
+      _cursorNotifier = ValueNotifier<Offset?>(null);
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _cursorNotifier?.dispose();
     super.dispose();
   }
 
@@ -484,7 +537,31 @@ class _LayrzAppState extends State<LayrzApp> with WidgetsBindingObserver {
     required LayrzThemeData themeData,
     required Widget? child,
   }) {
-    final userChild = widget.builder?.call(context, child) ?? child ?? const SizedBox.shrink();
+    final builtChild = widget.builder?.call(context, child) ?? child ?? const SizedBox.shrink();
+
+    // Installed as close to the raw built content as possible -- outside
+    // (above) `contentWithFindInPage`, `LayrzShortcut`, and
+    // `LayrzSnackbarMessenger` below, so cursor tracking spans the whole
+    // app's content, including whatever those wrap. A bare `MouseRegion`
+    // (not a `Listener`) is enough here: `onHover`/`onExit` already fire
+    // for every pointer move within, and on leaving, this region regardless
+    // of button state, and this design has no need to observe raw pointer
+    // button events the way a drag gesture would. Absent entirely when
+    // `enableLayoCursorTracking` is `false` (the default), so an app that
+    // never opts in installs no extra hit-testable layer and pays no
+    // `onHover` cost at all.
+    final notifier = _cursorNotifier;
+    final userChild = notifier == null
+        ? builtChild
+        : LayoCursorScope(
+            notifier: notifier,
+            child: MouseRegion(
+              opaque: false,
+              onHover: (event) => notifier.value = event.position,
+              onExit: (_) => notifier.value = null,
+              child: builtChild,
+            ),
+          );
 
     // Without an ancestor `DefaultSelectionStyle`, `EditableText.selectionColor`
     // and `SelectableRegion.selectionColor` both resolve to null and paint

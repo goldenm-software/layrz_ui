@@ -72,6 +72,33 @@ void main() {
       // there is no "default" for it, so this asserts the shell stored
       // exactly the widget instance passed in.
       expect(shell.title, same(title));
+      expect(shell.preferDualPane, isFalse);
+      expect(shell.dualPaneEmptyState, isNull);
+
+      controller.dispose();
+      tableController.dispose();
+    });
+
+    test("preferDualPane and dualPaneEmptyState can be provided", () {
+      final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<String>();
+      final dualPaneEmptyState = Text("Nothing selected");
+
+      final shell = LayrzScaffoldShell<String>(
+        items: const [],
+        controller: controller,
+        itemExtent: 48.0,
+        title: const Text('Title'),
+        tableColumns: [
+          LayrzColumn<String>(key: const ValueKey('c'), headerText: 'C', valueBuilder: (item) => '', width: 200),
+        ],
+        tableController: tableController,
+        preferDualPane: true,
+        dualPaneEmptyState: dualPaneEmptyState,
+      );
+
+      expect(shell.preferDualPane, isTrue);
+      expect(shell.dualPaneEmptyState, same(dualPaneEmptyState));
 
       controller.dispose();
       tableController.dispose();
