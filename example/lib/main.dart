@@ -81,7 +81,7 @@ Future<void> main() async {
   // final font = const DoppioOneFont();
   await Future.wait([
     font.load(),
-    BrowserContextMenu.disableContextMenu(),
+    if (LayrzPlatform.isWeb) BrowserContextMenu.disableContextMenu(),
   ]);
   runApp(ProviderScope(child: ShowroomApp(font: font)));
 }
@@ -398,6 +398,7 @@ class ShowroomApp extends ConsumerWidget {
       themeMode: mode,
       colorblindMode: colorblindMode,
       colorblindStrength: colorblindStrength,
+      enableLayoCursorTracking: true,
     );
   }
 }

@@ -2,9 +2,39 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/platform/platform.dart';
 
+import 'layo_cursor_scope.dart';
 import 'layo_emotion.dart';
 import 'layo_painter.dart';
+
+/// The [LayoEmotion] values [Layo.followCursor] supports.
+///
+/// A cursor-following feature shift only makes visual sense for emotions
+/// whose eyes read as looking somewhere — [LayoEmotion.mrLayo] (the plain
+/// default face), [LayoEmotion.angry] (furious brows that can still glare
+/// toward the pointer), and [LayoEmotion.question] (puzzled question-mark
+/// eyes that can still "turn" toward it). Every other emotion either has no
+/// directional gaze to sell (e.g. [LayoEmotion.sleep]'s closed eyes,
+/// [LayoEmotion.dead]'s "X" eyes) or wears an overlay/background layer whose
+/// geometry was never designed to shift (e.g. [LayoEmotion.comandante]'s
+/// beret, [LayoEmotion.money]'s bill rain) — see [Layo.followCursor]'s own
+/// doc comment for the enforcement this set backs.
+const Set<LayoEmotion> _kFollowCursorSupportedEmotions = {
+  LayoEmotion.mrLayo,
+  LayoEmotion.angry,
+  LayoEmotion.question,
+};
+
+/// The debug-mode `assert` message `_LayoState._syncCursorListener` fires
+/// when [Layo.followCursor] (or [AvatarLayo.followCursor]) is `true` on a
+/// supported emotion but no [LayoCursorScope] exists above it in the widget
+/// tree — the app never opted into global cursor tracking. Names the exact
+/// flag that fixes it so the message is immediately actionable rather than
+/// merely descriptive.
+const String _kMissingCursorScopeMessage =
+    'Layo.followCursor is enabled but no LayoCursorScope was found in the widget tree above this Layo. '
+    'Set enableLayoCursorTracking: true on LayrzApp (or LayrzApp.router) to install it.';
 
 /// The "MrLayo" brand mascot, rendered entirely with [CustomPainter] — no
 /// bundled image or SVG asset.
@@ -117,6 +147,14 @@ import 'layo_painter.dart';
 /// into an [Expanded], a grid cell, or any other bounded box and keeps the
 /// original artwork's proportions. When the parent imposes no width bound
 /// (for example inside a scrolling [Column]), pass an explicit [width].
+///
+/// Optionally, [followCursor] makes just the facial features (the eyes,
+/// mouth, and every emotion-specific stand-in) shift slightly toward the
+/// mouse pointer — anywhere on screen, not only while hovering this widget
+/// itself — easing smoothly rather than snapping. See its own doc comment
+/// for the full contract, including which [LayoEmotion] values support it
+/// and how it degrades safely when the app has not opted into global cursor
+/// tracking.
 class Layo extends StatefulWidget {
   /// Creates a new [Layo] mascot graphic.
   ///
@@ -144,7 +182,25 @@ class Layo extends StatefulWidget {
   ///
   /// The [emotion] parameter is optional and defaults to
   /// [LayoEmotion.mrLayo], the original default face.
-  const Layo({this.width, this.animate = true, this.emotion = LayoEmotion.mrLayo, super.key});
+  ///
+  /// The [followCursor] parameter is optional and defaults to `false`. It is
+  /// only supported for [LayoEmotion.mrLayo], [LayoEmotion.angry], and
+  /// [LayoEmotion.question] — passing `true` for any other [emotion] fails
+  /// an assertion, both here (a `const`-safe check with a fixed message,
+  /// since the offending [emotion] cannot be interpolated into a `const`
+  /// string) and, with the offending [emotion] actually named, in
+  /// `_LayoState.initState` and [didUpdateWidget] (the latter also catching
+  /// a runtime swap to an unsupported [emotion] while [followCursor] stays
+  /// `true`). See [followCursor]'s own doc comment for the full behavior.
+  const Layo({this.width, this.animate = true, this.emotion = LayoEmotion.mrLayo, this.followCursor = false, super.key})
+    : assert(
+        !followCursor ||
+            emotion == LayoEmotion.mrLayo ||
+            emotion == LayoEmotion.angry ||
+            emotion == LayoEmotion.question,
+        'Layo.followCursor is only supported for LayoEmotion.mrLayo, LayoEmotion.angry, and '
+        'LayoEmotion.question.',
+      );
 
   /// Optional explicit width in logical pixels.
   ///
@@ -174,6 +230,53 @@ class Layo extends StatefulWidget {
   /// antenna (a static pose, not an animation frame to skip) — only its
   /// recurring "failed twitch" is suppressed.
   final bool animate;
+
+  /// Whether [Layo]'s facial features (the eyes, mouth, and every
+  /// emotion-specific stand-in) shift slightly toward the mouse pointer,
+  /// tracked anywhere on screen — not merely while the pointer hovers this
+  /// particular widget.
+  ///
+  /// Defaults to `false`, so every existing [Layo] usage stays perfectly
+  /// static unless it opts in. **Only the facial features move** — the head
+  /// shell, body, ears, antenna, and tie stay exactly where the static
+  /// artwork places them; this is a pure translation of
+  /// [LayoPainter.featureOffset], never a rotation or a tilt of the whole
+  /// head. The applied offset eases smoothly toward the pointer's direction
+  /// rather than snapping (the same ~220ms easeOut ease this feature has
+  /// always used), and eases back to neutral (features centered) whenever no
+  /// pointer position is available.
+  ///
+  /// **Only supported for [LayoEmotion.mrLayo], [LayoEmotion.angry], and
+  /// [LayoEmotion.question]** — the only three emotions whose eyes read as
+  /// looking somewhere rather than standing in for an unrelated glyph or
+  /// overlay (a lightbulb, a beret, closed "zzz" eyes, sunglasses, and so
+  /// on). Passing `true` together with any other [emotion] fails an
+  /// assertion in debug mode; every other [LayoEmotion] is completely fine
+  /// to use as long as it does not also opt into [followCursor].
+  ///
+  /// **Tracking is global, but opt-in at the app level.** The cursor position
+  /// this feature follows comes from [LayoCursorScope], which [LayrzApp]
+  /// installs only when its own `enableLayoCursorTracking` is `true`
+  /// (defaulting to `false`). A [Layo] with `followCursor: true` inside an
+  /// app that never opted in — or with no [LayrzApp] ancestor at all, e.g. in
+  /// isolation in a widget test — fires a debug-mode `assert` naming the
+  /// missing flag (a developer mistake worth surfacing loudly), but **never
+  /// throws**: that `assert` is compiled out entirely in profile/release
+  /// builds, exactly like every other `assert` in this library, so it can
+  /// never crash a shipped app. In every build mode, including when the
+  /// `assert` above fires and including profile/release where it has already
+  /// been stripped, this instance still attaches nothing of its own and its
+  /// features simply stay at their neutral rest position, exactly as if
+  /// `followCursor` were `false`. This is also a no-op on a touch platform
+  /// (see [LayrzPlatform.isTouchOS] — there is no pointer to follow there,
+  /// and no missing-scope `assert` fires there either, since there is
+  /// nothing to track regardless of whether a scope exists) and whenever no
+  /// pointer position is currently known (e.g. the pointer has left the
+  /// app's content entirely). On a supported [emotion], a non-touch
+  /// platform, and an app that opted in, no listener is attached to
+  /// [LayoCursorScope]'s notifier at all unless [followCursor] is `true`, so
+  /// a [Layo] that never opts in pays zero extra overhead for this feature.
+  final bool followCursor;
 
   /// The mascot artwork's fixed width:height aspect ratio, traced from the
   /// original 500×833 reference resource (`mr-layo.png`).
@@ -429,6 +532,41 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// [LayoEmotion.party].
   late final AnimationController _pomPomBobController;
 
+  /// Drives [Layo.followCursor]'s eased feature offset, always running from
+  /// `0.0` (fully neutral) to `1.0` (fully toward [_gazeTarget]) or back —
+  /// never looping, since the gaze has no cyclical component of its own,
+  /// only a smoothing ease toward wherever the pointer currently is (or back
+  /// to neutral once it is unavailable). [_gazeAnimation] is what [build]
+  /// actually reads to derive [LayoPainter.featureOffset]; this controller
+  /// only supplies the eased progress between [_gazeFrom] and [_gazeTarget].
+  late final AnimationController _gazeController;
+
+  /// The eased `0..1` progress [_gazeController] drives, curved so the
+  /// features settle into (and out of) an offset rather than moving at a
+  /// constant rate.
+  late final Animation<double> _gazeAnimation;
+
+  /// The normalized gaze direction (`dx`, `dy` each in `[-1, 1]`, derived from
+  /// the global cursor position relative to this [Layo]'s own screen-space
+  /// center — see [_updateGazeFromGlobalCursor]) [_gazeController] is
+  /// currently easing away from — the direction at the start of the
+  /// animation currently in flight (or the resting value, [Offset.zero],
+  /// once settled there).
+  Offset _gazeFrom = Offset.zero;
+
+  /// The normalized gaze direction [_gazeController] is currently easing
+  /// toward — updated on every [_cursorNotifier] tick (or reset to
+  /// [Offset.zero] when the global cursor position becomes unavailable) via
+  /// [_setGazeTarget].
+  Offset _gazeTarget = Offset.zero;
+
+  /// The [LayoCursorScope] notifier this instance currently listens to, or
+  /// `null` when tracking is not active (see [_syncCursorListener]) — kept so
+  /// [_onCursorTick] can be detached from the exact instance it was attached
+  /// to, never a fresh [LayoCursorScope.maybeOf] lookup that might now
+  /// resolve differently.
+  ValueNotifier<Offset?>? _cursorNotifier;
+
   /// A single [Listenable] merging every controller/animation above, passed
   /// to [AnimatedBuilder.animation] so one listener covers all idle
   /// animations regardless of which ones are actually active for the
@@ -633,9 +771,30 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
   /// party hat overlay).
   bool get _isParty => widget.emotion == LayoEmotion.party;
 
+  /// Whether [Layo.followCursor] is currently *requested* — the caller
+  /// opted in, [Layo.emotion] is one of the emotions that supports it (see
+  /// [_kFollowCursorSupportedEmotions]; enforced separately by the [Layo]
+  /// constructor's own assertion, so this getter never has to reject an
+  /// unsupported emotion itself, only check it), and this is not a touch
+  /// platform (see [LayrzPlatform.isTouchOS] — there is no pointer to follow
+  /// there).
+  ///
+  /// This alone does **not** mean tracking is actually active — see
+  /// [_cursorNotifier], which additionally requires a [LayoCursorScope]
+  /// ancestor to exist at all (the app's own opt-in). [_syncCursorListener]
+  /// is what actually attaches or detaches the notifier listener based on
+  /// both conditions together.
+  bool get _wantsCursorTracking =>
+      widget.followCursor && _kFollowCursorSupportedEmotions.contains(widget.emotion) && !LayrzPlatform.isTouchOS;
+
   @override
   void initState() {
     super.initState();
+    assert(
+      !widget.followCursor || _kFollowCursorSupportedEmotions.contains(widget.emotion),
+      'Layo.followCursor is only supported for LayoEmotion.mrLayo, LayoEmotion.angry, and '
+      'LayoEmotion.question, but emotion was ${widget.emotion}.',
+    );
     _pulseController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
     _blinkController = AnimationController(vsync: this, duration: const Duration(milliseconds: 140));
     _blinkAnimation = CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut);
@@ -686,6 +845,8 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _pomPomSwayController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3000));
     _confettiController = AnimationController(vsync: this, duration: const Duration(milliseconds: 6000));
     _pomPomBobController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000));
+    _gazeController = AnimationController(vsync: this, duration: _kGazeEaseDuration);
+    _gazeAnimation = CurvedAnimation(parent: _gazeController, curve: Curves.easeOut);
     _repaint = Listenable.merge([
       _pulseController,
       _blinkAnimation,
@@ -719,19 +880,154 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       _pomPomSwayController,
       _confettiController,
       _pomPomBobController,
+      _gazeAnimation,
     ]);
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // _syncCursorListener runs FIRST, before _syncAnimating: it can fire a
+    // debug-mode assert (see its own doc comment) when followCursor is
+    // requested with no LayoCursorScope ancestor, and that assert must throw
+    // before _syncAnimating gets a chance to schedule any blink/twitch/etc.
+    // timer -- otherwise a scheduled timer would be orphaned by the
+    // aborted build (this State never reaches a stable mounted frame to
+    // later dispose it), which the test binding's own invariant check
+    // (`!timersPending`) correctly flags as a leak.
+    _syncCursorListener();
     _syncAnimating();
   }
 
   @override
   void didUpdateWidget(covariant Layo oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // In practice this repeats a check the `Layo` constructor's own assert
+    // already ran for `widget` an instant earlier -- constructing the new
+    // `Layo(...)` that reaches `didUpdateWidget` always re-invokes that
+    // constructor, whose assert fires first, before this method ever runs
+    // -- so this one is a structurally unreachable backstop for that exact
+    // path. It is kept anyway as cheap defense against a hypothetical
+    // future change that decouples `emotion`/`followCursor` from the
+    // constructor call (e.g. a mutable controller driving them instead).
+    assert(
+      !widget.followCursor || _kFollowCursorSupportedEmotions.contains(widget.emotion),
+      'Layo.followCursor is only supported for LayoEmotion.mrLayo, LayoEmotion.angry, and '
+      'LayoEmotion.question, but emotion was ${widget.emotion}.',
+    );
+    // Same ordering rationale as didChangeDependencies: _syncCursorListener
+    // runs first since it can fire the missing-scope assert.
+    _syncCursorListener();
     _syncAnimating();
+    if (!_wantsCursorTracking && (oldWidget.followCursor || widget.emotion != oldWidget.emotion)) {
+      // Either this instance no longer wants cursor tracking at all (opted
+      // out, emotion swapped to an unsupported one, or the platform gate
+      // flipped -- impossible mid-session in practice, but cheap to cover
+      // uniformly), or the emotion changed while staying unsupported: reset
+      // the gaze to neutral immediately rather than leaving a stale offset
+      // frozen on screen with nothing left driving it back to rest.
+      _gazeController.stop();
+      _gazeController.value = 0;
+      _gazeFrom = Offset.zero;
+      _gazeTarget = Offset.zero;
+    }
+  }
+
+  /// Attaches or detaches this instance's listener on [LayoCursorScope]'s
+  /// notifier so exactly one is active whenever, and only whenever, both
+  /// [_wantsCursorTracking] is true AND a [LayoCursorScope] ancestor exists.
+  ///
+  /// Called from both [didChangeDependencies] (covers a [LayoCursorScope]
+  /// ancestor appearing/disappearing, e.g. this [Layo] being moved in the
+  /// tree) and [didUpdateWidget] (covers [Layo.followCursor]/[Layo.emotion]
+  /// changing). Looks up [LayoCursorScope.maybeOf] on every call rather than
+  /// caching whether one exists, since [BuildContext] ancestry can change
+  /// between calls; the lookup itself is cheap (a single
+  /// `getInheritedWidgetOfExactType` walk) and registers no build-time
+  /// dependency (see [LayoCursorScope.maybeOf]'s own doc comment), so calling
+  /// it on every dependency/update pass costs nothing extra.
+  ///
+  /// **[Layo]'s "safe fallback" contract**: when [LayoCursorScope.maybeOf]
+  /// returns `null` while [_wantsCursorTracking] is `true` (the app never
+  /// called `enableLayoCursorTracking: true` on its [LayrzApp]/
+  /// [LayrzApp.router], or there is no [LayrzApp] ancestor at all), this
+  /// method:
+  ///
+  ///  1. In debug mode only, fires [_kMissingCursorScopeMessage] as a plain
+  ///     `assert` — loud, actionable developer feedback that this specific
+  ///     `Layo` requested cursor tracking but nothing above it provides it,
+  ///     naming the exact app-level flag that fixes it. This is an `assert`,
+  ///     never a thrown exception: it is compiled out entirely in
+  ///     profile/release builds, exactly like every other `assert` in this
+  ///     library, so it can never crash a shipped app.
+  ///  2. Regardless of build mode, attaches nothing — no listener,
+  ///     no [MouseRegion], nothing — and [_gazeTarget] simply never leaves
+  ///     [Offset.zero], so the features stay at their neutral rest position
+  ///     with no error of any kind. This is what actually runs in
+  ///     profile/release, where the `assert` above has already been stripped:
+  ///     the debug assert is the developer signal, and this static fallback
+  ///     is the release-mode safety net that keeps running underneath it.
+  void _syncCursorListener() {
+    final scope = _wantsCursorTracking ? LayoCursorScope.maybeOf(context) : null;
+    assert(
+      !_wantsCursorTracking || scope != null,
+      _kMissingCursorScopeMessage,
+    );
+    if (identical(scope, _cursorNotifier)) {
+      return;
+    }
+    _cursorNotifier?.removeListener(_onCursorTick);
+    _cursorNotifier = scope;
+    scope?.addListener(_onCursorTick);
+    // Read the notifier's current value immediately on attach (or reset to
+    // neutral on detach) rather than waiting for its next tick, so a `Layo`
+    // that mounts while the cursor is already known somewhere on screen (or
+    // that stops tracking) reflects that right away instead of staying
+    // frozen at whatever `_gazeTarget` happened to hold before.
+    _onCursorTick();
+  }
+
+  /// Called once on every [_cursorNotifier] tick (a pointer move, or the
+  /// pointer becoming unavailable) — recomputes the gaze target from the
+  /// notifier's current global position relative to this [Layo]'s own
+  /// screen-space center and re-targets [_gazeController] toward it.
+  ///
+  /// This is the **only** channel a pointer move travels through to reach
+  /// this [Layo]: [ValueNotifier.addListener] fires a plain callback with no
+  /// [BuildContext] argument and, critically, calls no `setState` of its own
+  /// here — the callback only mutates [_gazeFrom]/[_gazeTarget] and drives
+  /// [_gazeController], which [build]'s own [AnimatedBuilder] already listens
+  /// to via [_repaint]. So a pointer move repaints this [Layo]'s own
+  /// [CustomPaint] layer and nothing above it; no ancestor widget, and no
+  /// [LayoCursorScope] itself, is ever rebuilt by this.
+  ///
+  /// Reads the render box only when `mounted` and
+  /// [RenderObject.attached] both hold, exactly mirroring
+  /// [_LayoState.dispose]'s own ordering concern: a notifier tick can in
+  /// principle fire after this instance's [dispose] has already run (a
+  /// listener removed from within the same microtask a tick is already
+  /// queued for), so every read here is guarded rather than assumed safe.
+  void _onCursorTick() {
+    if (!mounted) {
+      return;
+    }
+    final cursor = _cursorNotifier?.value;
+    if (cursor == null) {
+      _setGazeTarget(Offset.zero);
+      return;
+    }
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.attached || !renderObject.hasSize) {
+      return;
+    }
+    final center = renderObject.localToGlobal(renderObject.size.center(Offset.zero));
+    final size = renderObject.size;
+    if (size.width <= 0 || size.height <= 0) {
+      return;
+    }
+    final dx = ((cursor.dx - center.dx) / (size.width / 2)).clamp(-1.0, 1.0);
+    final dy = ((cursor.dy - center.dy) / (size.height / 2)).clamp(-1.0, 1.0);
+    _setGazeTarget(Offset(dx, dy));
   }
 
   /// Recomputes whether this instance should be animating right now and, on
@@ -1519,8 +1815,32 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     _pomPomSwayController.dispose();
     _confettiController.dispose();
     _pomPomBobController.dispose();
+    _gazeController.dispose();
+    _cursorNotifier?.removeListener(_onCursorTick);
     super.dispose();
   }
+
+  /// Starts [_gazeController] easing from its current live value toward
+  /// [target], re-basing [_gazeFrom] to wherever the gaze visually is right
+  /// now (matching [LayoController.to]'s own re-basing rationale) rather
+  /// than restarting the ease from scratch on every cursor tick, so a
+  /// pointer in continuous motion reads as one smooth, continuously
+  /// re-aimed offset rather than a stutter of restarted eases. Called from
+  /// [_onCursorTick] with the freshly-computed gaze direction (or
+  /// [Offset.zero] once no cursor position is known).
+  void _setGazeTarget(Offset target) {
+    if (target == _gazeTarget) {
+      return;
+    }
+    _gazeFrom = Offset.lerp(_gazeFrom, _gazeTarget, _gazeAnimation.value)!;
+    _gazeTarget = target;
+    _gazeController.forward(from: 0);
+  }
+
+  /// The current live gaze direction, interpolated between [_gazeFrom] and
+  /// [_gazeTarget] by [_gazeAnimation]'s eased progress — read once per frame
+  /// in [build] to derive the actual applied [LayoPainter.featureOffset].
+  Offset get _currentGaze => Offset.lerp(_gazeFrom, _gazeTarget, _gazeAnimation.value)!;
 
   @override
   Widget build(BuildContext context) {
@@ -1529,6 +1849,7 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
       child: AnimatedBuilder(
         animation: _repaint,
         builder: (context, _) {
+          final gaze = _currentGaze;
           return CustomPaint(
             painter: LayoPainter(
               emotion: widget.emotion,
@@ -1565,6 +1886,10 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
               pomPomSwayT: _pomPomSwayController.value,
               confettiT: _confettiController.value,
               pomPomBobT: _pomPomBobController.value,
+              featureOffset: Offset(
+                gaze.dx * _kFeatureMaxShiftFraction * _kScreenRectWidth,
+                gaze.dy * _kFeatureMaxShiftFraction * _kScreenRectHeight,
+              ),
             ),
             size: Size.infinite,
           );
@@ -1573,10 +1898,7 @@ class _LayoState extends State<Layo> with TickerProviderStateMixin {
     );
 
     final explicitWidth = widget.width;
-    if (explicitWidth != null) {
-      return SizedBox(width: explicitWidth, child: aspect);
-    }
-    return aspect;
+    return explicitWidth != null ? SizedBox(width: explicitWidth, child: aspect) : aspect;
   }
 }
 
@@ -1605,3 +1927,57 @@ const double _kGlitchMaxDim = 0.7;
 /// units, small enough to read as a jitter rather than the glyph group
 /// visibly relocating.
 const double _kGlitchMaxOffset = 1.6;
+
+/// The maximum translation [Layo.followCursor] applies to
+/// [LayoPainter.featureOffset], as a fraction of the dark face-screen
+/// window's own width/height (`_screenRect` in `layo_painter.dart`), at the
+/// pointer's most extreme normalized gaze direction (`dx`/`dy = ±1`). Kept as
+/// a single named constant deliberately, so it is a one-line change to
+/// retune live against the running app.
+///
+/// **Bounds check (why this value can never clip the screen window):**
+/// checked directly against `_screenRect`'s bounds (`Rect.fromLTRB(78.45,
+/// 123.02, 317.04, 308.80)`, in the same pre-`k` source units this fraction
+/// multiplies) and the widest feature bounding box among the three supported
+/// emotions -- [LayoEmotion.mrLayo]'s own two eyes plus mouth, roughly
+/// `x: 119.1..276.74, y: 180.16..261.20` (the eyes' own centers ± their
+/// radius, down through the mouth's lower edge; the angry/question glyphs
+/// occupy a visually similar region). Even the original, more aggressive
+/// `0.08` candidate (≈19.1 horizontal, ≈14.9 vertical source units of
+/// travel, of the screen rect's own `238.59`-wide by `185.78`-tall extent)
+/// cleared every edge of `_screenRect` by a comfortable margin (over 40
+/// source units left/right, over 47 top/bottom) at the most extreme
+/// `dx`/`dy = ±1` gaze, so this constant's own current value -- well below
+/// that -- has no clipping risk at all; the margin only grows as this value
+/// is tuned down.
+///
+/// **Current value:** `0.03` -- the maintainer found an earlier whole-head
+/// tilt/shift pass (since replaced by this features-only translation)
+/// visually exaggerated at its own `~3.5%`-of-box shift, and asked for a
+/// noticeably more subtle features-only travel than the `0.08` this value
+/// started at during development; `0.03` is the current tuning, arrived at
+/// as a deliberately conservative starting point to be fine-tuned further
+/// live against the running app rather than a value independently re-derived
+/// from first principles.
+const double _kFeatureMaxShiftFraction = 0.03;
+
+/// The dark face-screen window's own width, in the same pre-`k` source units
+/// [_kFeatureMaxShiftFraction] multiplies -- mirrors `_screenRect` in
+/// `layo_painter.dart` (`317.04 - 78.45`), duplicated here (rather than
+/// imported) since `layo_painter.dart`'s `_screenRect` is private to that
+/// file and this value is only ever used to scale
+/// [_kFeatureMaxShiftFraction], not to draw anything.
+const double _kScreenRectWidth = 317.04 - 78.45;
+
+/// The dark face-screen window's own height, in the same pre-`k` source
+/// units [_kFeatureMaxShiftFraction] multiplies -- mirrors `_screenRect` in
+/// `layo_painter.dart` (`308.80 - 123.02`); see [_kScreenRectWidth]'s own
+/// doc comment for why this is duplicated rather than imported.
+const double _kScreenRectHeight = 308.80 - 123.02;
+
+/// How long [_LayoState._gazeController] takes to ease from wherever the
+/// gaze currently sits to a freshly re-targeted direction (a pointer move,
+/// or the pointer leaving, both re-target via [_LayoState._setGazeTarget]) --
+/// short enough to feel responsive to a moving pointer, long enough that the
+/// lean visibly eases rather than snapping.
+const Duration _kGazeEaseDuration = Duration(milliseconds: 220);
