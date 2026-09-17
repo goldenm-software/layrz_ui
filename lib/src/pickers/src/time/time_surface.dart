@@ -121,30 +121,32 @@ class LayrzTimeSurfaceState extends State<LayrzTimeSurface> {
     final tokens = context.tokens;
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          LayrzPickerDialogHeader(
-            labelText: widget.labelText,
-            onClose: () => LayrzModalRoute.popIfCurrent(context),
-          ),
-          LayrzPickersTimeFieldsPanel(
-            value: _draft,
-            showSeconds: widget.showSeconds,
-            use24HourFormat: widget.use24HourFormat,
-            onChanged: (time) {
-              setState(() => _draft = time);
-              widget.onDraftChanged?.call();
-            },
-          ),
-          if (widget.showInlineFooter && widget.onCancel != null) ...[
-            SizedBox(height: tokens.spacing.sp3),
-            LayrzPickerInlineFooter(
-              onCancel: widget.onCancel!,
-              onSave: save,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LayrzPickerDialogHeader(
+              labelText: widget.labelText,
+              onClose: () => LayrzModalRoute.popIfCurrent(context),
             ),
+            LayrzPickersTimeFieldsPanel(
+              value: _draft,
+              showSeconds: widget.showSeconds,
+              use24HourFormat: widget.use24HourFormat,
+              onChanged: (time) {
+                setState(() => _draft = time);
+                widget.onDraftChanged?.call();
+              },
+            ),
+            if (widget.showInlineFooter && widget.onCancel != null) ...[
+              SizedBox(height: tokens.spacing.sp3),
+              LayrzPickerInlineFooter(
+                onCancel: widget.onCancel!,
+                onSave: save,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

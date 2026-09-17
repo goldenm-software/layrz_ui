@@ -310,42 +310,44 @@ class LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
 
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LayrzPickerDialogHeader(
-            labelText: widget.labelText,
-            onClose: () => LayrzModalRoute.popIfCurrent(context),
-          ),
-          // Fix 2: the calendar and the time fields are now two
-          // LayrzTabView tabs -- "Date" and "Time" -- rather than stacked
-          // sections, so the surface reads as one focused screen at a time
-          // instead of a tall, scrolling column. See this class's own doc
-          // for why this is unrelated to the deprecated, retired
-          // `presentation` (tabbed/stepped) split.
-          LayrzTabView(
-            isScrollable: false,
-            expandContent: false,
-            tabs: [
-              LayrzTab(
-                labelText: l10n.dateTimePickerDate,
-                child: _buildDatePart(context),
-              ),
-              LayrzTab(
-                labelText: l10n.dateTimePickerTime,
-                child: _buildTimePart(context),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LayrzPickerDialogHeader(
+              labelText: widget.labelText,
+              onClose: () => LayrzModalRoute.popIfCurrent(context),
+            ),
+            // Fix 2: the calendar and the time fields are now two
+            // LayrzTabView tabs -- "Date" and "Time" -- rather than stacked
+            // sections, so the surface reads as one focused screen at a time
+            // instead of a tall, scrolling column. See this class's own doc
+            // for why this is unrelated to the deprecated, retired
+            // `presentation` (tabbed/stepped) split.
+            LayrzTabView(
+              isScrollable: false,
+              expandContent: false,
+              tabs: [
+                LayrzTab(
+                  labelText: l10n.dateTimePickerDate,
+                  child: _buildDatePart(context),
+                ),
+                LayrzTab(
+                  labelText: l10n.dateTimePickerTime,
+                  child: _buildTimePart(context),
+                ),
+              ],
+            ),
+            if (widget.showInlineFooter) ...[
+              SizedBox(height: tokens.spacing.sp3),
+              LayrzPickerInlineFooter(
+                onCancel: widget.onCancel,
+                onSave: canSave ? save : null,
               ),
             ],
-          ),
-          if (widget.showInlineFooter) ...[
-            SizedBox(height: tokens.spacing.sp3),
-            LayrzPickerInlineFooter(
-              onCancel: widget.onCancel,
-              onSave: canSave ? save : null,
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

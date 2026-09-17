@@ -44,8 +44,15 @@ class _WrapperFormWidgetState extends State<_WrapperFormWidget> {
   Widget build(BuildContext context) {
     return LayrzDetailScaffold(
       title: const Text("Wrapped title", key: Key("wrapped-title")),
-      body: Column(
-        children: List.generate(20, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+      // Wrapped in the CALLER's own SingleChildScrollView, per the new
+      // contract: LayrzDetailScaffold no longer wraps `body` in a scroll view
+      // of its own, so a body this tall must bring one to avoid overflowing
+      // the bounded height it now genuinely receives (e.g. via the narrow
+      // sheet's scrollable: false path).
+      body: SingleChildScrollView(
+        child: Column(
+          children: List.generate(20, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+        ),
       ),
       actions: [
         LayrzButton(labelText: "Save", key: const Key("wrapped-save"), onTap: () {}),
@@ -107,57 +114,73 @@ void main() {
       expect(find.text("Body content"), findsOneWidget);
     });
 
-    testWidgets("a tall body scrolls instead of overflowing (narrow viewport, bounded parent)", (tester) async {
-      addTearDown(tester.view.reset);
-      tester.view.physicalSize = const Size(400, 800);
-      tester.view.devicePixelRatio = 1.0;
+    testWidgets(
+      "a tall body wrapped in the CALLER's own SingleChildScrollView scrolls instead of overflowing "
+      "(narrow viewport, bounded parent)",
+      (tester) async {
+        addTearDown(tester.view.reset);
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
 
-      await _pumpBounded(
-        tester,
-        LayrzDetailScaffold(
-          title: const Text("Title"),
-          body: Column(
-            children: List.generate(
-              60,
-              (i) => SizedBox(height: 40, child: Text("Row $i", key: Key("row-$i"))),
+        // NEW CONTRACT: LayrzDetailScaffold no longer wraps `body` in a scroll
+        // view of its own -- scrolling is entirely the caller's responsibility.
+        // This test's `body` therefore brings its OWN SingleChildScrollView, so
+        // a tall Column scrolls instead of overflowing the bounded pane.
+        await _pumpBounded(
+          tester,
+          LayrzDetailScaffold(
+            title: const Text("Title"),
+            body: SingleChildScrollView(
+              child: Column(
+                children: List.generate(
+                  60,
+                  (i) => SizedBox(height: 40, child: Text("Row $i", key: Key("row-$i"))),
+                ),
+              ),
             ),
           ),
-        ),
-        size: const Size(360, 300),
-      );
+          size: const Size(360, 300),
+        );
 
-      expect(tester.takeException(), isNull);
-      expect(find.byType(SingleChildScrollView), findsOneWidget);
-      // The first row is present, but a row far down the list is not yet
-      // built/laid out within the visible viewport -- proof the body is
-      // actually scrolling rather than being force-fit or silently clipped
-      // without a scroll view.
-      expect(find.byKey(const Key("row-0")), findsOneWidget);
-    });
+        expect(tester.takeException(), isNull);
+        expect(find.byType(SingleChildScrollView), findsOneWidget);
+        // The first row is present, but a row far down the list is not yet
+        // built/laid out within the visible viewport -- proof the body is
+        // actually scrolling rather than being force-fit or silently clipped
+        // without a scroll view.
+        expect(find.byKey(const Key("row-0")), findsOneWidget);
+      },
+    );
 
-    testWidgets("a tall body scrolls instead of overflowing (wide viewport, bounded parent)", (tester) async {
-      addTearDown(tester.view.reset);
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
+    testWidgets(
+      "a tall body wrapped in the CALLER's own SingleChildScrollView scrolls instead of overflowing "
+      "(wide viewport, bounded parent)",
+      (tester) async {
+        addTearDown(tester.view.reset);
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
 
-      await _pumpBounded(
-        tester,
-        LayrzDetailScaffold(
-          title: const Text("Title"),
-          body: Column(
-            children: List.generate(
-              60,
-              (i) => SizedBox(height: 40, child: Text("Row $i", key: Key("row-$i"))),
+        await _pumpBounded(
+          tester,
+          LayrzDetailScaffold(
+            title: const Text("Title"),
+            body: SingleChildScrollView(
+              child: Column(
+                children: List.generate(
+                  60,
+                  (i) => SizedBox(height: 40, child: Text("Row $i", key: Key("row-$i"))),
+                ),
+              ),
             ),
           ),
-        ),
-        size: const Size(500, 300),
-      );
+          size: const Size(500, 300),
+        );
 
-      expect(tester.takeException(), isNull);
-      expect(find.byType(SingleChildScrollView), findsOneWidget);
-      expect(find.byKey(const Key("row-0")), findsOneWidget);
-    });
+        expect(tester.takeException(), isNull);
+        expect(find.byType(SingleChildScrollView), findsOneWidget);
+        expect(find.byKey(const Key("row-0")), findsOneWidget);
+      },
+    );
 
     testWidgets("actions present: footer row renders the buttons, right-aligned", (tester) async {
       addTearDown(tester.view.reset);
@@ -228,18 +251,28 @@ void main() {
 
     testWidgets(
       "REGRESSION: inside a LayrzBottomSheetScope, lays out without an 'unbounded height' RenderFlex error "
-      "inside an unbounded ancestor (simulating LayrzBottomSheet's SingleChildScrollView)",
+      "inside an unbounded ancestor (simulating LayrzBottomSheet's SingleChildScrollView), when the CALLER's "
+      "body brings its own scroll view",
       (tester) async {
         addTearDown(tester.view.reset);
         tester.view.physicalSize = const Size(400, 800);
         tester.view.devicePixelRatio = 1.0;
 
+        // Under the new contract, a plain tall Column with no scroll view of
+        // its own would overflow (there is no scaffold-owned scroller left to
+        // absorb it) even inside the Flexible/shrink-wrap branch this test
+        // targets. Giving the body its OWN SingleChildScrollView exercises the
+        // intended no-throw path -- LayrzDetailScaffold self-detecting the
+        // sheet scope and switching to Flexible -- without conflating it with
+        // an unrelated overflow.
         await _pumpUnbounded(
           tester,
           LayrzDetailScaffold(
             title: const Text("Title", key: Key("title")),
-            body: Column(
-              children: List.generate(20, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+            body: SingleChildScrollView(
+              child: Column(
+                children: List.generate(20, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+              ),
             ),
             actions: [
               LayrzButton(labelText: "Save", onTap: () {}),
@@ -264,7 +297,7 @@ void main() {
 
     testWidgets(
       "REGRESSION: inside a LayrzBottomSheetScope, lays out without error inside an unbounded ancestor on a "
-      "wide viewport too",
+      "wide viewport too, when the CALLER's body brings its own scroll view",
       (tester) async {
         addTearDown(tester.view.reset);
         tester.view.physicalSize = const Size(1600, 1200);
@@ -274,8 +307,10 @@ void main() {
           tester,
           LayrzDetailScaffold(
             title: const Text("Title"),
-            body: Column(
-              children: List.generate(20, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+            body: SingleChildScrollView(
+              child: Column(
+                children: List.generate(20, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+              ),
             ),
           ),
         );
@@ -317,7 +352,9 @@ void main() {
       },
     );
 
-    testWidgets("lays out and scrolls inside a bounded ancestor too", (tester) async {
+    testWidgets("lays out and scrolls inside a bounded ancestor too, given the CALLER's own scroll view", (
+      tester,
+    ) async {
       addTearDown(tester.view.reset);
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
@@ -326,8 +363,10 @@ void main() {
         tester,
         LayrzDetailScaffold(
           title: const Text("Title"),
-          body: Column(
-            children: List.generate(40, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+          body: SingleChildScrollView(
+            child: Column(
+              children: List.generate(40, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+            ),
           ),
         ),
         size: const Size(400, 250),
@@ -361,98 +400,102 @@ void main() {
     });
 
     group("desktop pane fills height (no LayrzBottomSheetScope ancestor)", () {
-      testWidgets("actions pin to the BOTTOM of a tall bounded pane, not directly under a short body", (
-        tester,
-      ) async {
-        addTearDown(tester.view.reset);
-        tester.view.physicalSize = const Size(1600, 1200);
-        tester.view.devicePixelRatio = 1.0;
+      testWidgets(
+        "actions pin to the BOTTOM of a tall bounded pane, when the body actually FILLS its bounded height",
+        (tester) async {
+          addTearDown(tester.view.reset);
+          tester.view.physicalSize = const Size(1600, 1200);
+          tester.view.devicePixelRatio = 1.0;
 
-        const paneHeight = 800.0;
+          const paneHeight = 800.0;
 
-        await _pumpBounded(
-          tester,
-          LayrzDetailScaffold(
-            title: const Text("Title", key: Key("title")),
-            // Deliberately short: on the old shrink-wrap behavior, the
-            // actions row would float up right under this body instead of
-            // pinning to the bottom of the 800px pane.
-            body: const Text("Short body", key: Key("body")),
-            actions: [
-              LayrzButton(labelText: "Cancel", key: const Key("cancel-btn"), onTap: () {}),
-              LayrzButton(labelText: "Save", key: const Key("save-btn"), onTap: () {}),
-            ],
-          ),
-          size: const Size(600, paneHeight),
-        );
-
-        expect(tester.takeException(), isNull);
-
-        final paneRect = tester.getRect(find.byKey(const Key("bounded-pane")));
-        final bodyRect = tester.getRect(find.byKey(const Key("body")));
-        final actionsRect = tester.getRect(find.byKey(const Key("save-btn")));
-
-        // Sanity: the pane rect (the SizedBox we pumped) really is as tall
-        // as intended, i.e. this assertion is exercising a genuinely bounded
-        // tall parent.
-        expect(paneRect.height, paneHeight);
-
-        // Positions below are converted to pane-local coordinates -- getRect
-        // returns global (screen) offsets, and pumpThemed centers the pane
-        // inside the full 1200px-tall test surface, so a raw global
-        // comparison against paneHeight would be off by the pane's own
-        // centering offset.
-        final bodyTopInPane = bodyRect.top - paneRect.top;
-        final actionsBottomInPane = actionsRect.bottom - paneRect.top;
-        final actionsTopInPane = actionsRect.top - paneRect.top;
-        final bodyBottomInPane = bodyRect.bottom - paneRect.top;
-
-        // The body sits right under the title, near the top of the pane.
-        expect(bodyTopInPane, lessThan(paneHeight * 0.25));
-
-        // The actions row sits near the BOTTOM of the 800px pane -- proof
-        // Expanded filled the remaining space instead of the Column
-        // shrink-wrapping around a short body. A comfortable margin (100px)
-        // absorbs the actions row's own height plus padding.
-        expect(actionsBottomInPane, greaterThan(paneHeight - 100));
-
-        // And, directly: the gap between the body's bottom and the actions'
-        // top is large -- not the few pixels of spacing a shrink-wrapped
-        // Column would leave.
-        expect(actionsTopInPane - bodyBottomInPane, greaterThan(paneHeight * 0.5));
-      });
-
-      testWidgets("with a tall body, actions still sit at the bottom (not just once body stops scrolling)", (
-        tester,
-      ) async {
-        addTearDown(tester.view.reset);
-        tester.view.physicalSize = const Size(1600, 1200);
-        tester.view.devicePixelRatio = 1.0;
-
-        const paneHeight = 500.0;
-
-        await _pumpBounded(
-          tester,
-          LayrzDetailScaffold(
-            title: const Text("Title"),
-            body: Column(
-              children: List.generate(40, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+          // NEW CONTRACT: the scaffold no longer wraps `body` in a scroll view
+          // that used to stretch a short body's own outer Expanded box to the
+          // full pane height. A short, non-flexible body (e.g. a bare `Text`)
+          // no longer visually pushes the actions row down -- that follows
+          // directly from `body` now being placed unscrolled, exactly as
+          // given, inside the bounded Expanded slot. This test instead uses a
+          // body that genuinely FILLS its bounded height (`SizedBox.expand`),
+          // which is the real, supported way to make actions pin to the
+          // bottom under the new contract.
+          await _pumpBounded(
+            tester,
+            LayrzDetailScaffold(
+              title: const Text("Title", key: Key("title")),
+              body: const SizedBox.expand(child: Text("Fill-height body", key: Key("body"))),
+              actions: [
+                LayrzButton(labelText: "Cancel", key: const Key("cancel-btn"), onTap: () {}),
+                LayrzButton(labelText: "Save", key: const Key("save-btn"), onTap: () {}),
+              ],
             ),
-            actions: [
-              LayrzButton(labelText: "Save", key: const Key("save-btn"), onTap: () {}),
-            ],
-          ),
-          size: const Size(500, paneHeight),
-        );
+            size: const Size(600, paneHeight),
+          );
 
-        expect(tester.takeException(), isNull);
-        expect(find.byType(SingleChildScrollView), findsOneWidget);
+          expect(tester.takeException(), isNull);
 
-        final paneRect = tester.getRect(find.byKey(const Key("bounded-pane")));
-        final actionsRect = tester.getRect(find.byKey(const Key("save-btn")));
-        final actionsBottomInPane = actionsRect.bottom - paneRect.top;
-        expect(actionsBottomInPane, greaterThan(paneHeight - 100));
-      });
+          final paneRect = tester.getRect(find.byKey(const Key("bounded-pane")));
+          final bodyRect = tester.getRect(find.byKey(const Key("body")));
+          final actionsRect = tester.getRect(find.byKey(const Key("save-btn")));
+
+          // Sanity: the pane rect (the SizedBox we pumped) really is as tall
+          // as intended, i.e. this assertion is exercising a genuinely bounded
+          // tall parent.
+          expect(paneRect.height, paneHeight);
+
+          // Positions below are converted to pane-local coordinates -- getRect
+          // returns global (screen) offsets, and pumpThemed centers the pane
+          // inside the full 1200px-tall test surface, so a raw global
+          // comparison against paneHeight would be off by the pane's own
+          // centering offset.
+          final bodyBottomInPane = bodyRect.bottom - paneRect.top;
+          final actionsBottomInPane = actionsRect.bottom - paneRect.top;
+
+          // The fill-height body's own box extends nearly to the bottom of the
+          // pane -- proof Expanded genuinely filled the remaining space.
+          expect(bodyBottomInPane, greaterThan(paneHeight - 100));
+
+          // The actions row sits near the BOTTOM of the 800px pane. A
+          // comfortable margin (100px) absorbs the actions row's own height
+          // plus padding.
+          expect(actionsBottomInPane, greaterThan(paneHeight - 100));
+        },
+      );
+
+      testWidgets(
+        "with a tall body wrapped in the CALLER's own SingleChildScrollView, actions still sit at the bottom "
+        "(the scroll view itself fills the bounded Expanded slot)",
+        (tester) async {
+          addTearDown(tester.view.reset);
+          tester.view.physicalSize = const Size(1600, 1200);
+          tester.view.devicePixelRatio = 1.0;
+
+          const paneHeight = 500.0;
+
+          await _pumpBounded(
+            tester,
+            LayrzDetailScaffold(
+              title: const Text("Title"),
+              body: SingleChildScrollView(
+                child: Column(
+                  children: List.generate(40, (i) => SizedBox(height: 30, child: Text("Field $i"))),
+                ),
+              ),
+              actions: [
+                LayrzButton(labelText: "Save", key: const Key("save-btn"), onTap: () {}),
+              ],
+            ),
+            size: const Size(500, paneHeight),
+          );
+
+          expect(tester.takeException(), isNull);
+          expect(find.byType(SingleChildScrollView), findsOneWidget);
+
+          final paneRect = tester.getRect(find.byKey(const Key("bounded-pane")));
+          final actionsRect = tester.getRect(find.byKey(const Key("save-btn")));
+          final actionsBottomInPane = actionsRect.bottom - paneRect.top;
+          expect(actionsBottomInPane, greaterThan(paneHeight - 100));
+        },
+      );
     });
 
     group("LayrzScaffoldShell narrow-sheet integration", () {
@@ -584,6 +627,104 @@ void main() {
           expect(tester.takeException(), isNull);
           expect(find.byKey(const Key("wrapped-title")), findsOneWidget);
           expect(find.byKey(const Key("wrapped-save")), findsOneWidget);
+        },
+      );
+    });
+
+    group("REGRESSION: LayrzTabView(expandContent: true) as body", () {
+      // The reported bug: LayrzTabView's `expandContent: true` (the default)
+      // wraps the selected tab's content in an `Expanded`, which requires a
+      // genuinely bounded-height ancestor. Before the scroll view was removed
+      // from LayrzDetailScaffold's body slot, that inner Expanded sat inside
+      // an unbounded SingleChildScrollView and threw "RenderFlex children
+      // have non-zero flex but incoming height constraints are unbounded".
+      // The new contract -- body placed directly in a bounded Expanded/
+      // Flexible slot, with no scroll view of its own -- fixes this because
+      // the height LayrzTabView receives is now genuinely bounded on both the
+      // wide (Expanded) and narrow/in-sheet (Flexible, via scrollable: false)
+      // paths.
+      testWidgets(
+        "wide/desktop path (Expanded slot): lays out without an unbounded-height error and the selected "
+        "tab's content is laid out",
+        (tester) async {
+          addTearDown(tester.view.reset);
+          tester.view.physicalSize = const Size(1600, 1200);
+          tester.view.devicePixelRatio = 1.0;
+
+          await _pumpBounded(
+            tester,
+            LayrzDetailScaffold(
+              title: const Text("Title"),
+              body: LayrzTabView(
+                expandContent: true,
+                tabs: [
+                  LayrzTab(
+                    labelText: "First",
+                    child: const Text("First tab content", key: Key("first-tab-content")),
+                  ),
+                  LayrzTab(
+                    labelText: "Second",
+                    child: const Text("Second tab content", key: Key("second-tab-content")),
+                  ),
+                ],
+              ),
+            ),
+            size: const Size(600, 800),
+          );
+
+          expect(tester.takeException(), isNull);
+          // The selected (first) tab's content is genuinely laid out.
+          expect(find.byKey(const Key("first-tab-content")), findsOneWidget);
+          expect(find.text("First tab content"), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        "narrow/in-sheet path (Flexible slot, simulating scrollable: false): lays out without an "
+        "unbounded-height error and the selected tab's content is laid out",
+        (tester) async {
+          addTearDown(tester.view.reset);
+          tester.view.physicalSize = const Size(400, 800);
+          tester.view.devicePixelRatio = 1.0;
+
+          // Simulates the narrow LayrzBottomSheet path with scrollable: false
+          // (scaffold_shell.dart:709): a LayrzBottomSheetScope ancestor (so
+          // LayrzDetailScaffold self-detects "in sheet" and uses Flexible) plus
+          // a BOUNDED height ancestor -- unlike _pumpUnbounded's
+          // SingleChildScrollView, which stands in for the OLD scrollable:
+          // true default. scrollable: false hands the sheet's content a
+          // bounded box instead (via the sheet's own Column(max)/Expanded
+          // chain), which is exactly what lets LayrzTabView's inner Expanded
+          // lay out instead of throwing.
+          await pumpThemed(
+            tester,
+            SizedBox(
+              width: 400,
+              height: 700,
+              child: LayrzBottomSheetScope(
+                child: LayrzDetailScaffold(
+                  title: const Text("Title"),
+                  body: LayrzTabView(
+                    expandContent: true,
+                    tabs: [
+                      LayrzTab(
+                        labelText: "First",
+                        child: const Text("First tab content", key: Key("first-tab-content")),
+                      ),
+                      LayrzTab(
+                        labelText: "Second",
+                        child: const Text("Second tab content", key: Key("second-tab-content")),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+
+          expect(tester.takeException(), isNull);
+          expect(find.byKey(const Key("first-tab-content")), findsOneWidget);
+          expect(find.text("First tab content"), findsOneWidget);
         },
       );
     });

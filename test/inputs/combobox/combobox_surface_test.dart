@@ -332,7 +332,6 @@ void main() {
                     options: ['First', 'Second'],
                     emptyText: 'Nothing here',
                   ),
-                  scrollable: false,
                 );
               },
               child: const Text('open sheet'),
@@ -471,7 +470,6 @@ void main() {
                     options: ['Apple', 'Apricot', 'Banana'],
                     emptyText: 'Nothing here',
                   ),
-                  scrollable: false,
                 );
               },
               child: const Text('open sheet'),
@@ -681,7 +679,6 @@ void main() {
                     options: ['Alpha', 'Bravo'],
                     emptyText: 'Nothing here',
                   ),
-                  scrollable: false,
                 );
               },
               child: const Text('open sheet'),

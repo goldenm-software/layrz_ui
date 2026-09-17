@@ -259,42 +259,44 @@ class LayrzMonthRangeSurfaceState extends State<LayrzMonthRangeSurface> {
 
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          LayrzPickerDialogHeader(
-            labelText: widget.labelText,
-            onClose: () => LayrzModalRoute.popIfCurrent(context),
-          ),
-          LayrzPickersMonthGrid(
-            displayedYear: _displayedYear,
-            onYearChanged: _handleYearChanged,
-            reference: DateTime.now(),
-            rangeStart: widget.consecutive ? _draft.anchor?.toDateTime() : null,
-            rangeEnd: widget.consecutive ? _draft.end?.toDateTime() : null,
-            arbitrarySelection: widget.consecutive
-                ? const {}
-                : _draft.arbitrarySelection.map((m) => m.toDateTime()).toSet(),
-            rejectedMonths: rejected,
-            minimum: widget.minimum?.toDateTime(),
-            maximum: widget.maximum?.toDateTime(),
-            disabledMonths: widget.consecutive ? const {} : widget.disabledMonths.map((m) => m.toDateTime()).toSet(),
-            onMonthTap: _handleTap,
-            keyboardHandler: buildMonthGridKeyboardHandler(
-              isDisabled: _isDisabled,
-              onSelect: _handleTap,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LayrzPickerDialogHeader(
+              labelText: widget.labelText,
+              onClose: () => LayrzModalRoute.popIfCurrent(context),
+            ),
+            LayrzPickersMonthGrid(
+              displayedYear: _displayedYear,
               onYearChanged: _handleYearChanged,
+              reference: DateTime.now(),
+              rangeStart: widget.consecutive ? _draft.anchor?.toDateTime() : null,
+              rangeEnd: widget.consecutive ? _draft.end?.toDateTime() : null,
+              arbitrarySelection: widget.consecutive
+                  ? const {}
+                  : _draft.arbitrarySelection.map((m) => m.toDateTime()).toSet(),
+              rejectedMonths: rejected,
+              minimum: widget.minimum?.toDateTime(),
+              maximum: widget.maximum?.toDateTime(),
+              disabledMonths: widget.consecutive ? const {} : widget.disabledMonths.map((m) => m.toDateTime()).toSet(),
+              onMonthTap: _handleTap,
+              keyboardHandler: buildMonthGridKeyboardHandler(
+                isDisabled: _isDisabled,
+                onSelect: _handleTap,
+                onYearChanged: _handleYearChanged,
+              ),
             ),
-          ),
-          if (widget.showInlineFooter) ...[
-            SizedBox(height: tokens.spacing.sp3),
-            LayrzPickerInlineFooter(
-              onCancel: widget.onCancel,
-              onClear: hasSelection ? clear : null,
-              onSave: canSave ? save : null,
-            ),
+            if (widget.showInlineFooter) ...[
+              SizedBox(height: tokens.spacing.sp3),
+              LayrzPickerInlineFooter(
+                onCancel: widget.onCancel,
+                onClear: hasSelection ? clear : null,
+                onSave: canSave ? save : null,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

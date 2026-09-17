@@ -75,21 +75,25 @@ void main() {
         // right at the bottom of the CONTENT area -- mirroring the
         // maintainer's screenshot where an error label and a character
         // counter sat at the bottom of a form and were hidden behind the nav
-        // bar. Content lives inside a SingleChildScrollView with unbounded
-        // height, so a fixed-height spacer (not mainAxisAlignment) is what
-        // actually pushes the trailing text down near the screen's own
-        // bottom edge -- without it, the defect is never in reach to observe.
-        builder: (context) => Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text('Phone Number'),
-              SizedBox(height: 760),
-              Text('Username contains invalid characters'),
-              Text('0/30'),
-            ],
+        // bar. The sheet now gives the builder a TIGHTLY BOUNDED height (the
+        // content area's own size) rather than auto-scrolling, so the
+        // builder brings its own SingleChildScrollView; a fixed-height
+        // spacer (not mainAxisAlignment) is what actually pushes the
+        // trailing text down near the screen's own bottom edge -- without
+        // it, the defect is never in reach to observe.
+        builder: (context) => SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text('Phone Number'),
+                SizedBox(height: 760),
+                Text('Username contains invalid characters'),
+                Text('0/30'),
+              ],
+            ),
           ),
         ),
       ),
@@ -146,8 +150,13 @@ void main() {
 
       // Content is deliberately taller than the visible area (see
       // pumpSheetWithSystemBars) so the trailing text needs scrolling into
-      // view -- exactly as the maintainer's real, tall form does.
-      await tester.scrollUntilVisible(find.text('0/30'), 200.0);
+      // view -- exactly as the maintainer's real, tall form does. The sheet
+      // now bounds the builder's content instead of auto-scrolling it, so the
+      // builder brings its own SingleChildScrollView -- there are therefore
+      // two Scrollables in the tree (the sheet's own draggable one and the
+      // builder's), and the innermost/last one is the builder's, which is
+      // the one that actually needs to move to reveal '0/30'.
+      await tester.scrollUntilVisible(find.text('0/30'), 200.0, scrollable: find.byType(Scrollable).last);
       await tester.pumpAndSettle();
 
       final surfaceRect = tester.getRect(sheetSurfaceFinder());

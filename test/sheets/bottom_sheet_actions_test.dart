@@ -136,11 +136,13 @@ void main() {
               LayrzBottomSheet.show<void>(
                 context,
                 initialSize: 0.5,
-                builder: (context) => Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (int i = 0; i < 60; i++) Text('Row $i'),
-                  ],
+                builder: (context) => SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (int i = 0; i < 60; i++) Text('Row $i'),
+                    ],
+                  ),
                 ),
                 actions: [
                   LayrzButton(labelText: 'Confirm', onTap: () {}),

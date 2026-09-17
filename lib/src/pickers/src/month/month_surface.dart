@@ -149,36 +149,38 @@ class LayrzMonthSurfaceState extends State<LayrzMonthSurface> {
     final tokens = context.tokens;
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          LayrzPickerDialogHeader(
-            labelText: widget.labelText,
-            onClose: () => LayrzModalRoute.popIfCurrent(context),
-          ),
-          LayrzPickersMonthGrid(
-            displayedYear: _displayedYear,
-            onYearChanged: _handleYearChanged,
-            reference: DateTime.now(),
-            selectedMonth: _draft?.toDateTime(),
-            minimum: widget.minimum?.toDateTime(),
-            maximum: widget.maximum?.toDateTime(),
-            disabledMonths: widget.disabledMonths.map((m) => m.toDateTime()).toSet(),
-            onMonthTap: _handleMonthTap,
-            keyboardHandler: buildMonthGridKeyboardHandler(
-              isDisabled: _isDisabled,
-              onSelect: _handleMonthTap,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LayrzPickerDialogHeader(
+              labelText: widget.labelText,
+              onClose: () => LayrzModalRoute.popIfCurrent(context),
+            ),
+            LayrzPickersMonthGrid(
+              displayedYear: _displayedYear,
               onYearChanged: _handleYearChanged,
+              reference: DateTime.now(),
+              selectedMonth: _draft?.toDateTime(),
+              minimum: widget.minimum?.toDateTime(),
+              maximum: widget.maximum?.toDateTime(),
+              disabledMonths: widget.disabledMonths.map((m) => m.toDateTime()).toSet(),
+              onMonthTap: _handleMonthTap,
+              keyboardHandler: buildMonthGridKeyboardHandler(
+                isDisabled: _isDisabled,
+                onSelect: _handleMonthTap,
+                onYearChanged: _handleYearChanged,
+              ),
             ),
-          ),
-          if (widget.showInlineFooter && widget.onCancel != null) ...[
-            SizedBox(height: tokens.spacing.sp3),
-            LayrzPickerInlineFooter(
-              onCancel: widget.onCancel!,
-              onSave: canSave ? save : null,
-            ),
+            if (widget.showInlineFooter && widget.onCancel != null) ...[
+              SizedBox(height: tokens.spacing.sp3),
+              LayrzPickerInlineFooter(
+                onCancel: widget.onCancel!,
+                onSave: canSave ? save : null,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

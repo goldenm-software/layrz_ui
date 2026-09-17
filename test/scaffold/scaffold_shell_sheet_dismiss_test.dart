@@ -122,7 +122,16 @@ void main() {
     testWidgets("drag-to-dismiss pops exactly once and throws nothing", (tester) async {
       await _pumpShellApp(tester, controller: controller, items: items, observer: observer);
 
-      controller.open(key: const ValueKey("1"), builder: (_) => const Text("detail:Alpha"));
+      // Wrapped in a SingleChildScrollView with no explicit controller so it
+      // inherits the ambient PrimaryScrollController the sheet provides under
+      // scrollable:false -- mirroring how real detail forms (AppForm fields)
+      // contain a genuine Scrollable, which is what lets the sheet's
+      // DraggableScrollableController actually attach (see
+      // DragHandle._onDragUpdate/_onDragEnd, which early-return otherwise).
+      controller.open(
+        key: const ValueKey("1"),
+        builder: (_) => const SingleChildScrollView(child: Text("detail:Alpha")),
+      );
       await tester.pump();
       await tester.pumpAndSettle();
       expect(find.text("detail:Alpha"), findsOneWidget);
@@ -134,7 +143,7 @@ void main() {
 
       // The default snap points are [0.5, 0.95] with minSize 0.25. Dragging well
       // past the low end dismisses the sheet on release.
-      await tester.drag(handle, const Offset(0, 300));
+      await tester.drag(handle, const Offset(0, 600));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);

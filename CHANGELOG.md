@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0
+
+- `LayrzBottomSheet.show` now has `scrollable: false` by default, preventing the sheet from being scrollable unless explicitly enabled.
+- `LayrzDetailScaffold` removes the scroll capability in favor of `body`'s scroll handling.
+
 ## 1.1.4
 
 - **BREAKING — `LayrzTabView` gains `expandContent`, defaulting to `true`.** The selected tab's content is now wrapped in an `Expanded` by default and fills the vertical space remaining below the tab strip, which **requires `LayrzTabView` to be given a bounded height** by its parent (e.g. inside an `Expanded`, a fixed-height `SizedBox`, or any other bounded-height context). Previously the content was always laid out at its intrinsic height. Pass `expandContent: false` to restore the previous content-sized behavior — needed when `LayrzTabView` lives in an unbounded-height context such as a `SingleChildScrollView`, a `ListView` item, or a content-sized `Column`/`Padding`.

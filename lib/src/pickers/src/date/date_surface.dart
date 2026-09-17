@@ -236,39 +236,41 @@ class LayrzDateSurfaceState extends State<LayrzDateSurface> {
     final tokens = context.tokens;
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          LayrzPickerDialogHeader(
-            labelText: widget.labelText,
-            onClose: () => LayrzModalRoute.popIfCurrent(context),
-          ),
-          _buildHeader(context),
-          SizedBox(height: tokens.spacing.sp2),
-          LayrzPickersDayGrid(
-            displayedMonth: _displayedMonth,
-            selectedDate: _draft,
-            firstDay: widget.firstDay,
-            lastDay: widget.lastDay,
-            disabledDays: widget.disabledDays,
-            firstDayOfWeek: widget.firstDayOfWeek,
-            showWeekNumbers: widget.showWeekNumbers,
-            onDayTap: _handleTap,
-            keyboardHandler: buildDayGridKeyboardHandler(
-              isDisabled: _isDisabled,
-              onSelect: _handleTap,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LayrzPickerDialogHeader(
+              labelText: widget.labelText,
+              onClose: () => LayrzModalRoute.popIfCurrent(context),
+            ),
+            _buildHeader(context),
+            SizedBox(height: tokens.spacing.sp2),
+            LayrzPickersDayGrid(
+              displayedMonth: _displayedMonth,
+              selectedDate: _draft,
+              firstDay: widget.firstDay,
+              lastDay: widget.lastDay,
+              disabledDays: widget.disabledDays,
               firstDayOfWeek: widget.firstDayOfWeek,
+              showWeekNumbers: widget.showWeekNumbers,
+              onDayTap: _handleTap,
+              keyboardHandler: buildDayGridKeyboardHandler(
+                isDisabled: _isDisabled,
+                onSelect: _handleTap,
+                firstDayOfWeek: widget.firstDayOfWeek,
+              ),
+              onDisplayedMonthChanged: _stepMonth,
             ),
-            onDisplayedMonthChanged: _stepMonth,
-          ),
-          if (widget.showInlineFooter && widget.onCancel != null) ...[
-            SizedBox(height: tokens.spacing.sp3),
-            LayrzPickerInlineFooter(
-              onCancel: widget.onCancel!,
-              onSave: canSave ? save : null,
-            ),
+            if (widget.showInlineFooter && widget.onCancel != null) ...[
+              SizedBox(height: tokens.spacing.sp3),
+              LayrzPickerInlineFooter(
+                onCancel: widget.onCancel!,
+                onSave: canSave ? save : null,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
