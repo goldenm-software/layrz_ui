@@ -326,6 +326,7 @@ class LayrzDateTimeSurfaceState extends State<LayrzDateTimeSurface> {
           // `presentation` (tabbed/stepped) split.
           LayrzTabView(
             isScrollable: false,
+            expandContent: false,
             tabs: [
               LayrzTab(
                 labelText: l10n.dateTimePickerDate,

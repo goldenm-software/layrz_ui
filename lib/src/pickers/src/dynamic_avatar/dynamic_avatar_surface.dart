@@ -218,26 +218,22 @@ class LayrzDynamicAvatarSurfaceState extends State<LayrzDynamicAvatarSurface> {
               tabs: [
                 LayrzTab(
                   labelText: l10n.dynamicAvatarTypesURLUrl,
-                  child: Expanded(child: _buildUrlTab(context, l10n)),
+                  child: _buildUrlTab(context, l10n),
                 ),
                 LayrzTab(
                   labelText: l10n.dynamicAvatarTypesBASE64,
-                  child: Expanded(child: _buildUploadTab(context)),
+                  child: _buildUploadTab(context),
                 ),
                 LayrzTab(
                   labelText: l10n.dynamicAvatarTabIcon,
-                  child: Expanded(
-                    child: LayrzDynamicAvatarIconTab(
-                      onIconSelected: (icon) => widget.onSourceSelected(LayrzAvatarIcon(icon)),
-                    ),
+                  child: LayrzDynamicAvatarIconTab(
+                    onIconSelected: (icon) => widget.onSourceSelected(LayrzAvatarIcon(icon)),
                   ),
                 ),
                 LayrzTab(
                   labelText: l10n.dynamicAvatarTabEmoji,
-                  child: Expanded(
-                    child: LayrzDynamicAvatarEmojiTab(
-                      onEmojiSelected: (emoji) => widget.onSourceSelected(LayrzAvatarEmoji(emoji.char)),
-                    ),
+                  child: LayrzDynamicAvatarEmojiTab(
+                    onEmojiSelected: (emoji) => widget.onSourceSelected(LayrzAvatarEmoji(emoji.char)),
                   ),
                 ),
               ],

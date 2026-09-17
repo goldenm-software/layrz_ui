@@ -249,6 +249,7 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
         ? _buildWheelTab(context)
         : LayrzTabView(
             isScrollable: false,
+            expandContent: false,
             tabs: [
               LayrzTab(
                 labelText: l10n.colorPickerPaletteTab,

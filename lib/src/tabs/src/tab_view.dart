@@ -44,6 +44,12 @@ import 'tab.dart';
 /// **Selection** is tracked internally; [onTabChanged] fires only for a
 /// user-initiated tap on a non-selected tab, never for the initial mount or
 /// for a tap on the tab that is already selected.
+///
+/// **Content sizing**, controlled by [expandContent]: by default the
+/// selected tab's content fills the remaining vertical space, which requires
+/// a bounded-height parent. Pass `expandContent: false` when [LayrzTabView]
+/// instead lives in an unbounded-height context, such as a
+/// `SingleChildScrollView`.
 class LayrzTabView extends StatefulWidget {
   /// The tabs to render, in display order. Must contain at least one entry.
   final List<LayrzTab> tabs;
@@ -85,6 +91,21 @@ class LayrzTabView extends StatefulWidget {
   /// strip, or any other value to override the token default.
   final double? contentGap;
 
+  /// Whether the selected tab's content fills the remaining vertical space.
+  ///
+  /// Defaults to `true`: the selected tab's [LayrzTab.child] is wrapped in an
+  /// `Expanded` and fills the vertical space left below the tab strip. This
+  /// is the normal behavior and **requires** [LayrzTabView] to be given a
+  /// bounded height by its parent — e.g. inside an `Expanded`, a fixed-height
+  /// `SizedBox`, or any other bounded-height context.
+  ///
+  /// When `false`, the content is laid out at its intrinsic height instead.
+  /// Use this when [LayrzTabView] lives in an unbounded-height context — a
+  /// `SingleChildScrollView`, a `ListView` item, or a content-sized
+  /// `Column`/`Padding` — where `Expanded` would otherwise throw
+  /// `RenderFlex ... incoming height constraints are unbounded`.
+  final bool expandContent;
+
   /// Creates a new [LayrzTabView].
   ///
   /// [tabs] must be non-empty. [initialIndex] is clamped into range rather
@@ -98,6 +119,7 @@ class LayrzTabView extends StatefulWidget {
     this.isScrollable = true,
     this.padding,
     this.contentGap,
+    this.expandContent = true,
   }) : assert(tabs.isNotEmpty, 'LayrzTabView needs at least one tab.');
 
   @override
@@ -190,7 +212,10 @@ class _LayrzTabViewState extends State<LayrzTabView> {
           child: strip,
         ),
         SizedBox(height: widget.contentGap ?? tokens.spacing.sp3),
-        widget.tabs[_selectedIndex].child,
+        if (widget.expandContent)
+          Expanded(child: widget.tabs[_selectedIndex].child)
+        else
+          widget.tabs[_selectedIndex].child,
       ],
     );
   }
