@@ -457,6 +457,7 @@ class LayrzDateTimeRangeSurfaceState extends State<LayrzDateTimeRangeSurface> {
           // for the ~118px overflow this also resolves.
           LayrzTabView(
             isScrollable: false,
+            expandContent: false,
             tabs: [
               LayrzTab(
                 labelText: l10n.dateTimePickerDate,

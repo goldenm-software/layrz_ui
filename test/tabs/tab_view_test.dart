@@ -31,7 +31,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
       expect(find.text('First'), findsOneWidget);
       expect(find.text('Second'), findsOneWidget);
@@ -47,7 +47,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
       expect(find.text('First'), findsOneWidget);
       expect(find.text('Second'), findsOneWidget);
@@ -62,6 +62,7 @@ void main() {
       await pumpThemed(
         tester,
         LayrzTabView(
+          expandContent: false,
           tabs: [
             LayrzTab(
               labelText: 'First',
@@ -85,6 +86,7 @@ void main() {
       await pumpThemed(
         tester,
         LayrzTabView(
+          expandContent: false,
           tabs: [
             LayrzTab(labelText: 'First', leadingIcon: icon, child: const Text('First content')),
             LayrzTab(labelText: 'Second', child: const Text('Second content')),
@@ -104,6 +106,7 @@ void main() {
       await pumpThemed(
         tester,
         LayrzTabView(
+          expandContent: false,
           tabs: [
             LayrzTab(
               labelText: 'First',
@@ -127,6 +130,7 @@ void main() {
       await pumpThemed(
         tester,
         LayrzTabView(
+          expandContent: false,
           tabs: [
             LayrzTab(labelText: 'First', trailingIcon: icon, child: const Text('First content')),
             LayrzTab(labelText: 'Second', child: const Text('Second content')),
@@ -146,6 +150,7 @@ void main() {
       await pumpThemed(
         tester,
         LayrzTabView(
+          expandContent: false,
           tabs: [
             LayrzTab(label: const Text('Custom label'), child: const Text('First content')),
             LayrzTab(labelText: 'Second', child: const Text('Second content')),
@@ -163,7 +168,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
       expect(find.text('First content'), findsOneWidget);
       expect(find.text('Second content'), findsNothing);
@@ -186,6 +191,7 @@ void main() {
         LayrzTabView(
           tabs: _buildTabs(),
           onTabChanged: (index) => changedIndex = index,
+          expandContent: false,
         ),
       );
 
@@ -206,6 +212,7 @@ void main() {
         LayrzTabView(
           tabs: _buildTabs(),
           onTabChanged: (_) => callCount++,
+          expandContent: false,
         ),
       );
 
@@ -223,6 +230,7 @@ void main() {
         LayrzTabView(
           tabs: _buildTabs(),
           onTabChanged: (_) => callCount++,
+          expandContent: false,
         ),
       );
 
@@ -241,7 +249,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), initialIndex: 99));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), initialIndex: 99, expandContent: false));
 
       expect(tester.takeException(), isNull);
       expect(find.text('Third content'), findsOneWidget);
@@ -252,7 +260,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), initialIndex: -5));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), initialIndex: -5, expandContent: false));
 
       expect(tester.takeException(), isNull);
       expect(find.text('First content'), findsOneWidget);
@@ -263,7 +271,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), initialIndex: 1));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), initialIndex: 1, expandContent: false));
 
       expect(find.text('Second content'), findsOneWidget);
       expect(find.text('First content'), findsNothing);
@@ -278,7 +286,7 @@ void main() {
 
       final tokens = LayrzTokens.light();
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
       final sizedBoxes = tester.widgetList<SizedBox>(find.byType(SizedBox));
       final gapBox = sizedBoxes.firstWhere((box) => box.height == tokens.spacing.sp3);
@@ -291,7 +299,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), contentGap: 0));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), contentGap: 0, expandContent: false));
 
       final sizedBoxes = tester.widgetList<SizedBox>(find.byType(SizedBox));
       final gapBox = sizedBoxes.firstWhere((box) => box.height == 0);
@@ -304,7 +312,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), contentGap: 40));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), contentGap: 40, expandContent: false));
 
       final sizedBoxes = tester.widgetList<SizedBox>(find.byType(SizedBox));
       final gapBox = sizedBoxes.firstWhere((box) => box.height == 40);
@@ -319,7 +327,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
       expect(find.byType(SingleChildScrollView), findsOneWidget);
       expect(find.byType(Expanded), findsNothing);
@@ -333,6 +341,7 @@ void main() {
       await pumpThemed(
         tester,
         LayrzTabView(
+          expandContent: false,
           tabs: [
             LayrzTab(labelText: 'A very long first tab label', child: const Text('First content')),
             LayrzTab(labelText: 'A very long second tab label', child: const Text('Second content')),
@@ -353,7 +362,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), isScrollable: false));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), isScrollable: false, expandContent: false));
 
       expect(find.byType(SingleChildScrollView), findsNothing);
       expect(find.byType(Expanded), findsNWidgets(3));
@@ -372,6 +381,7 @@ void main() {
             LayrzTab(labelText: 'A much longer label', child: const Text('Second content')),
           ],
           isScrollable: false,
+          expandContent: false,
         ),
       );
 
@@ -388,7 +398,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
       final sizeBefore = tester.getSize(find.byType(LayrzTappable).first);
 
@@ -407,7 +417,7 @@ void main() {
 
       final tokens = LayrzTokens.light();
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
       final tappable = tester.widget<LayrzTappable>(
         find.ancestor(of: find.text('First'), matching: find.byType(LayrzTappable)).first,
@@ -423,7 +433,7 @@ void main() {
 
       final tokens = LayrzTokens.light();
 
-      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
       final tappable = tester.widget<LayrzTappable>(
         find.ancestor(of: find.text('Second'), matching: find.byType(LayrzTappable)).first,
@@ -442,7 +452,7 @@ void main() {
 
       final handle = tester.ensureSemantics();
       try {
-        await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+        await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
         expect(
           tester.getSemantics(find.text('First')),
@@ -462,7 +472,7 @@ void main() {
 
       final handle = tester.ensureSemantics();
       try {
-        await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+        await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
         expect(
           tester.getSemantics(find.text('Second')),
@@ -486,7 +496,7 @@ void main() {
 
       final handle = tester.ensureSemantics();
       try {
-        await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+        await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
         expect(
           tester.getSemantics(find.text('First')),
@@ -544,7 +554,7 @@ void main() {
 
       final handle = tester.ensureSemantics();
       try {
-        await pumpThemed(tester, LayrzTabView(tabs: _buildTabs()));
+        await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false));
 
         expect(
           tester.getSemantics(find.text('First')),
@@ -560,5 +570,128 @@ void main() {
         handle.dispose();
       }
     });
+  });
+
+  group('LayrzTabView — expandContent', () {
+    guardedTestWidgets('expandContent: true (default) fills a bounded parent (wide viewport)', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        SizedBox(height: 600, width: 800, child: LayrzTabView(tabs: _buildTabs())),
+      );
+
+      expect(find.byType(Expanded), findsOneWidget);
+
+      final columnSize = tester.getSize(find.byType(Column).first);
+      final contentSize = tester.getSize(find.text('First content'));
+
+      // The content's rendered height must be less than the column's full
+      // height (it shares the column with the strip and the gap) but the
+      // Expanded ancestor must exist, proving the content stretches to fill
+      // whatever space remains below the strip rather than being
+      // intrinsically sized.
+      expect(contentSize.height, lessThan(columnSize.height));
+      expect(find.byType(Expanded), findsOneWidget);
+    });
+
+    guardedTestWidgets('expandContent: true (default) fills a bounded parent (compact viewport)', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        SizedBox(height: 600, width: 360, child: LayrzTabView(tabs: _buildTabs())),
+      );
+
+      expect(find.byType(Expanded), findsOneWidget);
+      expect(find.text('First content'), findsOneWidget);
+    });
+
+    guardedTestWidgets('expandContent: false renders content-sized in an unbounded Column (wide viewport)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LayrzTabView(tabs: _buildTabs(), expandContent: false),
+          ],
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('First content'), findsOneWidget);
+      expect(find.byType(Expanded), findsNothing);
+    });
+
+    guardedTestWidgets('expandContent: false renders content-sized in an unbounded Column (compact viewport)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LayrzTabView(tabs: _buildTabs(), expandContent: false),
+          ],
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('First content'), findsOneWidget);
+      expect(find.byType(Expanded), findsNothing);
+    });
+
+    guardedTestWidgets('expandContent: false renders without error inside a SingleChildScrollView (wide viewport)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        SingleChildScrollView(
+          child: LayrzTabView(tabs: _buildTabs(), expandContent: false),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('First content'), findsOneWidget);
+      expect(find.byType(Expanded), findsNothing);
+    });
+
+    guardedTestWidgets(
+      'expandContent: false renders without error inside a SingleChildScrollView (compact viewport)',
+      (tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        await pumpThemed(
+          tester,
+          SingleChildScrollView(
+            child: LayrzTabView(tabs: _buildTabs(), expandContent: false),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('First content'), findsOneWidget);
+        expect(find.byType(Expanded), findsNothing);
+      },
+    );
   });
 }

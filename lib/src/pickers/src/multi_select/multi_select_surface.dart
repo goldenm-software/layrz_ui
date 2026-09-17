@@ -533,12 +533,19 @@ class LayrzMultiSelectInputSurfaceState<T> extends State<LayrzMultiSelectInputSu
               // the widget.
               isScrollable: false,
               contentGap: 0,
+              expandContent: false,
               initialIndex: _activeTab == LayrzMultiSelectTab.all ? 0 : 1,
               onTabChanged: (index) =>
                   _handleTabChanged(index == 0 ? LayrzMultiSelectTab.all : LayrzMultiSelectTab.selected),
               tabs: [
-                LayrzTab(labelText: l10n.multiSelectTabAll(_filteredItems.length), child: const SizedBox.shrink()),
-                LayrzTab(labelText: l10n.multiSelectTabSelected(_draft.length), child: const SizedBox.shrink()),
+                LayrzTab(
+                  labelText: l10n.multiSelectTabAll(_filteredItems.length),
+                  child: const SizedBox.shrink(),
+                ),
+                LayrzTab(
+                  labelText: l10n.multiSelectTabSelected(_draft.length),
+                  child: const SizedBox.shrink(),
+                ),
               ],
             ),
           ),

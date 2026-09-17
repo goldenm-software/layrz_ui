@@ -330,33 +330,31 @@ class LayrzEmojiSurfaceState extends State<LayrzEmojiSurface> {
       );
     }
 
-    return Expanded(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
-        child: LayrzGlyphGrid<Emoji>(
-          items: filteredEmoji,
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp1),
+      child: LayrzGlyphGrid<Emoji>(
+        items: filteredEmoji,
+        columns: _kEmojiGridColumns,
+        cellExtent: _kEmojiCellExtent,
+        itemBuilder: _buildEmojiCell,
+        // This surface is always hosted inside a bounded
+        // `LayrzBottomSheet`/dialog body (the `Expanded`
+        // above claims that bound), and the emoji list can run
+        // into the thousands — so this grid needs the lazy,
+        // parent-filling viewport mode rather than the shared
+        // widget's shrink-to-content default. See
+        // `LayrzGlyphGrid.shrinkWrap`'s doc for why the default
+        // `true` would both truncate this grid's height and make
+        // it lay out every cell eagerly on scroll.
+        shrinkWrap: false,
+        onItemActivated: (emoji) => widget.onEmojiSelected(emoji.char),
+        keyboardHandler: buildGlyphGridKeyboardHandler(
           columns: _kEmojiGridColumns,
-          cellExtent: _kEmojiCellExtent,
-          itemBuilder: _buildEmojiCell,
-          // This surface is always hosted inside a bounded
-          // `LayrzBottomSheet`/dialog body (the `Expanded`
-          // above claims that bound), and the emoji list can run
-          // into the thousands — so this grid needs the lazy,
-          // parent-filling viewport mode rather than the shared
-          // widget's shrink-to-content default. See
-          // `LayrzGlyphGrid.shrinkWrap`'s doc for why the default
-          // `true` would both truncate this grid's height and make
-          // it lay out every cell eagerly on scroll.
-          shrinkWrap: false,
-          onItemActivated: (emoji) => widget.onEmojiSelected(emoji.char),
-          keyboardHandler: buildGlyphGridKeyboardHandler(
-            columns: _kEmojiGridColumns,
-            itemCount: filteredEmoji.length,
-            isDisabled: (_) => false,
-            onSelect: (index) => widget.onEmojiSelected(filteredEmoji[index].char),
-          ),
-          semanticLabelBuilder: (emoji, index) => emoji.shortName,
+          itemCount: filteredEmoji.length,
+          isDisabled: (_) => false,
+          onSelect: (index) => widget.onEmojiSelected(filteredEmoji[index].char),
         ),
+        semanticLabelBuilder: (emoji, index) => emoji.shortName,
       ),
     );
   }
