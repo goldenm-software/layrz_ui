@@ -66,10 +66,11 @@ class LayrzBottomSheet {
   ///   default) renders nothing and changes no layout: the sheet's `Column` simply has no
   ///   third child, identical to every existing caller today.
   ///
-  ///   **Pinned below the scrollable content, never inside it.** [actions] is a sibling of
-  ///   the `Expanded` content area in the sheet's own `Column`, not nested inside whatever
-  ///   scroll view wraps [builder] (see [scrollable]) -- so a tall [builder] scrolls
-  ///   independently while [actions] stays fixed at the bottom, exactly like [title] and
+  ///   **Pinned below the content area, never inside it.** [actions] is a sibling of
+  ///   the `Expanded` content area in the sheet's own `Column`, not nested inside the
+  ///   non-scrolling wrapper that owns the drag surface around [builder]'s content --
+  ///   so a [builder] that scrolls internally does so independently while [actions]
+  ///   stays fixed at the bottom, exactly like [title] and
   ///   [actions] stay pinned outside [LayrzDialog.show]'s own content scroll view. This
   ///   also means [actions] is never pushed behind the on-screen keyboard: the keyboard
   ///   avoidance that shrinks/pins the whole sheet above the keyboard (see
@@ -155,31 +156,24 @@ class LayrzBottomSheet {
   ///   pill) is draggable, and dragging it resizes the sheet the same way dragging the
   ///   content does — more forgiving than a handle-only hit target, which is easy to
   ///   miss on touch.
-  /// - [scrollable]: whether the sheet wraps [builder]'s content in its own
-  ///   [SingleChildScrollView]. Defaults to `true`, which preserves this method's original
-  ///   behaviour exactly: the content is wrapped and the sheet's drag/scroll-handoff
-  ///   [ScrollController] is attached to that wrapper, so a non-scrolling builder (e.g. a
-  ///   `Column`) needs no changes to work.
-  ///   Set to `false` when [builder] returns its own scrollable (e.g. a `ListView` or
-  ///   `GridView`) — the sheet then hands that [ScrollController] to [builder] instead of
-  ///   wrapping it. This exists because a same-axis scrollable nested inside the sheet's own
-  ///   `SingleChildScrollView` is given unbounded height by its parent and asserts
-  ///   (`Vertical viewport was given unbounded height`); `scrollable: false` is the
-  ///   escape hatch so the next caller that reaches for a lazy list finds this flag
-  ///   instead of that crash.
-  ///   The controller is handed down via [PrimaryScrollController], so a **vertical**
-  ///   scrollable in [builder] that sets no `controller` of its own picks it up
-  ///   implicitly — that is what gives it the sheet's drag/scroll handoff without an
-  ///   explicit wire-up. A caller that wants a *different* controller (e.g. to also
-  ///   read its own scroll offset) must pass one explicitly on that scrollable, which
-  ///   opts it out of inheriting this one. A **horizontal** scrollable never inherits
-  ///   it regardless — [PrimaryScrollController.shouldInherit] only matches a
-  ///   [ScrollView] whose `scrollDirection` is [Axis.vertical] — so it keeps its own
-  ///   ordinary controller and does not participate in the handoff. If [builder]
-  ///   nests a second vertical scrollable inside the first, only the outer one
-  ///   inherits (the SDK inserts [PrimaryScrollController.none] below it precisely to
-  ///   prevent a descendant from claiming the same controller); the inner one scrolls
-  ///   independently, with no drag handoff of its own.
+  ///
+  /// **Content sizing and the drag surface.** [builder]'s content is always given a
+  /// *bounded* height — equal to the sheet's own content area at its current extent —
+  /// rather than the unbounded height a bare `SingleChildScrollView` would hand its
+  /// child. This is what lets a fill-height child such as
+  /// `LayrzTabView(expandContent: true)` (which wraps its content in an `Expanded`)
+  /// live inside the sheet without throwing `RenderFlex ... unbounded height`. Content
+  /// shorter than that bounded area sits at its top, not centered or stretched.
+  ///
+  /// The sheet's own [DraggableScrollableController] is **always** attached to a
+  /// non-scrolling wrapper around that bounded box (a `SingleChildScrollView` with
+  /// `NeverScrollableScrollPhysics`, so it never itself scrolls or contends with
+  /// [builder]'s own gestures), so drag-to-dismiss and drag-to-resize work for *any*
+  /// content — including content with no scrollable of its own, such as a static
+  /// `Text`/`Column`. If [builder] needs its content to scroll, it must bring its own
+  /// scrollable (e.g. a `ListView`/`SingleChildScrollView`); that inner scrollable
+  /// scrolls independently inside the bounded box, and the outer wrapper still owns
+  /// the drag surface.
   static Future<T?> show<T>(
     BuildContext context, {
     required WidgetBuilder builder,
@@ -192,7 +186,6 @@ class LayrzBottomSheet {
     double minSize = 0.25,
     double maxSize = 0.95,
     bool showDragHandle = true,
-    bool scrollable = true,
   }) {
     // Validate sizing constraints
     assert(
@@ -267,7 +260,6 @@ class LayrzBottomSheet {
         minSize: minSize,
         maxSize: maxSize,
         showDragHandle: showDragHandle,
-        scrollable: scrollable,
       ),
     );
   }
@@ -346,7 +338,6 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
     required double minSize,
     required double maxSize,
     required bool showDragHandle,
-    required bool scrollable,
   }) : super(
          pageBuilder: (context, animation, secondaryAnimation) {
            return _BottomSheetContent(
@@ -360,7 +351,6 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
              minSize: minSize,
              maxSize: maxSize,
              showDragHandle: showDragHandle,
-             scrollable: scrollable,
            );
          },
          // A persistent sheet paints no barrier at all (see the Stack below), so
@@ -496,14 +486,12 @@ class _BottomSheetRoute<T> extends LayrzModalRoute<T> {
 
 /// Marks the subtree as being rendered inside a [LayrzBottomSheet].
 ///
-/// [LayrzBottomSheet] hands its `builder` an *unbounded* height (its content
-/// sits inside a [SingleChildScrollView]), while other presentations of the
-/// same content -- e.g. [LayrzScaffoldShell]'s wide/folded detail pane --
-/// hand it a *bounded* box instead. A widget that needs to lay out
-/// differently in the two cases (e.g. [LayrzDetailScaffold], which must
-/// avoid an unbounded-height `Expanded` inside the sheet) can call
-/// [LayrzBottomSheetScope.maybeOf] to detect which one it is in, without
-/// [LayrzBottomSheet]'s caller having to thread a flag through every
+/// [LayrzBottomSheet] hands its `builder` a *bounded* height -- equal to the
+/// sheet's own content area at its current extent -- the same as other
+/// presentations of the same content, e.g. [LayrzScaffoldShell]'s wide/folded
+/// detail pane. A widget that still needs to detect which presentation it is
+/// in (e.g. to change its own chrome) can call [LayrzBottomSheetScope.maybeOf]
+/// without [LayrzBottomSheet]'s caller having to thread a flag through every
 /// intermediate wrapper widget by hand.
 ///
 /// This is deliberately an [InheritedWidget] rather than a constructor flag
@@ -617,10 +605,6 @@ class _BottomSheetContent<T> extends StatefulWidget {
   /// Whether to show the drag handle.
   final bool showDragHandle;
 
-  /// Whether the sheet wraps [builder]'s content in its own [SingleChildScrollView].
-  /// See [LayrzBottomSheet.show] for the full contract.
-  final bool scrollable;
-
   /// Creates a bottom sheet content widget.
   const _BottomSheetContent({
     required this.builder,
@@ -633,7 +617,6 @@ class _BottomSheetContent<T> extends StatefulWidget {
     required this.minSize,
     required this.maxSize,
     required this.showDragHandle,
-    required this.scrollable,
   });
 
   @override
@@ -944,31 +927,62 @@ class _BottomSheetContentState<T> extends State<_BottomSheetContent<T>> {
                               // InheritedWidget discoverable from arbitrarily far down the
                               // tree, rather than a flag stamped onto the builder's direct
                               // return value.
-                              child: widget.scrollable
-                                  ? SingleChildScrollView(
-                                      controller: scrollController,
-                                      child: LayrzBottomSheetScope(child: widget.builder(context)),
-                                    )
-                                  // scrollable: false hands the caller the scrollController via
-                                  // PrimaryScrollController instead of wrapping the content: a
-                                  // vertical ListView/GridView that sets no controller of its own
-                                  // binds to it automatically, giving it the sheet's drag/scroll
-                                  // handoff without being nested inside another same-axis scrollable.
-                                  // automaticallyInheritForPlatforms covers every platform, not just
-                                  // mobile (PrimaryScrollController's own default) — the sheet already
-                                  // knows which ScrollController it wants used, on every platform.
-                                  : PrimaryScrollController(
-                                      controller: scrollController,
-                                      automaticallyInheritForPlatforms: TargetPlatform.values.toSet(),
+                              //
+                              // A SINGLE composition replaces the old scrollable:true/false
+                              // branch (see git history / the removed `scrollable` parameter
+                              // on LayrzBottomSheet.show for the two behaviours this collapses):
+                              //
+                              // - The LayoutBuilder captures this Expanded's own bounded
+                              //   height (constraints.maxHeight), which is exactly this
+                              //   sheet's current content-area extent.
+                              // - That height is handed to builder's content via a tight
+                              //   SizedBox, so a fill-height child such as
+                              //   LayrzTabView(expandContent: true) -- which wraps its content
+                              //   in an Expanded -- gets a genuinely BOUNDED box to expand
+                              //   into, rather than the unbounded height a bare
+                              //   SingleChildScrollView hands its child (the original defect
+                              //   scrollable:false existed to route around). Content shorter
+                              //   than that height is laid out at the box's top, not centered
+                              //   or stretched -- Column's default top-start alignment (or,
+                              //   for a single non-Column child, the child's own top-left
+                              //   placement inside the tight box) already gives this for free,
+                              //   with no extra Align needed (verified: a bare Text inside this
+                              //   exact composition renders flush with the box's top edge).
+                              // - The whole thing is wrapped in a SingleChildScrollView with
+                              //   NeverScrollableScrollPhysics, and scrollController is
+                              //   attached to THAT wrapper -- unconditionally, regardless of
+                              //   what builder returns. This is what makes
+                              //   scrollController.hasClients (and so
+                              //   DraggableScrollableController.isAttached) true for ANY
+                              //   content, which is what DragHandle's _onDragUpdate/_onDragEnd
+                              //   require before they act at all -- restoring drag-to-dismiss
+                              //   for static, non-scrollable content, which previously left the
+                              //   controller unattached and silently broke the handle.
+                              //   NeverScrollableScrollPhysics means this outer wrapper itself
+                              //   never scrolls, so there is no gesture contention with a
+                              //   caller-supplied inner scrollable (e.g. a ListView) -- only
+                              //   that inner scrollable's own gestures scroll it, exactly as
+                              //   before, while it still receives a bounded height to lay out
+                              //   against instead of an infinite one.
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  return SingleChildScrollView(
+                                    controller: scrollController,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    child: SizedBox(
+                                      height: constraints.maxHeight,
                                       child: LayrzBottomSheetScope(child: widget.builder(context)),
                                     ),
+                                  );
+                                },
+                              ),
                             ),
                             // Actions -- deliberately a SECOND, non-expanded Column child, sibling
                             // to the Expanded content above rather than nested inside it. This pins
-                            // the row outside whatever scroll view widget.scrollable wraps the
-                            // content in (or outside the caller's own scrollable, when
-                            // widget.scrollable is false) -- mirroring LayrzDialog's title/actions
-                            // staying outside its own content scroll view (dialog.dart's
+                            // the row outside the non-scrolling wrapper (and any scrollable the
+                            // caller's own builder brings) that the content above lives inside --
+                            // mirroring LayrzDialog's title/actions staying outside its own content
+                            // scroll view (dialog.dart's
                             // _buildSlots). A caller with actions taller than the sheet's content
                             // wants them to stay reachable, not scroll away with a long builder;
                             // matching the dialog's own choice here, per the maintainer's explicit

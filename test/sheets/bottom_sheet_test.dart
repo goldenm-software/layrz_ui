@@ -400,7 +400,6 @@ void main() {
             onTap: () {
               LayrzBottomSheet.show<String>(
                 context,
-                scrollable: false,
                 builder: (context) => ListView.builder(
                   itemCount: 50,
                   itemBuilder: (context, index) => SizedBox(height: 40, child: Text('Item $index')),
@@ -475,7 +474,9 @@ void main() {
       );
     });
 
-    testWidgets('scrollable: false lets the caller provide its own scrolling ListView', (WidgetTester tester) async {
+    testWidgets('a caller-provided scrolling ListView renders and scrolls without an unbounded-height error', (
+      WidgetTester tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(400, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -486,7 +487,6 @@ void main() {
             onTap: () {
               LayrzBottomSheet.show<String>(
                 context,
-                scrollable: false,
                 builder: (context) => ListView.builder(
                   itemCount: 50,
                   itemBuilder: (context, index) => SizedBox(height: 40, child: Text('Item $index')),
@@ -501,15 +501,19 @@ void main() {
       await tester.tap(find.text('Tap'));
       await tester.pumpAndSettle();
 
-      // The frame must complete with no unbounded-height assertion — the defect this
-      // flag exists to prevent is a ListView nested inside the sheet's own
-      // SingleChildScrollView, which throws "Vertical viewport was given unbounded height".
+      // The frame must complete with no unbounded-height assertion. The sheet's own
+      // NeverScrollableScrollPhysics wrapper now always gives builder's content a
+      // BOUNDED height (see bottom_sheet.dart's LayoutBuilder/SizedBox composition), so
+      // a ListView nested inside it lays out correctly instead of throwing "Vertical
+      // viewport was given unbounded height" — the defect the old `scrollable: false`
+      // escape hatch existed to route around, now fixed for every caller unconditionally.
       expect(tester.takeException(), isNull);
       expect(find.text('Item 0'), findsOneWidget);
       expect(find.text('Item 49'), findsNothing);
 
-      // And the list actually scrolls, using the sheet's own scrollController handed
-      // down via PrimaryScrollController — not merely renders once.
+      // And the list actually scrolls internally, using its own ListView Scrollable —
+      // not merely renders once. This proves the outer NeverScrollableScrollPhysics
+      // wrapper does not swallow or contend with the caller's own scroll gesture.
       //
       // This must be driven as many small increments rather than one `tester.drag`
       // call: DraggableScrollableSheet's resize/scroll handoff (`applyUserOffset` in
@@ -530,7 +534,11 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Item 0'), findsNothing);
-      expect(find.text('Item 49'), findsOneWidget, reason: 'scrollable: false must produce a working, scrolling frame');
+      expect(
+        find.text('Item 49'),
+        findsOneWidget,
+        reason: 'a caller-provided scrollable must produce a working, scrolling frame',
+      );
     });
 
     testWidgets('wraps the sheet content in a ClipRRect matching the decoration radii', (WidgetTester tester) async {
@@ -705,6 +713,203 @@ void main() {
         );
       },
       skip: !canCaptureImage,
+    );
+
+    testWidgets('a sheet with static, non-scrollable content can still be drag-dismissed', (
+      WidgetTester tester,
+    ) async {
+      // Regression test for the bug this change fixes: previously, `scrollable: false`
+      // (and, in a different way, a builder that returned no Scrollable of its own) left
+      // the sheet's DraggableScrollableController unattached -- DragHandle's
+      // _onDragUpdate/_onDragEnd both early-return on `!sheetController.isAttached` -- so
+      // drag-to-dismiss silently did nothing for content with no scrollable of its own.
+      // The fix always attaches the controller via the sheet's own
+      // NeverScrollableScrollPhysics wrapper, regardless of what builder returns, so this
+      // must now succeed for bare, non-scrolling content.
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzBottomSheet.show<String>(
+                context,
+                builder: (context) => const Column(
+                  children: [
+                    Text('Static title'),
+                    Text('Two lines of plain, non-scrolling content.'),
+                  ],
+                ),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap'));
+      await tester.pumpAndSettle();
+      expect(find.text('Static title'), findsOneWidget);
+
+      final handle = find.byWidgetPredicate(
+        (widget) => widget is Container && widget.constraints?.maxWidth == 40 && widget.constraints?.maxHeight == 4,
+      );
+
+      // A large downward drag, well past the lowest snap point / minSize floor.
+      await tester.drag(handle, const Offset(0, 600));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Static title'),
+        findsNothing,
+        reason:
+            'drag-to-dismiss must work for static content with no scrollable of its own -- '
+            'this is the bug the single new behavior fixes',
+      );
+    });
+
+    testWidgets('LayrzTabView(expandContent: true) renders as sheet content without an unbounded-height error', (
+      WidgetTester tester,
+    ) async {
+      // Regression test proving the content wrapper gives builder's content a genuinely
+      // BOUNDED height: LayrzTabView's default expandContent:true wraps its selected
+      // tab's child in an Expanded, which throws `RenderFlex ... incoming height
+      // constraints are unbounded` unless its Column ancestor has a bounded height. A
+      // bare SingleChildScrollView (the old scrollable:true path) hands its child
+      // UNBOUNDED height, which is exactly the shape that throws.
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        Builder(
+          builder: (context) => GestureDetector(
+            onTap: () {
+              LayrzBottomSheet.show<String>(
+                context,
+                builder: (context) => LayrzTabView(
+                  tabs: [
+                    LayrzTab(
+                      labelText: 'One',
+                      child: Container(color: const Color(0xFF00FF00)),
+                    ),
+                    LayrzTab(
+                      labelText: 'Two',
+                      child: Container(color: const Color(0xFF0000FF)),
+                    ),
+                  ],
+                ),
+              );
+            },
+            child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Tap'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: 'LayrzTabView(expandContent: true) must not throw an unbounded-height RenderFlex error',
+      );
+      expect(find.byType(LayrzTabView), findsOneWidget);
+
+      final tabViewSize = tester.getSize(find.byType(LayrzTabView));
+      expect(tabViewSize.width, greaterThan(0));
+      expect(tabViewSize.height, greaterThan(0));
+    });
+
+    testWidgets(
+      "a sheet whose content brings its own SingleChildScrollView still scrolls internally and remains "
+      'drag-dismissable',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        // A caller-owned controller so the assertion below can read the INNER
+        // scrollable's own offset directly. A plain (non-lazy) SingleChildScrollView
+        // keeps every child mounted regardless of scroll position -- unlike a
+        // ListView, `find.text('Row 0')` would still find it even fully scrolled
+        // past, so offset is the only reliable signal that this scrollable actually
+        // moved.
+        final innerController = ScrollController();
+        addTearDown(innerController.dispose);
+
+        await pumpThemedApp(
+          tester,
+          Builder(
+            builder: (context) => GestureDetector(
+              onTap: () {
+                LayrzBottomSheet.show<String>(
+                  context,
+                  builder: (context) => SingleChildScrollView(
+                    controller: innerController,
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < 50; i++) SizedBox(height: 40, child: Text('Row $i')),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              child: const SizedBox(width: 100, height: 100, child: Text('Tap')),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Tap'));
+        await tester.pumpAndSettle();
+        expect(find.text('Row 0'), findsOneWidget);
+        expect(innerController.offset, equals(0.0));
+
+        // The caller's OWN SingleChildScrollView must still scroll its content
+        // internally -- driven as many small increments so the drag/scroll handoff
+        // (DraggableScrollableSheet's own outer NeverScrollableScrollPhysics wrapper vs.
+        // this inner scrollable) settles into scrolling the inner one, exactly as the
+        // sibling ListView test above does.
+        final innerScrollable = find.descendant(
+          of: find.byType(SingleChildScrollView).last,
+          matching: find.byType(Scrollable),
+        );
+        final gesture = await tester.startGesture(tester.getCenter(innerScrollable));
+        for (var i = 0; i < 40; i++) {
+          await gesture.moveBy(const Offset(0, -75));
+          await tester.pump();
+        }
+        await gesture.up();
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(
+          innerController.offset,
+          greaterThan(0.0),
+          reason: "the caller's own scrollable must scroll internally, not just render once",
+        );
+
+        // And the sheet's OWN wrapper -- not the caller's inner scrollable -- must still
+        // own the drag surface: the handle drags the sheet no differently than it does
+        // for any other content.
+        final handle = find.byWidgetPredicate(
+          (widget) => widget is Container && widget.constraints?.maxWidth == 40 && widget.constraints?.maxHeight == 4,
+        );
+        await tester.drag(handle, const Offset(0, 600));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Row 0'),
+          findsNothing,
+          reason:
+              'drag-to-dismiss must still work when content brings its own scrollable -- the '
+              "sheet's outer wrapper, not the caller's inner one, owns the controller",
+        );
+      },
     );
   });
 }

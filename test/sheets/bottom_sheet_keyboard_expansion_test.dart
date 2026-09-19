@@ -65,18 +65,20 @@ void main() {
                   initialSize: initialSize,
                   minSize: minSize,
                   maxSize: maxSize,
-                  builder: (context) => Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Sheet title'),
-                        if (withBottomMarker) ...[
-                          const SizedBox(height: 900),
-                          const Text('Bottom marker', key: ValueKey('bottomMarker')),
+                  builder: (context) => SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Sheet title'),
+                          if (withBottomMarker) ...[
+                            const SizedBox(height: 900),
+                            const Text('Bottom marker', key: ValueKey('bottomMarker')),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 );
@@ -344,7 +346,17 @@ void main() {
           // permanent inset (viewPadding.bottom, still 24 regardless of the
           // keyboard) were mistakenly consulted here instead of the
           // keyboard-aware padding.bottom (already 0).
-          await tester.scrollUntilVisible(find.byKey(const ValueKey('bottomMarker')), 200.0);
+          // The sheet bounds the builder's content instead of auto-scrolling
+          // it, so the builder brings its own SingleChildScrollView -- there
+          // are therefore two Scrollables in the tree (the sheet's own
+          // draggable one and the builder's), and the innermost/last one is
+          // the builder's, which is the one that actually needs to move to
+          // reveal the bottom marker.
+          await tester.scrollUntilVisible(
+            find.byKey(const ValueKey('bottomMarker')),
+            200.0,
+            scrollable: find.byType(Scrollable).last,
+          );
           await tester.pumpAndSettle();
           final markerRect = tester.getRect(find.byKey(const ValueKey('bottomMarker')));
           final gapFromSurfaceBottom = surfaceRect.bottom - markerRect.bottom;

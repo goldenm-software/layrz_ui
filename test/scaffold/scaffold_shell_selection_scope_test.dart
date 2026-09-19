@@ -47,7 +47,22 @@ void main() {
     /// reproduces "A ValueNotifier<int> was used after being disposed" on
     /// the band-transition test below -- a test-harness fidelity gap, not a
     /// defect in the fix, but real enough to be worth recording here.
-    Future<BuildContext> pumpNestedShellApp(WidgetTester tester, LayrzScaffoldController controller) async {
+    ///
+    /// [wrapDetailContentInScrollView] wraps the sheet's own detail content
+    /// (the `onItemTap` builder below) in a `SingleChildScrollView` with no
+    /// explicit `controller:`, so it inherits the ambient
+    /// `PrimaryScrollController` the sheet provides under `scrollable: false`
+    /// -- mirroring how real detail forms (AppForm fields) contain a genuine
+    /// `Scrollable`, which is what lets the sheet's own
+    /// `DraggableScrollableController` actually attach (see
+    /// `DragHandle._onDragUpdate`/`_onDragEnd`, which early-return when the
+    /// controller never attaches). Defaults to `false` so every other test in
+    /// this group keeps its exact original flat content.
+    Future<BuildContext> pumpNestedShellApp(
+      WidgetTester tester,
+      LayrzScaffoldController controller, {
+      bool wrapDetailContentInScrollView = false,
+    }) async {
       late BuildContext capturedShellBodyContext;
       final navigatorKey = GlobalKey<NavigatorState>();
       final tableController = LayrzTableController<_TestItem>();
@@ -107,10 +122,16 @@ void main() {
                           ),
                           onItemTap: (item) => controller.open(
                             key: item.key,
-                            builder: (_) => Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Text('Field States for ${item.item.name}', style: const TextStyle(fontSize: 20)),
-                            ),
+                            builder: (_) {
+                              final content = Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Text(
+                                  'Field States for ${item.item.name}',
+                                  style: const TextStyle(fontSize: 20),
+                                ),
+                              );
+                              return wrapDetailContentInScrollView ? SingleChildScrollView(child: content) : content;
+                            },
                           ),
                         );
                       },
@@ -332,7 +353,7 @@ void main() {
       final controller = LayrzScaffoldController();
       addTearDown(controller.dispose);
 
-      await pumpNestedShellApp(tester, controller);
+      await pumpNestedShellApp(tester, controller, wrapDetailContentInScrollView: true);
 
       await tester.tap(find.text('Text Input'));
       await tester.pumpAndSettle();
@@ -343,7 +364,7 @@ void main() {
       );
       expect(handle, findsOneWidget);
 
-      await tester.drag(handle, const Offset(0, 300));
+      await tester.drag(handle, const Offset(0, 600));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);

@@ -291,7 +291,6 @@ class LayrzResponsiveModal {
         minSize: sheet.minSize,
         maxSize: sheet.maxSize,
         showDragHandle: sheet.showDragHandle,
-        scrollable: sheet.scrollable,
         isPersistent: false,
       );
     }

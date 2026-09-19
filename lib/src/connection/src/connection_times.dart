@@ -14,6 +14,13 @@ const Duration kLayrzConnectionDefaultOnline = Duration(minutes: 15);
 /// resolves to the idle state.
 const Duration kLayrzConnectionDefaultIdle = Duration(minutes: 60);
 
+/// The `offline` threshold used by [LayrzConnectionTimes.defaults].
+///
+/// Telemetry received within this window (but outside [kLayrzConnectionDefaultIdle])
+/// resolves to the offline state; beyond it, resolution falls through to the
+/// disconnected state.
+const Duration kLayrzConnectionDefaultOffline = Duration(days: 30);
+
 /// Configurable elapsed-time thresholds for [LayrzConnectionIndicator]'s
 /// 5-state resolution.
 ///
@@ -25,11 +32,16 @@ const Duration kLayrzConnectionDefaultIdle = Duration(minutes: 60);
 /// method that reads a `Connection` and produces a [LayrzConnectionTimes]),
 /// which is outside this package's concern.
 ///
-/// Only the `online`/`idle` boundaries are configurable. The `offline` →
-/// `disconnected` boundary (30 days) and the "no data" state (`receivedAt ==
-/// null`) are fixed constants — see `LayrzConnectionState` — because no
-/// caller has asked for those to vary, and hardcoding them keeps the 5-state
-/// model simple to reason about.
+/// **The band model** ([resolveLayrzConnectionState]'s resolution order):
+/// ```
+/// receivedAt == null       -> noData
+/// elapsed <= times.online  -> online
+/// elapsed <= times.idle    -> idle
+/// elapsed <= times.offline -> offline
+/// otherwise                -> disconnected   (fallthrough — no threshold of its own)
+/// ```
+/// `disconnected` is deliberately not a configurable band: it is whatever
+/// doesn't fit under [offline], so there is nothing to set for it.
 @immutable
 class LayrzConnectionTimes {
   /// The maximum elapsed time since `receivedAt` for which the connection is
@@ -43,46 +55,67 @@ class LayrzConnectionTimes {
   /// considered idle (orange) rather than offline.
   ///
   /// Elapsed time greater than [online] but at most [idle] resolves to the
-  /// idle state; beyond [idle] (and within 30 days) resolves to offline.
+  /// idle state; beyond [idle] (and within [offline]) resolves to offline.
   /// Defaults to 60 minutes via [LayrzConnectionTimes.defaults].
   final Duration idle;
+
+  /// The maximum elapsed time since `receivedAt` for which the connection is
+  /// still considered offline (red) rather than disconnected.
+  ///
+  /// Elapsed time greater than [idle] but at most this value resolves to the
+  /// offline state; beyond it, resolution falls through to the disconnected
+  /// state — `disconnected` has no threshold field of its own, it is simply
+  /// "everything past [offline]". Defaults to 30 days via
+  /// [LayrzConnectionTimes.defaults].
+  final Duration offline;
 
   /// Creates a new [LayrzConnectionTimes] with explicit thresholds.
   ///
   /// Most callers should prefer [LayrzConnectionTimes.defaults], which
   /// matches the values documented on [LayrzConnectionIndicator]'s 5-state
-  /// model. Use this constructor directly only when the online/idle
+  /// model. Use this constructor directly only when the online/idle/offline
   /// boundaries genuinely differ from that default.
   const LayrzConnectionTimes({
     required this.online,
     required this.idle,
+    required this.offline,
   });
 
-  /// The default thresholds: 15 minutes online, 60 minutes idle.
+  /// The default thresholds: 15 minutes online, 60 minutes idle, 30 days
+  /// offline.
   ///
   /// This is the config [LayrzConnectionIndicator] uses when its own
   /// `connection` field is null.
-  const LayrzConnectionTimes.defaults() : online = kLayrzConnectionDefaultOnline, idle = kLayrzConnectionDefaultIdle;
+  const LayrzConnectionTimes.defaults()
+    : online = kLayrzConnectionDefaultOnline,
+      idle = kLayrzConnectionDefaultIdle,
+      offline = kLayrzConnectionDefaultOffline;
 
   /// Returns a copy of this config with the given fields replaced.
   LayrzConnectionTimes copyWith({
     Duration? online,
     Duration? idle,
+    Duration? offline,
   }) {
     return LayrzConnectionTimes(
       online: online ?? this.online,
       idle: idle ?? this.idle,
+      offline: offline ?? this.offline,
     );
   }
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is LayrzConnectionTimes && runtimeType == other.runtimeType && online == other.online && idle == other.idle;
+      other is LayrzConnectionTimes &&
+          runtimeType == other.runtimeType &&
+          online == other.online &&
+          idle == other.idle &&
+          offline == other.offline;
 
   @override
-  int get hashCode => Object.hash(online, idle);
+  int get hashCode => Object.hash(online, idle, offline);
 
   @override
-  String toString() => 'LayrzConnectionTimes(online: $online, idle: $idle)';
+  String toString() => 'LayrzConnectionTimes(online: $online, idle: $idle, offline: $offline)';
 }

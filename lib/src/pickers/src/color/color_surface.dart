@@ -245,37 +245,42 @@ class LayrzColorSurfaceState extends State<LayrzColorSurface> {
     // palette rather than a deliberate choice (OQ-2). LayrzTabView asserts
     // `tabs.isNotEmpty`, not `>= 2`, so this branch is still required rather
     // than merely an optimization.
-    final Widget tabbedOrWheel = widget.palette.isEmpty
-        ? _buildWheelTab(context)
-        : LayrzTabView(
-            isScrollable: false,
-            expandContent: false,
-            tabs: [
-              LayrzTab(
-                labelText: l10n.colorPickerPaletteTab,
-                child: SizedBox(height: 220.0, child: _buildPaletteTab(context)),
-              ),
-              LayrzTab(
-                labelText: l10n.colorPickerWheelTab,
-                child: _buildWheelTab(context),
-              ),
-            ],
-          );
+    final Widget tabbedOrWheel;
+    if (widget.palette.isEmpty) {
+      tabbedOrWheel = _buildWheelTab(context);
+    } else {
+      tabbedOrWheel = LayrzTabView(
+        isScrollable: false,
+        expandContent: false,
+        tabs: [
+          LayrzTab(
+            labelText: l10n.colorPickerPaletteTab,
+            child: SizedBox(height: 220.0, child: _buildPaletteTab(context)),
+          ),
+          LayrzTab(
+            labelText: l10n.colorPickerWheelTab,
+            child: _buildWheelTab(context),
+          ),
+        ],
+      );
+    }
 
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LayrzPickerDialogHeader(
-            labelText: widget.labelText,
-            onClose: () => LayrzModalRoute.popIfCurrent(context),
-          ),
-          tabbedOrWheel,
-          SizedBox(height: tokens.spacing.sp3),
-          _buildHexReadout(context),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            LayrzPickerDialogHeader(
+              labelText: widget.labelText,
+              onClose: () => LayrzModalRoute.popIfCurrent(context),
+            ),
+            tabbedOrWheel,
+            SizedBox(height: tokens.spacing.sp3),
+            _buildHexReadout(context),
+          ],
+        ),
       ),
     );
   }

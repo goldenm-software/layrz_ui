@@ -8,10 +8,11 @@ enum LayrzConnectionIndicatorMode {
   /// `LayrzConnectionIndicator`'s constructor.
   dot,
 
-  /// Renders the given `child` wrapped in a colored pill/chrome whose
-  /// background or border reflects the resolved state.
+  /// Renders a self-contained chip showing the resolved state's localized
+  /// label (e.g. "Online", "Idle", "Offline", "Disconnected", "No data") on
+  /// a state-colored chrome.
   ///
-  /// Requires a non-null `child` — see the assertion documented on
-  /// `LayrzConnectionIndicator`'s constructor.
+  /// `child` is ignored in this mode — see the class-level doc on
+  /// `LayrzConnectionIndicator`.
   full,
 }

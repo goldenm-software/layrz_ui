@@ -1,5 +1,6 @@
 import "package:flutter/widgets.dart";
 import "package:flutter_material_design_icons/flutter_material_design_icons.dart";
+import "package:layrz_ui/src/buttons/buttons.dart";
 import "package:layrz_ui/src/cards/cards.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
 import "package:layrz_ui/src/refresh/refresh.dart";
@@ -10,6 +11,7 @@ import "package:layrz_ui/src/tokens/tokens.dart";
 
 import "detail_pane.dart";
 import "list_panel.dart";
+import "multiselect_action_bar.dart";
 import "scaffold_controller.dart";
 
 /// An adaptive list-detail shell widget in the layrz_ui design system.
@@ -48,6 +50,15 @@ import "scaffold_controller.dart";
 ///
 /// The consuming app passes items and owns the controller; the shell owns the
 /// layout and search filtering.
+///
+/// **Standardized multiselect action bar:** supplying [multiselectActionsBuilder]
+/// is what enables multiselect at all — it draws the desktop table's
+/// checkbox column AND, once its selection
+/// (`LayrzTableController.selection`) is non-empty, floats a bottom-center
+/// [LayrzScaffoldMultiselectBar] in the root [Overlay] — a count label, a
+/// shell-owned clear button, and the caller's own action buttons — so every
+/// consumer gets the same selection-action affordance without reimplementing
+/// it. See [multiselectActionsBuilder]'s own doc for the full contract.
 class LayrzScaffoldShell<T> extends StatefulWidget {
   /// The items to display in the list.
   final List<LayrzScaffoldItem<T>> items;
@@ -196,6 +207,70 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// rendered instead.
   final Widget? dualPaneEmptyState;
 
+  /// Builds the caller's action buttons for the standardized multiselect
+  /// action bar, called with the currently selected rows as a `List<T>`.
+  ///
+  /// **Providing this callback is what enables multiselect entirely.** Its
+  /// mere presence (non-null), independent of the current selection, is
+  /// passed straight through to the internal [LayrzTable]'s own
+  /// `hasMultiselect` flag, which draws the pinned-left select-all checkbox
+  /// in the header and a per-row checkbox in every row. The shell adds no
+  /// selection callback of its own — read the current selection from
+  /// [tableController], via [LayrzTableController.selection] (or drive it
+  /// programmatically with [LayrzTableController.selectItem],
+  /// [LayrzTableController.deselectItem], [LayrzTableController.toggleSelection],
+  /// [LayrzTableController.selectAll], and [LayrzTableController.clearSelection]),
+  /// since [tableController] is the same caller-owned instance already passed
+  /// into this shell.
+  ///
+  /// Once that selection becomes non-empty, the shell additionally shows a
+  /// floating, bottom-center overlay bar (via `rootOverlay: true`) built from
+  /// [LayrzScaffoldMultiselectBar]: a resolved "N selected" count label, a
+  /// shell-owned clear-selection button, then the buttons this builder
+  /// returns. The bar appears exactly when selection becomes non-empty and is
+  /// removed exactly when it becomes empty again — driven by listening to
+  /// [tableController].
+  ///
+  /// **Applies to the desktop/wide table view only.** It has no effect on the
+  /// compact/narrow single-pane layout, which renders [ListPanel] (not
+  /// [LayrzTable]) and therefore never shows a checkbox column or this bar
+  /// regardless of this parameter.
+  ///
+  /// Defaults to `null`, which is fully backward compatible: no checkbox
+  /// column is drawn and no overlay is ever inserted, regardless of
+  /// selection state.
+  final List<LayrzButton> Function(List<T> selected)? multiselectActionsBuilder;
+
+  /// Builds the "N selected" count label text shown in the multiselect action
+  /// bar, given the current selection [count].
+  ///
+  /// Copy is the caller's responsibility, since only the app knows the
+  /// right phrasing/pluralization for its locale and domain. When null, the
+  /// shell falls back to a plain `'$count selected'` string — there is
+  /// currently no localized `LayrzUiL10n` key for this copy (checked as part
+  /// of DESIGN-{multiselect-bar}; none of the scaffold or selection
+  /// namespaces declare one), so no l10n key is invented here.
+  ///
+  /// Only consulted while [multiselectActionsBuilder] is non-null and the
+  /// desktop table's selection is non-empty.
+  final String Function(int count)? multiselectCountLabel;
+
+  /// The label for the shell-provided clear-selection button in the
+  /// multiselect action bar.
+  ///
+  /// Copy is the caller's responsibility. When null, the shell falls back to
+  /// a plain `'Clear'` string — there is currently no localized
+  /// `LayrzUiL10n` key for a clear/deselect-all action (same check as
+  /// [multiselectCountLabel]), so no l10n key is invented here.
+  ///
+  /// Activating this button calls `LayrzTableController.clearSelection()` on
+  /// [tableController], which empties the selection and, in turn, removes the
+  /// bar via the same listener that shows it.
+  ///
+  /// Only consulted while [multiselectActionsBuilder] is non-null and the
+  /// desktop table's selection is non-empty.
+  final String? multiselectClearLabel;
+
   /// Creates a new [LayrzScaffoldShell].
   ///
   /// - [items]: The items to display in the list. Required.
@@ -224,6 +299,15 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// - [dualPaneEmptyState]: The widget shown in the detail pane of the enforced split
   ///   when no item is selected. Only meaningful when [preferDualPane] is true. Defaults
   ///   to null, which renders a built-in localized placeholder.
+  /// - [multiselectActionsBuilder]: Providing this callback enables multiselect
+  ///   entirely — the desktop table's checkbox column, and the standardized action
+  ///   bar shown while its selection is non-empty. Defaults to null, which shows
+  ///   neither. Applies to the wide/table layout only; the narrow layout is
+  ///   unaffected regardless of this value.
+  /// - [multiselectCountLabel]: Builds the bar's "N selected" count label text.
+  ///   Defaults to null, which falls back to a plain `'$count selected'` string.
+  /// - [multiselectClearLabel]: Label for the bar's shell-provided clear-selection
+  ///   button. Defaults to null, which falls back to a plain `'Clear'` string.
   const LayrzScaffoldShell({
     super.key,
     required this.items,
@@ -241,6 +325,9 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
     this.showActionLabel,
     this.preferDualPane = false,
     this.dualPaneEmptyState,
+    this.multiselectActionsBuilder,
+    this.multiselectCountLabel,
+    this.multiselectClearLabel,
   });
 
   @override
@@ -250,6 +337,20 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
 class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   late VoidCallback _controllerListener;
   late ValueNotifier<int> _itemsChangeNotifier;
+
+  /// Listener kept on [LayrzScaffoldShell.tableController], separate from
+  /// [_controllerListener] (which listens to the scaffold controller). Its
+  /// only job is to keep the floating multiselect action bar's presence in
+  /// sync with `tableController.selection` — see [_syncMultiselectOverlay].
+  late VoidCallback _tableControllerListener;
+
+  /// The floating multiselect action bar's [OverlayEntry], inserted into the
+  /// app's root [Overlay] (`rootOverlay: true`) exactly while
+  /// [LayrzScaffoldShell.multiselectActionsBuilder] is non-null and
+  /// [LayrzScaffoldShell.tableController]'s selection is non-empty — mirrors
+  /// `LayrzFindInPageHostState`'s own idempotent insert/remove idiom for its
+  /// find-bar overlay. `null` while not shown.
+  OverlayEntry? _multiselectOverlayEntry;
 
   /// Whether a detail sheet is currently open on narrow layouts.
   bool _sheetOpen = false;
@@ -301,6 +402,15 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     };
     _itemsChangeNotifier = ValueNotifier(widget.items.length);
     widget.controller.addListener(_controllerListener);
+
+    _tableControllerListener = _syncMultiselectOverlay;
+    widget.tableController.addListener(_tableControllerListener);
+    // Post-frame: the overlay insert needs a fully mounted context (mirrors
+    // LayrzFindInPageHostState's own post-frame deferral for the same
+    // reason), and there is nothing to show yet on first build regardless.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncMultiselectOverlay();
+    });
   }
 
   @override
@@ -309,6 +419,11 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_controllerListener);
       widget.controller.addListener(_controllerListener);
+    }
+    if (oldWidget.tableController != widget.tableController) {
+      oldWidget.tableController.removeListener(_tableControllerListener);
+      widget.tableController.addListener(_tableControllerListener);
+      _syncMultiselectOverlay();
     }
     // Notify when items list instance changes (handles refetches with same keys but new instances),
     // but only while the narrow sheet's ListenableBuilder is actually listening to this notifier —
@@ -333,8 +448,90 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   @override
   void dispose() {
     widget.controller.removeListener(_controllerListener);
+    widget.tableController.removeListener(_tableControllerListener);
+    _multiselectOverlayEntry?.remove();
+    _multiselectOverlayEntry = null;
     _itemsChangeNotifier.dispose();
     super.dispose();
+  }
+
+  /// Inserts or removes [_multiselectOverlayEntry] to match the show
+  /// condition — [LayrzScaffoldShell.multiselectActionsBuilder] non-null AND
+  /// [LayrzScaffoldShell.tableController]'s selection non-empty — mirroring
+  /// `LayrzFindInPageHostState._syncFindBarOverlay`'s idempotent
+  /// insert/remove idiom exactly, including using the root overlay
+  /// (`rootOverlay: true`), which is load-bearing here for the same reason:
+  /// this bar must float above whatever chrome the current page sits behind,
+  /// anchored to the true screen bottom-center rather than a page-local
+  /// `Stack`.
+  ///
+  /// Called from [_tableControllerListener] on every selection change, and
+  /// once more from a post-frame callback in [initState] to pick up an
+  /// already-non-empty selection carried over from a prior build (e.g. a
+  /// caller-driven `tableController.selectItem` before this shell's first
+  /// frame).
+  void _syncMultiselectOverlay() {
+    if (!mounted) return;
+    final shouldShow = widget.multiselectActionsBuilder != null && widget.tableController.selection.isNotEmpty;
+
+    if (shouldShow) {
+      if (_multiselectOverlayEntry != null) {
+        _multiselectOverlayEntry!.markNeedsBuild();
+        return;
+      }
+      final entry = OverlayEntry(builder: _buildMultiselectOverlay);
+      _multiselectOverlayEntry = entry;
+      Overlay.of(context, rootOverlay: true).insert(entry);
+    } else {
+      _multiselectOverlayEntry?.remove();
+      _multiselectOverlayEntry = null;
+    }
+  }
+
+  /// Builds the multiselect action bar's overlay content: [SafeArea] +
+  /// bottom-center [Align], a fixed bottom margin, and a defensive
+  /// [ConstrainedBox] capping the bar's width to the available viewport width
+  /// minus that same margin on both sides — the same narrow-viewport
+  /// defensiveness `LayrzFindInPageHostState._buildFindBarOverlay` applies to
+  /// its own top-right bar, so an unexpectedly narrow window shrinks the bar
+  /// instead of letting it overflow past the screen edges.
+  ///
+  /// Resolves [LayrzScaffoldShell.multiselectCountLabel] and
+  /// [LayrzScaffoldShell.multiselectClearLabel] to concrete strings here
+  /// (falling back to a plain, un-localized default — see those fields' own
+  /// docs for why no `LayrzUiL10n` key is used), and resolves
+  /// [LayrzScaffoldShell.multiselectActionsBuilder] against the current
+  /// selection unwrapped to a `List<T>`.
+  Widget _buildMultiselectOverlay(BuildContext context) {
+    final tokens = context.tokens;
+    final margin = tokens.spacing.sp4;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    final selected = widget.tableController.selection.toList(growable: false);
+    final builder = widget.multiselectActionsBuilder;
+    if (builder == null || selected.isEmpty) return const SizedBox.shrink();
+
+    final countLabel = widget.multiselectCountLabel?.call(selected.length) ?? '${selected.length} selected';
+    final clearLabel = widget.multiselectClearLabel ?? 'Clear';
+
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: Padding(
+          padding: EdgeInsets.only(bottom: margin),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: (screenWidth - margin * 2).clamp(0.0, double.infinity)),
+            child: LayrzScaffoldMultiselectBar(
+              count: selected.length,
+              countLabel: countLabel,
+              clearLabel: clearLabel,
+              onClear: widget.tableController.clearSelection,
+              actions: builder(selected),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -548,6 +745,7 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
               columns: widget.tableColumns,
               controller: widget.tableController,
               canSearch: widget.searchable,
+              hasMultiselect: widget.multiselectActionsBuilder != null,
               actionsCount: 1,
               actionsBuilder: (data) => [
                 LayrzTableAction(

@@ -141,52 +141,54 @@ class LayrzTimeRangeSurfaceState extends State<LayrzTimeRangeSurface> {
 
     return Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          LayrzPickerDialogHeader(
-            labelText: widget.labelText,
-            onClose: () => LayrzModalRoute.popIfCurrent(context),
-          ),
-          Text(l10n.timePickerStart, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
-          SizedBox(height: tokens.spacing.sp1),
-          LayrzPickersTimeFieldsPanel(
-            // Genuinely unset until the user edits a field -- never
-            // defaulted to 9:00 (see the class doc). The panel itself
-            // requires a non-null `value` to render, so an unset draft is
-            // shown as 00:00 without ever being *reported* as 00:00: the
-            // `onChanged` callback below is the only path that sets
-            // `_start`, and it only runs when the user actually edits a
-            // field.
-            value: _start,
-            showSeconds: widget.showSeconds,
-            use24HourFormat: widget.use24HourFormat,
-            onChanged: (time) {
-              setState(() => _start = time);
-              widget.onDraftChanged?.call();
-            },
-          ),
-          SizedBox(height: tokens.spacing.sp3),
-          Text(l10n.timePickerEnd, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
-          SizedBox(height: tokens.spacing.sp1),
-          LayrzPickersTimeFieldsPanel(
-            // See the start cluster's identical comment above.
-            value: _end,
-            showSeconds: widget.showSeconds,
-            use24HourFormat: widget.use24HourFormat,
-            onChanged: (time) {
-              setState(() => _end = time);
-              widget.onDraftChanged?.call();
-            },
-          ),
-          if (widget.showInlineFooter) ...[
-            SizedBox(height: tokens.spacing.sp3),
-            LayrzPickerInlineFooter(
-              onCancel: widget.onCancel,
-              onSave: save,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LayrzPickerDialogHeader(
+              labelText: widget.labelText,
+              onClose: () => LayrzModalRoute.popIfCurrent(context),
             ),
+            Text(l10n.timePickerStart, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
+            SizedBox(height: tokens.spacing.sp1),
+            LayrzPickersTimeFieldsPanel(
+              // Genuinely unset until the user edits a field -- never
+              // defaulted to 9:00 (see the class doc). The panel itself
+              // requires a non-null `value` to render, so an unset draft is
+              // shown as 00:00 without ever being *reported* as 00:00: the
+              // `onChanged` callback below is the only path that sets
+              // `_start`, and it only runs when the user actually edits a
+              // field.
+              value: _start,
+              showSeconds: widget.showSeconds,
+              use24HourFormat: widget.use24HourFormat,
+              onChanged: (time) {
+                setState(() => _start = time);
+                widget.onDraftChanged?.call();
+              },
+            ),
+            SizedBox(height: tokens.spacing.sp3),
+            Text(l10n.timePickerEnd, style: tokens.typography.label.copyWith(color: tokens.colors.fg2)),
+            SizedBox(height: tokens.spacing.sp1),
+            LayrzPickersTimeFieldsPanel(
+              // See the start cluster's identical comment above.
+              value: _end,
+              showSeconds: widget.showSeconds,
+              use24HourFormat: widget.use24HourFormat,
+              onChanged: (time) {
+                setState(() => _end = time);
+                widget.onDraftChanged?.call();
+              },
+            ),
+            if (widget.showInlineFooter) ...[
+              SizedBox(height: tokens.spacing.sp3),
+              LayrzPickerInlineFooter(
+                onCancel: widget.onCancel,
+                onSave: save,
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

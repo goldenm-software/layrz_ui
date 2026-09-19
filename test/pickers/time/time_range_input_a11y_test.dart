@@ -153,38 +153,61 @@ void main() {
       }
     });
 
-    testWidgets('label is announced once even while the panel is open (no duplicate node)', (tester) async {
-      final handle = tester.ensureSemantics();
-      try {
-        tester.view.physicalSize = const Size(1600, 1200);
-        tester.view.devicePixelRatio = 1.0;
-        addTearDown(tester.view.reset);
+    testWidgets(
+      'label is announced exactly twice while the panel is open -- once naming the route, once as the visible '
+      'header title -- and never a third, redundant time',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        try {
+          tester.view.physicalSize = const Size(1600, 1200);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
 
-        await pumpThemedApp(
-          tester,
-          _bounded(
-            LayrzTimeRangeInput(
-              labelText: 'Business hours',
-              startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
-              endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
-              onChanged: (_, _) {},
+          await pumpThemedApp(
+            tester,
+            _bounded(
+              LayrzTimeRangeInput(
+                labelText: 'Business hours',
+                startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
+                endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
+                onChanged: (_, _) {},
+              ),
             ),
-          ),
-        );
+          );
 
-        await tester.tap(find.byType(LayrzTimeRangeInput));
-        await tester.pumpAndSettle();
+          await tester.tap(find.byType(LayrzTimeRangeInput));
+          await tester.pumpAndSettle();
 
-        final labels = dumpSemanticsLabels(tester);
-        expect(
-          labels.where((l) => l == 'Business hours').length,
-          1,
-          reason: 'the chrome is constructed with labelText: null so it must not add a second labeled node',
-        );
-      } finally {
-        handle.dispose();
-      }
-    });
+          // The panel's own content now lives in a SingleChildScrollView (the
+          // sheet/panel contract no longer auto-scrolls unbounded content --
+          // see bottom_sheet.dart), which draws a semantics boundary between
+          // the route-naming node and the header. That boundary stops the
+          // header's own title Text from being silently swallowed into a
+          // merged blob together with the "Start"/"End" cluster labels the
+          // way it used to be -- it is now its own legible node, which is the
+          // CORRECT outcome: a screen-reader user tabbing into the open panel
+          // should hear "Business hours" as its heading, exactly as a sighted
+          // user reads it. Two occurrences are therefore expected and both
+          // are meaningful: one node with [scopesRoute, namesRoute] announces
+          // the route once on entry (LayrzResponsiveModal.show is called with
+          // semanticLabel: labelText), and a second, plain node is
+          // LayrzPickerDialogHeader's own visible title. A THIRD occurrence
+          // would mean the chrome anchor itself (constructed with
+          // labelText: null so the drawer's own field should stay silent)
+          // started leaking a redundant label too.
+          final labels = dumpSemanticsLabels(tester);
+          expect(
+            labels.where((l) => l == 'Business hours').length,
+            2,
+            reason:
+                'exactly two meaningful nodes are expected (route name + header title) -- a third would be a '
+                'genuinely redundant duplicate, most likely leaking from the chrome anchor',
+          );
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
 
     testWidgets('start and end clusters expose distinguishable semantic labels', (tester) async {
       final handle = tester.ensureSemantics();

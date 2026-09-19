@@ -3,14 +3,6 @@ import 'package:layrz_ui/src/tokens/tokens.dart';
 
 import 'connection_times.dart';
 
-/// The fixed elapsed-time boundary between the offline and disconnected
-/// states: 30 days.
-///
-/// Unlike [LayrzConnectionTimes.online]/[LayrzConnectionTimes.idle], this
-/// boundary is not configurable — no caller has asked for it to vary, and a
-/// device silent for 30+ days is disconnected under every known deployment.
-const Duration kLayrzConnectionOfflineBoundary = Duration(days: 30);
-
 /// The internal 5-state model resolved from a connection's elapsed time
 /// since it last reported data.
 ///
@@ -31,14 +23,15 @@ enum LayrzConnectionState {
   idle,
 
   /// Telemetry received after [LayrzConnectionTimes.idle] but within
-  /// [kLayrzConnectionOfflineBoundary] (30 days) of "now".
+  /// [LayrzConnectionTimes.offline] of "now".
   ///
   /// Rendered in `tokens.colors.danger` (red).
   offline,
 
-  /// Telemetry not received for at least [kLayrzConnectionOfflineBoundary]
-  /// (30 days).
+  /// Telemetry not received for longer than [LayrzConnectionTimes.offline].
   ///
+  /// This is a fallthrough — it has no threshold field of its own, it is
+  /// simply whatever elapsed time does not fit under [LayrzConnectionTimes.offline].
   /// Rendered in `tokens.colors.fg1` (near-black) — the most severe state,
   /// deliberately not a semantic color since it signals "gone", not merely
   /// "in trouble".
@@ -86,7 +79,7 @@ enum LayrzConnectionState {
 ///   supply this explicitly (rather than calling `DateTime.now()` here) so
 ///   the resolver stays a pure, deterministic function — [LayrzConnectionIndicator]
 ///   is what supplies a live clock.
-/// - [times]: the configurable online/idle thresholds. Defaults to
+/// - [times]: the configurable online/idle/offline thresholds. Defaults to
 ///   [LayrzConnectionTimes.defaults] when not supplied.
 LayrzConnectionState resolveLayrzConnectionState({
   required DateTime? receivedAt,
@@ -99,6 +92,6 @@ LayrzConnectionState resolveLayrzConnectionState({
 
   if (elapsed <= times.online) return LayrzConnectionState.online;
   if (elapsed <= times.idle) return LayrzConnectionState.idle;
-  if (elapsed <= kLayrzConnectionOfflineBoundary) return LayrzConnectionState.offline;
+  if (elapsed <= times.offline) return LayrzConnectionState.offline;
   return LayrzConnectionState.disconnected;
 }

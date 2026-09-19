@@ -2,10 +2,9 @@ import 'package:flutter/widgets.dart';
 
 import 'package:layrz_ui/src/buttons/buttons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
-import 'package:layrz_ui/src/scrollbar/scrollbar.dart';
 import 'package:layrz_ui/src/sheets/sheets.dart';
 
-/// A three-slot layout -- pinned title, scrollable body, pinned actions
+/// A three-slot layout -- pinned title, bounded-height body, pinned actions
 /// footer -- meant to be returned directly from a [LayrzScaffoldShell] detail
 /// builder, e.g. `controller.open(builder: (_) => LayrzDetailScaffold(...))`.
 ///
@@ -37,10 +36,15 @@ import 'package:layrz_ui/src/sheets/sheets.dart';
 ///   sheet's unbounded height instead of throwing a "RenderFlex ...
 ///   unbounded height" error.
 ///
-/// Either way, the body slot owns its own [LayrzScrollbar] +
-/// [SingleChildScrollView], so the caller's [body] itself needs no
-/// `Expanded`/`Flexible` of its own -- pass plain content (e.g. a `Column` of
-/// fields) and let this widget own the scrolling.
+/// **BREAKING**: [body] is placed directly in that bounded slot -- it is no
+/// longer wrapped in a scroll view of any kind. Scrolling is entirely the
+/// caller's responsibility: if [body]'s content can exceed the available
+/// height, the caller must wrap it in its own `SingleChildScrollView` (or
+/// other scrollable). The payoff is that [body] now genuinely receives a
+/// bounded height, so content that itself relies on `Expanded`/`Flexible` --
+/// e.g. `LayrzTabView(expandContent: true, ...)` -- lays out correctly
+/// instead of throwing "RenderFlex ... incoming height constraints are
+/// unbounded".
 ///
 /// The three-slot structure mirrors `LayrzDialog`'s own title/content/actions
 /// slot layout (see `lib/src/dialogs/src/dialog.dart`), reusing the same
@@ -59,14 +63,17 @@ class LayrzDetailScaffold extends StatefulWidget {
   /// rest of the content.
   final Widget title;
 
-  /// The scrollable content region, shown below [title] and above [actions]
-  /// (when present).
+  /// The content region, shown below [title] and above [actions] (when
+  /// present).
   ///
-  /// This widget gives [body] a bounded height (via [Expanded] or [Flexible],
-  /// depending on whether a [LayrzBottomSheetScope] ancestor is found) plus
-  /// its own scroll view, so [body] never needs to wrap any part of itself in
-  /// `Expanded`/`Flexible` to fill space -- pass plain content (e.g. a
-  /// `Column` of form fields) and any overflow scrolls automatically.
+  /// This widget gives [body] a bounded height -- an [Expanded] slot outside
+  /// a sheet, or a [Flexible] slot inside a [LayrzBottomSheet] -- so [body]
+  /// fills the available pane height. **[body] is NOT wrapped in a scroll
+  /// view**: if its content can overflow that height, the caller must
+  /// provide its own scrolling, e.g. by wrapping it in a
+  /// `SingleChildScrollView`. Because the bounded height is real, [body] may
+  /// itself freely use `Expanded`/`Flexible` internally -- e.g.
+  /// `LayrzTabView(expandContent: true, ...)`.
   final Widget body;
 
   /// Optional pinned footer buttons, right-aligned below [body].
@@ -80,7 +87,8 @@ class LayrzDetailScaffold extends StatefulWidget {
   /// Creates a new [LayrzDetailScaffold].
   ///
   /// - [title]: the pinned header shown above [body]. Required.
-  /// - [body]: the scrollable content region. Required.
+  /// - [body]: the content region, given a bounded height and left
+  ///   unscrolled by this widget. Required.
   /// - [actions]: optional pinned footer buttons, right-aligned. Defaults to
   ///   `null`, which renders no footer at all.
   const LayrzDetailScaffold({super.key, required this.title, required this.body, this.actions});
@@ -90,24 +98,6 @@ class LayrzDetailScaffold extends StatefulWidget {
 }
 
 class _LayrzDetailScaffoldState extends State<LayrzDetailScaffold> {
-  /// Owns the scroll position of [LayrzDetailScaffold.body]'s scroll view.
-  ///
-  /// Created in [initState] and disposed in [dispose], mirroring how
-  /// `LayrzDialog` owns its own `_scrollController` for its content slot.
-  late final ScrollController _scrollController;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -120,13 +110,7 @@ class _LayrzDetailScaffoldState extends State<LayrzDetailScaffold> {
     // through an arbitrary caller-supplied wrapper.
     final inSheet = LayrzBottomSheetScope.maybeOf(context) != null;
 
-    final bodyScrollView = LayrzScrollbar(
-      controller: _scrollController,
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        child: DefaultTextStyle.merge(style: tokens.typography.body, child: widget.body),
-      ),
-    );
+    final styledBody = DefaultTextStyle.merge(style: tokens.typography.body, child: widget.body);
 
     return Padding(
       padding: tokens.spacing.pd2,
@@ -137,7 +121,7 @@ class _LayrzDetailScaffoldState extends State<LayrzDetailScaffold> {
         children: [
           DefaultTextStyle.merge(style: tokens.typography.headline, child: widget.title),
 
-          inSheet ? Flexible(child: bodyScrollView) : Expanded(child: bodyScrollView),
+          inSheet ? Flexible(child: styledBody) : Expanded(child: styledBody),
           if (widget.actions?.isNotEmpty ?? false) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
