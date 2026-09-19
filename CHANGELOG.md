@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- **BREAKING — `LayrzConnectionIndicator.clock` is now a required `ValueListenable<DateTime>`** (was an optional `DateTime Function()?` with a `DateTime.now` fallback). The widget is now a `StatelessWidget` and rebuilds only its own subtree via a `ValueListenableBuilder` driven by the caller's clock — the caller owns the ticker (e.g. one shared `ValueNotifier<DateTime>` feeding many indicators), instead of each indicator running its own `Timer`. A caller may drive it with a `TZDateTime`-valued notifier; the widget stays timezone-agnostic. Callers must now supply a clock.
+- **BREAKING — `LayrzConnectionTimes` now requires an `offline` `Duration`** (default via `.defaults()` is 30 days), replacing the previously hardcoded offline boundary. The four states resolve as: `online` ≤ `online`, `idle` ≤ `idle`, `offline` ≤ `offline`, otherwise `disconnected` (the fallthrough tail).
+- `LayrzConnectionIndicator` dot mode now accepts an optional `child`: when provided, the status dot is overlaid on the child's bottom-right corner via `LayrzBadge` (previously dot mode forbade a child). With no child it still renders the bare dot.
+- **`LayrzScaffoldShell` gains standardized multiselect** via `multiselectActionsBuilder` (`List<LayrzButton> Function(List<T> selected)`). Providing it enables the desktop table's checkbox column and, while the selection is non-empty, a bottom-center floating action bar (two rows: the selected-count label and a clear button, then the caller's action buttons). Optional `multiselectCountLabel` and `multiselectClearLabel` customize the copy. Selection is read from the `LayrzTableController` the caller already passes. Desktop/wide table view only.
+- `LayrzDetailScaffold` removes its own scroll capability in favor of the `body`'s scroll handling, and the `LayrzBottomSheet` subcall it makes no longer double-scrolls.
+
 ## 1.2.0
 
 - `LayrzBottomSheet.show` now has `scrollable: false` by default, preventing the sheet from being scrollable unless explicitly enabled.
