@@ -32,15 +32,15 @@ int _countSemanticsWithExactLabel(WidgetTester tester, String label) {
 void main() {
   final fixedNow = DateTime(2026, 1, 1, 12, 0, 0);
 
-  group('LayrzConnectionIndicator construction asserts', () {
-    test('.full with a null child throws an AssertionError', () {
+  group('LayrzConnectionIndicator construction (no child-related asserts)', () {
+    test('.full with a null child does not throw', () {
       expect(
         () => LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.full,
           clock: ValueNotifier<DateTime>(fixedNow),
         ),
-        throwsAssertionError,
+        returnsNormally,
       );
     });
 
@@ -204,7 +204,7 @@ void main() {
   });
 
   group('LayrzConnectionIndicator.full rendering', () {
-    guardedTestWidgets('wraps the given child with a colored chrome', (tester) async {
+    guardedTestWidgets('renders the resolved state label as a self-contained chip, with no child', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -216,16 +216,34 @@ void main() {
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.full,
           clock: ValueNotifier<DateTime>(fixedNow),
-          child: const Text('unit-42'),
         ),
         theme: theme,
       );
 
-      expect(find.text('unit-42'), findsOneWidget);
+      expect(find.text('Connected'), findsOneWidget);
 
       final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
       final decoration = decoratedBox.decoration as BoxDecoration;
       expect(decoration.color, theme.tokens.colors.success);
+    });
+
+    guardedTestWidgets('ignores a passed child entirely and renders the state label instead', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzConnectionIndicator(
+          receivedAt: fixedNow,
+          mode: LayrzConnectionIndicatorMode.full,
+          clock: ValueNotifier<DateTime>(fixedNow),
+          child: const Text('SHOULD_NOT_APPEAR'),
+        ),
+      );
+
+      expect(find.text('Connected'), findsOneWidget);
+      expect(find.text('SHOULD_NOT_APPEAR'), findsNothing);
     });
 
     guardedTestWidgets('full-mode chrome is chip-shaped (r1 radius, not a fully-rounded pill)', (tester) async {
@@ -240,7 +258,6 @@ void main() {
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.full,
           clock: ValueNotifier<DateTime>(fixedNow),
-          child: const Text('unit-42'),
         ),
         theme: theme,
       );
@@ -266,7 +283,7 @@ void main() {
       );
     });
 
-    guardedTestWidgets('reflects the offline state color when stale', (tester) async {
+    guardedTestWidgets('reflects the offline state color and label when stale', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -279,26 +296,26 @@ void main() {
           receivedAt: receivedAt,
           mode: LayrzConnectionIndicatorMode.full,
           clock: ValueNotifier<DateTime>(fixedNow),
-          child: const Text('unit-99'),
         ),
         theme: theme,
       );
+
+      expect(find.text('Offline'), findsOneWidget);
 
       final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
       final decoration = decoratedBox.decoration as BoxDecoration;
       expect(decoration.color, theme.tokens.colors.danger);
     });
 
-    guardedTestWidgets('forces contrastColor on a child Text with its own explicit dark color', (tester) async {
+    guardedTestWidgets('forces contrastColor on the state label text on the dark Disconnected chip', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
       final theme = LayrzThemeData.light();
       // 40 days elapsed resolves to the disconnected state, whose color is
-      // the dark `fg1` token — the case that was unreadable before the fix,
-      // since the child's own explicit `fg1` color used to win over
-      // `contrastColor` under `DefaultTextStyle.merge`.
+      // the dark `fg1` token — contrastColor guarantees the chip's own label
+      // text stays legible against it.
       final receivedAt = fixedNow.subtract(const Duration(days: 40));
       await pumpThemed(
         tester,
@@ -306,16 +323,13 @@ void main() {
           receivedAt: receivedAt,
           mode: LayrzConnectionIndicatorMode.full,
           clock: ValueNotifier<DateTime>(fixedNow),
-          child: Text('unit-40', style: TextStyle(color: theme.tokens.colors.fg1)),
         ),
         theme: theme,
       );
 
-      final defaultTextStyle = tester.widget<DefaultTextStyle>(
-        find.ancestor(of: find.text('unit-40'), matching: find.byType(DefaultTextStyle)).first,
-      );
-      expect(defaultTextStyle.style.color, theme.tokens.colors.fg1.contrastColor);
-      expect(defaultTextStyle.style.color, isNot(theme.tokens.colors.fg1));
+      final label = tester.widget<Text>(find.text('Disconnected'));
+      expect(label.style?.color, theme.tokens.colors.fg1.contrastColor);
+      expect(label.style?.color, isNot(theme.tokens.colors.fg1));
     });
 
     guardedTestWidgets('does not render LayrzBadgeVisual or LayrzTooltip in full mode', (tester) async {
@@ -329,12 +343,49 @@ void main() {
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.full,
           clock: ValueNotifier<DateTime>(fixedNow),
-          child: const Text('unit-1'),
         ),
       );
 
       expect(find.byType(LayrzBadgeVisual), findsNothing);
       expect(find.byType(LayrzTooltip), findsNothing);
+    });
+
+    guardedTestWidgets('the state label updates when the clock notifier resolves a different state', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
+      // receivedAt stays fixed 2 minutes behind the clock's initial value —
+      // resolves to online. Advancing the clock notifier alone past the
+      // offline threshold must flip both the chip's color and its label.
+      final receivedAt = fixedNow.subtract(const Duration(minutes: 2));
+      final clock = ValueNotifier<DateTime>(fixedNow);
+      addTearDown(clock.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzConnectionIndicator(
+          receivedAt: receivedAt,
+          mode: LayrzConnectionIndicatorMode.full,
+          clock: clock,
+        ),
+        theme: theme,
+      );
+
+      expect(find.text('Connected'), findsOneWidget);
+      var decoration = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first).decoration as BoxDecoration;
+      expect(decoration.color, theme.tokens.colors.success);
+
+      clock.value = fixedNow.add(const Duration(hours: 3));
+      await tester.pump();
+
+      expect(find.text('Connected'), findsNothing);
+      expect(find.text('Offline'), findsOneWidget);
+      decoration = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first).decoration as BoxDecoration;
+      expect(decoration.color, theme.tokens.colors.danger);
     });
   });
 
@@ -507,6 +558,32 @@ void main() {
         // the same announcement text would duplicate it into two nodes.
         const announcement = 'Connected (2 minutes ago), new';
         expect(_countSemanticsWithExactLabel(tester, announcement), 1);
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    guardedTestWidgets('the .full chip announces just the state label, exactly once', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemed(
+          tester,
+          LayrzConnectionIndicator(
+            receivedAt: fixedNow,
+            mode: LayrzConnectionIndicatorMode.full,
+            clock: ValueNotifier<DateTime>(fixedNow),
+          ),
+        );
+
+        expect(
+          tester.getSemantics(find.text('Connected')),
+          matchesSemantics(label: 'Connected'),
+        );
+        expect(_countSemanticsWithExactLabel(tester, 'Connected'), 1);
       } finally {
         handle.dispose();
       }
