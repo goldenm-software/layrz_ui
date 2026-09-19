@@ -34,19 +34,15 @@ import 'connection_times.dart';
 ///   [LayrzBadgeVisual]; with a [child], the dot is instead overlaid on the
 ///   child's bottom-right corner via [LayrzBadge] (e.g. a connection dot on
 ///   an avatar), and the same announcement becomes the badge's `label`.
-/// - [LayrzConnectionIndicatorMode.full] — the state color wraps the
-///   caller-supplied [child] as a pill-shaped chrome (background tinted to
-///   the resolved state color, foreground/border derived via
-///   [LayrzColorExtensions.contrastColor] for contrast). Requires a non-null
-///   [child]; the widget never invents its own label/timestamp content here
-///   — the state color alone conveys status, and [child] is entirely
-///   caller-owned content (e.g. an asset name). **The content's text and
-///   icon color is forced to the state color's contrast color for
-///   legibility**: a hard `DefaultTextStyle`/`IconTheme` is applied (not a
-///   `.merge`), so a caller-supplied `Text` carrying its own explicit color
-///   still renders in the contrast color — this guarantees every `.full`
-///   pill stays readable regardless of what color the caller's content
-///   asks for, most notably on the dark `fg1` Disconnected pill.
+/// - [LayrzConnectionIndicatorMode.full] — a **self-contained chip**: it
+///   renders the resolved state's localized label (e.g. "Online", "Idle",
+///   "Offline", "Disconnected", "No data") on a state-colored chip-like
+///   chrome. [child] is **ignored** in this mode — `.full` never wraps or
+///   displays caller content; it is a standalone status chip, not a
+///   decorator. The label text color is derived via
+///   [LayrzColorExtensions.contrastColor] against the resolved state color
+///   for legibility on every state background, most notably the dark `fg1`
+///   Disconnected chip.
 ///
 /// **Clock source — caller-owned and reactive, not self-ticking.** This
 /// widget is [StatelessWidget] and owns no `Timer` of its own. Elapsed time
@@ -88,13 +84,19 @@ class LayrzConnectionIndicator extends StatelessWidget {
   /// [LayrzConnectionIndicatorMode.full].
   final LayrzConnectionIndicatorMode mode;
 
-  /// The content this indicator decorates or wraps.
+  /// The content this indicator decorates, used only by
+  /// [LayrzConnectionIndicatorMode.dot].
   ///
-  /// In [LayrzConnectionIndicatorMode.full] mode this is required — the
-  /// state chrome has nothing to wrap without it (see the constructor's
-  /// assert). In [LayrzConnectionIndicatorMode.dot] mode this is optional:
-  /// `null` renders the classic bare dot, while a non-null [child] overlays
-  /// the dot on its bottom-right corner via [LayrzBadge] instead.
+  /// In [LayrzConnectionIndicatorMode.dot] mode this is optional: `null`
+  /// renders the classic bare dot, while a non-null [child] overlays the dot
+  /// on its bottom-right corner via [LayrzBadge] instead (e.g. a connection
+  /// dot on an avatar).
+  ///
+  /// In [LayrzConnectionIndicatorMode.full] mode this is **ignored** — that
+  /// mode is a self-contained chip that renders the resolved state's label
+  /// on its own and never displays caller content. It is accepted (rather
+  /// than forbidden by an assertion) so a caller switching a widget between
+  /// modes at runtime does not need to conditionally omit it.
   final Widget? child;
 
   /// The caller-owned "now" source used to resolve elapsed time against
@@ -115,11 +117,10 @@ class LayrzConnectionIndicator extends StatelessWidget {
 
   /// Creates a new [LayrzConnectionIndicator].
   ///
-  /// Asserts:
-  /// - [mode] is [LayrzConnectionIndicatorMode.full] implies [child] is
-  ///   non-null — full mode has nothing to render without caller content.
-  ///   [LayrzConnectionIndicatorMode.dot] places no restriction on [child]:
-  ///   it is optional there (see the class-level doc).
+  /// [child] places no restriction in either mode: it is optional in
+  /// [LayrzConnectionIndicatorMode.dot] (see the class-level doc) and simply
+  /// ignored in [LayrzConnectionIndicatorMode.full], which renders its own
+  /// state-label chip regardless of what (if anything) is passed.
   const LayrzConnectionIndicator({
     super.key,
     required this.receivedAt,
@@ -127,10 +128,7 @@ class LayrzConnectionIndicator extends StatelessWidget {
     required this.mode,
     this.child,
     required this.clock,
-  }) : assert(
-         mode != LayrzConnectionIndicatorMode.full || child != null,
-         'LayrzConnectionIndicator.full requires a non-null child to wrap with the state chrome.',
-       );
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -190,6 +188,10 @@ class LayrzConnectionIndicator extends StatelessWidget {
           );
         }
 
+        // No outer `Semantics` wrapper is added here: the `Text` below already
+        // contributes `stateLabel` as its own semantics label, so wrapping it
+        // would merge into a duplicated "label\nlabel" announcement instead
+        // of a single clean one.
         return DecoratedBox(
           decoration: BoxDecoration(
             color: color,
@@ -199,19 +201,11 @@ class LayrzConnectionIndicator extends StatelessWidget {
           ),
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1 / 2),
-            // Deliberately a hard `DefaultTextStyle`/`IconTheme`, not `.merge`:
-            // `.merge` only fills in style fields the descendant left unset, so
-            // a caller-supplied `Text(..., style: someStyleWithAColor)` keeps its
-            // own explicit color and can win over `color.contrastColor` — on the
-            // dark `fg1` Disconnected pill that produced unreadable dark-on-dark
-            // text. Forcing the style here guarantees legibility on every state
-            // color regardless of what color the caller's content specifies.
-            child: DefaultTextStyle(
+            // `color.contrastColor` guarantees the label stays legible on every
+            // state color, most notably the dark `fg1` Disconnected chip.
+            child: Text(
+              stateLabel,
               style: tokens.typography.label.copyWith(color: color.contrastColor),
-              child: IconTheme(
-                data: IconThemeData(color: color.contrastColor),
-                child: child!,
-              ),
             ),
           ),
         );

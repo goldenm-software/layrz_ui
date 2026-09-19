@@ -23,10 +23,10 @@ import '../common/showroom_section.dart';
 ///
 /// - The `.dot` row hovers each dot for its tooltip (state + humanized
 ///   "time ago").
-/// - The `.full` row wraps a small asset-name label with the state's colored
-///   chrome, one per state — the pill forces its text/icon color to the
-///   state color's contrast color, so every row stays legible regardless of
-///   the label `Text`'s own style.
+/// - The `.full` row renders a self-contained chip per state — showing that
+///   state's localized label (e.g. "Online", "Disconnected") on the state's
+///   colored chrome. `.full` ignores `child` entirely, so no label `Text` is
+///   passed to it here.
 /// - The "`.dot` on an avatar" row passes a [LayrzAvatar.icon] as `.dot`
 ///   mode's `child`, overlaying the status dot on the avatar's bottom-right
 ///   corner directly — the widget's own badge-overlay support, rather than
@@ -126,11 +126,11 @@ class _ConnectionIndicatorSectionState extends State<ConnectionIndicatorSection>
             ],
           ),
           SizedBox(height: tokens.spacing.sp4),
-          Text('Full mode — the state chrome wraps caller-owned content', style: tokens.typography.title),
+          Text('Full mode — a self-contained chip showing the state label', style: tokens.typography.title),
           SizedBox(height: tokens.spacing.sp3),
           Text(
-            'The pill forces its content to the state color\'s contrast color, so every row below stays '
-            'legible even on the dark Disconnected pill.',
+            'Each chip renders its own resolved state label ("Online", "Idle", etc.) on the state-colored '
+            'chrome — `child` is not used here (`.full` ignores it entirely).',
             style: tokens.typography.label.copyWith(color: tokens.colors.fg3),
           ),
           SizedBox(height: tokens.spacing.sp2),
@@ -143,7 +143,6 @@ class _ConnectionIndicatorSectionState extends State<ConnectionIndicatorSection>
                   receivedAt: row.receivedAt,
                   mode: LayrzConnectionIndicatorMode.full,
                   clock: _clock,
-                  child: Text(row.label),
                 ),
             ],
           ),
