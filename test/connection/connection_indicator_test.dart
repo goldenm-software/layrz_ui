@@ -1,30 +1,44 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
 import '../helpers/no_overflow.dart';
 import '../helpers/pump_themed.dart';
+import '../helpers/root_semantics_node.dart';
+
+/// Counts semantics nodes under [tester]'s current tree whose label exactly
+/// equals [label].
+///
+/// Used to prove a single announcement string appears exactly once in the
+/// semantics tree — guarding against a competing outer `Semantics` node
+/// duplicating [LayrzBadge]'s own merged announcement (DESIGN "double
+/// semantics" hazard: see `combobox_input_a11y_test.dart`'s identical
+/// pattern).
+int _countSemanticsWithExactLabel(WidgetTester tester, String label) {
+  var count = 0;
+  void walk(SemanticsNode node) {
+    if (node.getSemanticsData().label == label) count++;
+    node.visitChildren((child) {
+      walk(child);
+      return true;
+    });
+  }
+
+  walk(rootSemanticsNode());
+  return count;
+}
 
 void main() {
   final fixedNow = DateTime(2026, 1, 1, 12, 0, 0);
 
   group('LayrzConnectionIndicator construction asserts', () {
-    test('.dot with a non-null child throws an AssertionError', () {
-      expect(
-        () => LayrzConnectionIndicator(
-          receivedAt: fixedNow,
-          mode: LayrzConnectionIndicatorMode.dot,
-          child: const SizedBox(),
-        ),
-        throwsAssertionError,
-      );
-    });
-
     test('.full with a null child throws an AssertionError', () {
       expect(
         () => LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.full,
+          clock: ValueNotifier<DateTime>(fixedNow),
         ),
         throwsAssertionError,
       );
@@ -35,6 +49,19 @@ void main() {
         () => LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.dot,
+          clock: ValueNotifier<DateTime>(fixedNow),
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('.dot with a non-null child does not throw (dot-over-child overlay is legal)', () {
+      expect(
+        () => LayrzConnectionIndicator(
+          receivedAt: fixedNow,
+          mode: LayrzConnectionIndicatorMode.dot,
+          clock: ValueNotifier<DateTime>(fixedNow),
+          child: const SizedBox(),
         ),
         returnsNormally,
       );
@@ -45,6 +72,7 @@ void main() {
         () => LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.full,
+          clock: ValueNotifier<DateTime>(fixedNow),
           child: const SizedBox(),
         ),
         returnsNormally,
@@ -63,7 +91,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.dot,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
         ),
       );
 
@@ -82,7 +110,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.dot,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
         ),
         theme: theme,
       );
@@ -103,7 +131,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: receivedAt,
           mode: LayrzConnectionIndicatorMode.dot,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
         ),
         theme: theme,
       );
@@ -124,7 +152,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: receivedAt,
           mode: LayrzConnectionIndicatorMode.dot,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
         ),
         theme: theme,
       );
@@ -145,7 +173,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: receivedAt,
           mode: LayrzConnectionIndicatorMode.dot,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
         ),
         theme: theme,
       );
@@ -165,7 +193,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: null,
           mode: LayrzConnectionIndicatorMode.dot,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
         ),
         theme: theme,
       );
@@ -187,7 +215,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.full,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
           child: const Text('unit-42'),
         ),
         theme: theme,
@@ -211,14 +239,13 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.full,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
           child: const Text('unit-42'),
         ),
         theme: theme,
       );
 
-      final decoration =
-          tester.widget<DecoratedBox>(find.byType(DecoratedBox).first).decoration as BoxDecoration;
+      final decoration = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first).decoration as BoxDecoration;
 
       // The chrome must use the chip's rounded-box r1 radius, never the pill
       // `full` radius — matching LayrzChip so it reads as a chip, not a pill.
@@ -251,7 +278,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: receivedAt,
           mode: LayrzConnectionIndicatorMode.full,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
           child: const Text('unit-99'),
         ),
         theme: theme,
@@ -278,7 +305,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: receivedAt,
           mode: LayrzConnectionIndicatorMode.full,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
           child: Text('unit-40', style: TextStyle(color: theme.tokens.colors.fg1)),
         ),
         theme: theme,
@@ -301,7 +328,7 @@ void main() {
         LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.full,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
           child: const Text('unit-1'),
         ),
       );
@@ -311,56 +338,94 @@ void main() {
     });
   });
 
-  group('LayrzConnectionIndicator timer lifecycle', () {
-    guardedTestWidgets('the periodic timer does not leak after dispose', (tester) async {
+  group('LayrzConnectionIndicator reactive clock', () {
+    guardedTestWidgets('rebuilds its state-dependent subtree when the clock notifier ticks, without owning '
+        'a timer of its own', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
+      final theme = LayrzThemeData.light();
+      // receivedAt stays fixed 2 minutes behind the clock's initial value —
+      // resolves to online. Advancing the clock notifier alone (never
+      // touching receivedAt, and with no Timer anywhere in this test) past
+      // the offline threshold must flip the resolved state, proving the
+      // widget reacts purely to the caller-driven ValueNotifier.
+      final receivedAt = fixedNow.subtract(const Duration(minutes: 2));
+      final clock = ValueNotifier<DateTime>(fixedNow);
+      addTearDown(clock.dispose);
+
+      await pumpThemed(
+        tester,
+        LayrzConnectionIndicator(
+          receivedAt: receivedAt,
+          mode: LayrzConnectionIndicatorMode.dot,
+          clock: clock,
+        ),
+        theme: theme,
+      );
+
+      final onlineBadge = tester.widget<LayrzBadgeVisual>(find.byType(LayrzBadgeVisual));
+      expect(onlineBadge.color, theme.tokens.colors.success);
+
+      // Push the notifier's value far enough past receivedAt to resolve to
+      // offline, then pump — no Timer involved, purely the notifier's own
+      // listener notification driving the rebuild.
+      clock.value = fixedNow.add(const Duration(hours: 3));
+      await tester.pump();
+
+      final offlineBadge = tester.widget<LayrzBadgeVisual>(find.byType(LayrzBadgeVisual));
+      expect(offlineBadge.color, theme.tokens.colors.danger);
+    });
+  });
+
+  group('LayrzConnectionIndicator.dot with a child (badge overlay)', () {
+    guardedTestWidgets('renders the child plus a LayrzBadge dot on its bottom-right corner', (tester) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final theme = LayrzThemeData.light();
       await pumpThemed(
         tester,
         LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.dot,
-          clock: () => fixedNow,
+          clock: ValueNotifier<DateTime>(fixedNow),
+          child: const Text('Asset A'),
         ),
+        theme: theme,
       );
 
-      // Remove the widget from the tree, triggering dispose().
-      await tester.pumpWidget(const SizedBox());
+      expect(find.text('Asset A'), findsOneWidget);
+      expect(find.byType(LayrzBadge), findsOneWidget);
+      // LayrzBadge itself renders exactly one LayrzBadgeVisual internally for
+      // its corner dot -- present here as a nested detail of LayrzBadge, not
+      // a second, competing bare-dot rendering path.
+      expect(find.byType(LayrzBadgeVisual), findsOneWidget);
 
-      // If the Timer.periodic were left running, pumping past its interval
-      // with nothing left mounted would either throw or leave a pending
-      // timer that fails the test via FlutterError.onError / pending timers
-      // check. Both getting here without exception and the tester's own
-      // pending-timer verification at tear-down prove no leak.
-      await tester.pump(const Duration(minutes: 2));
-      expect(tester.takeException(), isNull);
+      final badge = tester.widget<LayrzBadge>(find.byType(LayrzBadge));
+      expect(badge.color, theme.tokens.colors.success);
+      expect(badge.type, LayrzBadgeType.custom);
+      expect(badge.alignment, LayrzBadgeAlignment.bottomRight);
     });
 
-    guardedTestWidgets('advancing past the tick interval keeps the widget mounted (no rebuild crash)', (
-      tester,
-    ) async {
+    guardedTestWidgets('without a child still renders the classic bare dot, not a LayrzBadge', (tester) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      var now = fixedNow;
       await pumpThemed(
         tester,
         LayrzConnectionIndicator(
           receivedAt: fixedNow,
           mode: LayrzConnectionIndicatorMode.dot,
-          clock: () => now,
+          clock: ValueNotifier<DateTime>(fixedNow),
         ),
       );
 
-      // Simulate elapsed wall-clock time by advancing the injected clock,
-      // then let the periodic timer fire to trigger a rebuild against it.
-      now = fixedNow.add(const Duration(minutes: 20));
-      await tester.pump(kLayrzConnectionIndicatorTickInterval);
-
       expect(find.byType(LayrzBadgeVisual), findsOneWidget);
+      expect(find.byType(LayrzBadge), findsNothing);
     });
   });
 
@@ -377,7 +442,7 @@ void main() {
           LayrzConnectionIndicator(
             receivedAt: fixedNow.subtract(const Duration(minutes: 2)),
             mode: LayrzConnectionIndicatorMode.dot,
-            clock: () => fixedNow,
+            clock: ValueNotifier<DateTime>(fixedNow),
           ),
         );
 
@@ -402,7 +467,7 @@ void main() {
           LayrzConnectionIndicator(
             receivedAt: null,
             mode: LayrzConnectionIndicatorMode.dot,
-            clock: () => fixedNow,
+            clock: ValueNotifier<DateTime>(fixedNow),
           ),
         );
 
@@ -410,6 +475,38 @@ void main() {
           tester.getSemantics(find.byType(LayrzBadgeVisual)),
           matchesSemantics(label: 'No data'),
         );
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    guardedTestWidgets('the dot-over-child announcement appears exactly once (no double semantics)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemed(
+          tester,
+          LayrzConnectionIndicator(
+            receivedAt: fixedNow.subtract(const Duration(minutes: 2)),
+            mode: LayrzConnectionIndicatorMode.dot,
+            clock: ValueNotifier<DateTime>(fixedNow),
+            child: const Text('Asset A'),
+          ),
+        );
+
+        // LayrzBadge appends ", new" to the label it is given for a bare-dot
+        // badge (no count/icon) -- see LayrzBadge._announcement(). The
+        // connection announcement is passed straight through as that
+        // `label`, so the merged node reads "<announcement>, new" and must
+        // appear exactly once: a competing outer `Semantics` node wrapping
+        // the same announcement text would duplicate it into two nodes.
+        const announcement = 'Connected (2 minutes ago), new';
+        expect(_countSemanticsWithExactLabel(tester, announcement), 1);
       } finally {
         handle.dispose();
       }

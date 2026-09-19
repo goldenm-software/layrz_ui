@@ -35,21 +35,45 @@ void main() {
       expect(state, LayrzConnectionState.idle);
     });
 
-    test('90 minutes elapsed (past idle, within 30 days) resolves to offline', () {
+    test('90 minutes elapsed (past idle, within default 30-day offline threshold) resolves to offline', () {
       final receivedAt = fixedNow.subtract(const Duration(minutes: 90));
       final state = resolveLayrzConnectionState(receivedAt: receivedAt, now: fixedNow);
       expect(state, LayrzConnectionState.offline);
     });
 
-    test('exactly the offline boundary (30 days) still resolves to offline (inclusive)', () {
+    test('exactly the default offline boundary (30 days) still resolves to offline (inclusive)', () {
       final receivedAt = fixedNow.subtract(const Duration(days: 30));
       final state = resolveLayrzConnectionState(receivedAt: receivedAt, now: fixedNow);
       expect(state, LayrzConnectionState.offline);
     });
 
-    test('40 days elapsed (past the 30-day boundary) resolves to disconnected', () {
+    test('40 days elapsed (past the default 30-day boundary) resolves to disconnected', () {
       final receivedAt = fixedNow.subtract(const Duration(days: 40));
       final state = resolveLayrzConnectionState(receivedAt: receivedAt, now: fixedNow);
+      expect(state, LayrzConnectionState.disconnected);
+    });
+
+    test('a custom offline threshold moves the offline/disconnected boundary: at the boundary resolves '
+        'to offline', () {
+      const customTimes = LayrzConnectionTimes(
+        online: Duration(minutes: 15),
+        idle: Duration(minutes: 60),
+        offline: Duration(days: 2),
+      );
+      final receivedAt = fixedNow.subtract(const Duration(days: 2));
+      final state = resolveLayrzConnectionState(receivedAt: receivedAt, now: fixedNow, times: customTimes);
+      expect(state, LayrzConnectionState.offline);
+    });
+
+    test('a custom offline threshold moves the offline/disconnected boundary: past it resolves to '
+        'disconnected', () {
+      const customTimes = LayrzConnectionTimes(
+        online: Duration(minutes: 15),
+        idle: Duration(minutes: 60),
+        offline: Duration(days: 2),
+      );
+      final receivedAt = fixedNow.subtract(const Duration(days: 3));
+      final state = resolveLayrzConnectionState(receivedAt: receivedAt, now: fixedNow, times: customTimes);
       expect(state, LayrzConnectionState.disconnected);
     });
 
@@ -60,7 +84,11 @@ void main() {
     });
 
     test('custom LayrzConnectionTimes thresholds are honored over the defaults', () {
-      const customTimes = LayrzConnectionTimes(online: Duration(minutes: 5), idle: Duration(minutes: 10));
+      const customTimes = LayrzConnectionTimes(
+        online: Duration(minutes: 5),
+        idle: Duration(minutes: 10),
+        offline: Duration(days: 30),
+      );
       final receivedAt = fixedNow.subtract(const Duration(minutes: 7));
 
       // 7 minutes would be "online" under the 15-minute default, but must
