@@ -102,6 +102,7 @@ void main() {
               value: DateTime(2026, 9, 5, 9, 30),
               onChanged: (_) {},
               disabled: true,
+              pattern: '%Y-%m-%d %H:%M',
             ),
           ),
         );

@@ -130,6 +130,7 @@ void main() {
               endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
               onChanged: (_, _) {},
               disabled: true,
+              pattern: '%H:%M',
             ),
           ),
         );
@@ -364,7 +365,7 @@ void main() {
               startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
               endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
               onChanged: (_, _) {},
-              use24HourFormat: false,
+              pattern: '%I:%M %p',
             ),
           ),
         );

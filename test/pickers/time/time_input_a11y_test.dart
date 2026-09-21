@@ -140,6 +140,7 @@ void main() {
               value: const LayrzTimeOfDay(hour: 9, minute: 5),
               onChanged: (_) {},
               disabled: true,
+              pattern: '%H:%M',
             ),
           ),
         );
@@ -245,7 +246,7 @@ void main() {
                 labelText: 'Meeting time',
                 value: const LayrzTimeOfDay(hour: 9, minute: 5, second: 10),
                 onChanged: (_) {},
-                showSeconds: true,
+                pattern: '%H:%M:%S',
               ),
             ),
           );
@@ -281,7 +282,7 @@ void main() {
                 labelText: 'Meeting time',
                 value: const LayrzTimeOfDay(hour: 9, minute: 5, second: 10),
                 onChanged: (_) {},
-                showSeconds: true,
+                pattern: '%H:%M:%S',
               ),
             ),
           );
@@ -325,7 +326,7 @@ void main() {
               labelText: 'Meeting time',
               value: const LayrzTimeOfDay(hour: 14, minute: 5),
               onChanged: (_) {},
-              use24HourFormat: false,
+              pattern: '%I:%M %p',
             ),
           ),
         );
