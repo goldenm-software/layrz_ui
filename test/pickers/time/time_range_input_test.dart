@@ -66,6 +66,7 @@ void main() {
             startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
             onChanged: (_, _) {},
+            pattern: '%H:%M',
           ),
         ),
       );
@@ -213,6 +214,7 @@ void main() {
             startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
             onChanged: (_, _) => callCount++,
+            pattern: '%H:%M',
           ),
         ),
       );
@@ -307,6 +309,7 @@ void main() {
             startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
             onChanged: (start, end) => reported.add((start, end)),
+            pattern: '%H:%M',
           ),
         ),
       );
@@ -467,8 +470,8 @@ void main() {
     });
   });
 
-  group('LayrzTimeRangeInput — showSeconds toggles without layout reflow (D15)', () {
-    guardedTestWidgets('anchor row height is identical with showSeconds true vs false', (tester) async {
+  group('LayrzTimeRangeInput — seconds column is derived from pattern, not showSeconds (D15)', () {
+    guardedTestWidgets('anchor row height is identical with a seconds pattern vs without', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -481,6 +484,7 @@ void main() {
             startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
             onChanged: (_, _) {},
+            pattern: '%I:%M %p',
           ),
         ),
       );
@@ -494,7 +498,7 @@ void main() {
             startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
             onChanged: (_, _) {},
-            showSeconds: true,
+            pattern: '%I:%M:%S %p',
           ),
         ),
       );
@@ -503,7 +507,7 @@ void main() {
       expect(withoutSecondsHeight, withSecondsHeight);
     });
 
-    guardedTestWidgets('showSeconds true opens a panel with six EditableText fields (two clusters of three)', (
+    guardedTestWidgets('a %S pattern opens a panel with six EditableText fields (two clusters of three)', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -518,7 +522,7 @@ void main() {
             startValue: const LayrzTimeOfDay(hour: 9, minute: 0, second: 15),
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0, second: 45),
             onChanged: (_, _) {},
-            showSeconds: true,
+            pattern: '%H:%M:%S',
           ),
         ),
       );
@@ -528,15 +532,38 @@ void main() {
 
       expect(find.byType(EditableText), findsNWidgets(6));
     });
+
+    guardedTestWidgets('deprecated showSeconds is inert: a pattern without %S stays at four fields even when true', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeRangeInput(
+            labelText: 'Business hours',
+            startValue: const LayrzTimeOfDay(hour: 9, minute: 0, second: 15),
+            endValue: const LayrzTimeOfDay(hour: 17, minute: 0, second: 45),
+            onChanged: (_, _) {},
+            pattern: '%H:%M',
+            // ignore: deprecated_member_use
+            showSeconds: true,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeRangeInput));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditableText), findsNWidgets(4));
+    });
   });
 
-  group('LayrzTimeRangeInput — 24h default and 12h with meridiem', () {
-    guardedTestWidgets('use24HourFormat defaults to true', (tester) async {
-      const input = LayrzTimeRangeInput(labelText: 'Business hours');
-      expect(input.use24HourFormat, isTrue);
-    });
-
-    guardedTestWidgets('12h mode renders a meridiem control for both clusters', (tester) async {
+  group('LayrzTimeRangeInput — 12h/24h surface is derived from pattern, not use24HourFormat', () {
+    guardedTestWidgets('%I/%p pattern renders a meridiem control for both clusters', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -549,7 +576,7 @@ void main() {
             startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
             onChanged: (_, _) {},
-            use24HourFormat: false,
+            pattern: '%I:%M %p',
           ),
         ),
       );
@@ -559,6 +586,60 @@ void main() {
 
       expect(_meridiemButton('AM'), findsNWidgets(2));
       expect(_meridiemButton('PM'), findsNWidgets(2));
+    });
+
+    guardedTestWidgets('%H pattern renders no meridiem control for either cluster', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeRangeInput(
+            labelText: 'Business hours',
+            startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
+            endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
+            onChanged: (_, _) {},
+            pattern: '%H:%M',
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeRangeInput));
+      await tester.pumpAndSettle();
+
+      expect(_meridiemButton('AM'), findsNothing);
+      expect(_meridiemButton('PM'), findsNothing);
+    });
+
+    guardedTestWidgets('deprecated use24HourFormat is inert: a %H pattern stays 24h even when it is false', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeRangeInput(
+            labelText: 'Business hours',
+            startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
+            endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
+            onChanged: (_, _) {},
+            pattern: '%H:%M',
+            // ignore: deprecated_member_use
+            use24HourFormat: false,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeRangeInput));
+      await tester.pumpAndSettle();
+
+      expect(_meridiemButton('AM'), findsNothing);
+      expect(_meridiemButton('PM'), findsNothing);
     });
   });
 
@@ -576,6 +657,7 @@ void main() {
             startValue: const LayrzTimeOfDay(hour: 9, minute: 37),
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
             onChanged: (_, _) {},
+            pattern: '%H:%M',
           ),
         ),
       );
@@ -600,6 +682,7 @@ void main() {
             startValue: const LayrzTimeOfDay(hour: 9, minute: 0),
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
             onChanged: (start, end) => reported.add((start, end)),
+            pattern: '%H:%M',
           ),
         ),
       );
@@ -607,7 +690,7 @@ void main() {
       await tester.tap(find.byType(LayrzTimeRangeInput));
       await tester.pumpAndSettle();
 
-      // End cluster: hour(2), minute(3) -- showSeconds is false. Editing the
+      // End cluster: hour(2), minute(3) -- pattern has no %S. Editing the
       // end field (rather than start) keeps the pair in order (9:00 <=
       // 23:00), so this isolates the clamp behaviour from the auto-swap
       // rule tested separately above.
@@ -628,27 +711,28 @@ void main() {
   });
 
   group('LayrzTimeRangeInput — formatting', () {
-    guardedTestWidgets('default pattern formats each endpoint as HH:MM joined by the l10n range separator', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1600, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    guardedTestWidgets(
+      'default pattern formats each endpoint as hh:MM AM/PM (12h) joined by the l10n range separator',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await pumpThemedApp(
-        tester,
-        _bounded(
-          LayrzTimeRangeInput(
-            labelText: 'Business hours',
-            startValue: const LayrzTimeOfDay(hour: 8, minute: 4),
-            endValue: const LayrzTimeOfDay(hour: 16, minute: 30),
-            onChanged: (_, _) {},
+        await pumpThemedApp(
+          tester,
+          _bounded(
+            LayrzTimeRangeInput(
+              labelText: 'Business hours',
+              startValue: const LayrzTimeOfDay(hour: 8, minute: 4),
+              endValue: const LayrzTimeOfDay(hour: 16, minute: 30),
+              onChanged: (_, _) {},
+            ),
           ),
-        ),
-      );
+        );
 
-      expect(find.text('08:04 – 16:30'), findsOneWidget);
-    });
+        expect(find.text('08:04 AM – 04:30 PM'), findsOneWidget);
+      },
+    );
 
     guardedTestWidgets('a custom formatter overrides the summary text entirely', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
@@ -926,7 +1010,11 @@ void main() {
       await pumpThemedApp(
         tester,
         _bounded(
-          LayrzTimeRangeInput(labelText: 'Business hours', onChanged: (start, end) => reported.add((start, end))),
+          LayrzTimeRangeInput(
+            labelText: 'Business hours',
+            onChanged: (start, end) => reported.add((start, end)),
+            pattern: '%H:%M',
+          ),
         ),
       );
 
@@ -1072,6 +1160,7 @@ void main() {
             endValue: const LayrzTimeOfDay(hour: 17, minute: 0),
             onChanged: (_, _) {},
             controller: controller,
+            pattern: '%H:%M',
           ),
         ),
       );

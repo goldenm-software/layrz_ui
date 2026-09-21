@@ -73,9 +73,9 @@ void main() {
       await tester.tap(find.byType(LayrzTimeInput));
       await tester.pumpAndSettle();
 
-      // Two fields (hour, minute) -- showSeconds defaults to false, and the
-      // digital-clock panel genuinely omits the seconds group rather than
-      // mounting it hidden.
+      // Two fields (hour, minute) -- the default pattern ('%I:%M %p') has no
+      // %S directive, and the digital-clock panel genuinely omits the
+      // seconds group rather than mounting it hidden.
       expect(find.byType(EditableText), findsNWidgets(2));
     });
   });
@@ -97,6 +97,7 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 9, minute: 30),
             onChanged: reported.add,
+            pattern: '%H:%M',
           ),
         ),
       );
@@ -361,8 +362,8 @@ void main() {
     });
   });
 
-  group('LayrzTimeInput — showSeconds toggles without layout reflow (D15)', () {
-    guardedTestWidgets('anchor row height is identical with showSeconds true vs false', (tester) async {
+  group('LayrzTimeInput — seconds column is derived from pattern, not showSeconds (D15)', () {
+    guardedTestWidgets('anchor row height is identical with a seconds pattern vs without', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -374,6 +375,7 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 9, minute: 5),
             onChanged: (_) {},
+            pattern: '%I:%M %p',
           ),
         ),
       );
@@ -386,7 +388,7 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 9, minute: 5),
             onChanged: (_) {},
-            showSeconds: true,
+            pattern: '%I:%M:%S %p',
           ),
         ),
       );
@@ -395,7 +397,7 @@ void main() {
       expect(withoutSecondsHeight, withSecondsHeight);
     });
 
-    guardedTestWidgets('showSeconds true opens a panel with three EditableText fields', (tester) async {
+    guardedTestWidgets('a %S pattern opens a panel with three EditableText fields', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -407,7 +409,7 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 9, minute: 5, second: 30),
             onChanged: (_) {},
-            showSeconds: true,
+            pattern: '%H:%M:%S',
           ),
         ),
       );
@@ -417,15 +419,33 @@ void main() {
 
       expect(find.byType(EditableText), findsNWidgets(3));
     });
+
+    guardedTestWidgets('a pattern without %S opens a panel with only two EditableText fields', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeInput(
+            labelText: 'Time',
+            value: const LayrzTimeOfDay(hour: 9, minute: 5, second: 30),
+            onChanged: (_) {},
+            pattern: '%H:%M',
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeInput));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditableText), findsNWidgets(2));
+    });
   });
 
-  group('LayrzTimeInput — 24h default and 12h with meridiem', () {
-    guardedTestWidgets('use24HourFormat defaults to true', (tester) async {
-      const input = LayrzTimeInput(labelText: 'Time');
-      expect(input.use24HourFormat, isTrue);
-    });
-
-    guardedTestWidgets('24h mode formats an afternoon hour without a meridiem suffix', (tester) async {
+  group('LayrzTimeInput — 12h/24h surface is derived from pattern, not use24HourFormat', () {
+    guardedTestWidgets('%H pattern formats an afternoon hour without a meridiem suffix', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -437,6 +457,7 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 14, minute: 5),
             onChanged: (_) {},
+            pattern: '%H:%M',
           ),
         ),
       );
@@ -444,7 +465,7 @@ void main() {
       expect(find.text('14:05'), findsOneWidget);
     });
 
-    guardedTestWidgets('12h mode renders a meridiem control with both AM and PM options', (tester) async {
+    guardedTestWidgets('%H pattern opens a 24h panel: no meridiem control renders', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -456,7 +477,31 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 14, minute: 5),
             onChanged: (_) {},
-            use24HourFormat: false,
+            pattern: '%H:%M',
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeInput));
+      await tester.pumpAndSettle();
+
+      expect(_meridiemButton('AM'), findsNothing);
+      expect(_meridiemButton('PM'), findsNothing);
+    });
+
+    guardedTestWidgets('%I/%p pattern renders a meridiem control with both AM and PM options', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeInput(
+            labelText: 'Time',
+            value: const LayrzTimeOfDay(hour: 14, minute: 5),
+            onChanged: (_) {},
+            pattern: '%I:%M %p',
           ),
         ),
       );
@@ -468,7 +513,7 @@ void main() {
       expect(_meridiemButton('PM'), findsOneWidget);
     });
 
-    guardedTestWidgets('tapping PM in 12h mode reports an updated hour via onChanged', (tester) async {
+    guardedTestWidgets('tapping PM in a %p pattern reports an updated hour via onChanged', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -482,7 +527,7 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 9, minute: 5),
             onChanged: reported.add,
-            use24HourFormat: false,
+            pattern: '%I:%M %p',
           ),
         ),
       );
@@ -502,6 +547,89 @@ void main() {
       expect(reported, isNotEmpty);
       expect(reported.last.hour, 21);
     });
+
+    guardedTestWidgets('deprecated use24HourFormat is inert: a %H pattern stays 24h even when it is false', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeInput(
+            labelText: 'Time',
+            value: const LayrzTimeOfDay(hour: 14, minute: 5),
+            onChanged: (_) {},
+            pattern: '%H:%M',
+            // ignore: deprecated_member_use
+            use24HourFormat: false,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeInput));
+      await tester.pumpAndSettle();
+
+      expect(_meridiemButton('AM'), findsNothing);
+      expect(_meridiemButton('PM'), findsNothing);
+    });
+
+    guardedTestWidgets('deprecated use24HourFormat is inert: a %p pattern stays 12h even when it is true', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeInput(
+            labelText: 'Time',
+            value: const LayrzTimeOfDay(hour: 14, minute: 5),
+            onChanged: (_) {},
+            pattern: '%I:%M %p',
+            // ignore: deprecated_member_use
+            use24HourFormat: true,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeInput));
+      await tester.pumpAndSettle();
+
+      expect(_meridiemButton('AM'), findsOneWidget);
+      expect(_meridiemButton('PM'), findsOneWidget);
+    });
+
+    guardedTestWidgets('deprecated showSeconds is inert: a pattern without %S stays 2 fields even when it is true', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzTimeInput(
+            labelText: 'Time',
+            value: const LayrzTimeOfDay(hour: 9, minute: 5, second: 30),
+            onChanged: (_) {},
+            pattern: '%H:%M',
+            // ignore: deprecated_member_use
+            showSeconds: true,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzTimeInput));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditableText), findsNWidgets(2));
+    });
   });
 
   group('LayrzTimeInput — no interval snapping, out-of-range clamped not dropped', () {
@@ -517,6 +645,7 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 9, minute: 37),
             onChanged: (_) {},
+            pattern: '%H:%M',
           ),
         ),
       );
@@ -540,6 +669,7 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 9, minute: 5),
             onChanged: reported.add,
+            pattern: '%H:%M',
           ),
         ),
       );
@@ -598,7 +728,7 @@ void main() {
   });
 
   group('LayrzTimeInput — formatting', () {
-    guardedTestWidgets('default pattern formats as HH:MM', (tester) async {
+    guardedTestWidgets('default pattern formats as hh:MM AM/PM (12h)', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -614,7 +744,7 @@ void main() {
         ),
       );
 
-      expect(find.text('08:04'), findsOneWidget);
+      expect(find.text('08:04 AM'), findsOneWidget);
     });
 
     guardedTestWidgets('a custom formatter overrides the summary text entirely', (tester) async {
@@ -755,7 +885,7 @@ void main() {
             labelText: 'Time',
             value: const LayrzTimeOfDay(hour: 9, minute: 5, second: 20),
             onChanged: (_) {},
-            showSeconds: true,
+            pattern: '%H:%M:%S',
           ),
         ),
       );
@@ -787,6 +917,7 @@ void main() {
             value: const LayrzTimeOfDay(hour: 9, minute: 5),
             onChanged: (_) {},
             controller: controller,
+            pattern: '%H:%M',
           ),
         ),
       );

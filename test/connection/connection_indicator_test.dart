@@ -220,7 +220,15 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Connected'), findsOneWidget);
+      // `.full` renders the label followed by a formatted-timestamp suffix
+      // (` (2026-01-01 12:00 PM)` for `fixedNow` under the default pattern)
+      // in a second TextSpan of the same standalone RichText, so the plain
+      // text is no longer just the bare label. `findRichText: true` is
+      // required because the chip uses a raw RichText, not Text.rich --
+      // match on the label being present, then assert the timestamp suffix
+      // is also there as part of the same contract.
+      expect(find.textContaining('Connected', findRichText: true), findsOneWidget);
+      expect(find.textContaining('(2026-01-01 12:00 PM)', findRichText: true), findsOneWidget);
 
       final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
       final decoration = decoratedBox.decoration as BoxDecoration;
@@ -242,7 +250,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Connected'), findsOneWidget);
+      expect(find.textContaining('Connected', findRichText: true), findsOneWidget);
       expect(find.text('SHOULD_NOT_APPEAR'), findsNothing);
     });
 
@@ -300,7 +308,10 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Offline'), findsOneWidget);
+      // The appended timestamp formats `receivedAt` itself (not `now`), so
+      // 90 minutes before fixedNow's 12:00:00 formats to "10:30 AM".
+      expect(find.textContaining('Offline', findRichText: true), findsOneWidget);
+      expect(find.textContaining('(2026-01-01 10:30 AM)', findRichText: true), findsOneWidget);
 
       final decoratedBox = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first);
       final decoration = decoratedBox.decoration as BoxDecoration;
@@ -327,9 +338,20 @@ void main() {
         theme: theme,
       );
 
-      final label = tester.widget<Text>(find.text('Disconnected'));
-      expect(label.style?.color, theme.tokens.colors.fg1.contrastColor);
-      expect(label.style?.color, isNot(theme.tokens.colors.fg1));
+      // The chip renders a standalone RichText with two TextSpans (the state
+      // label, then the appended timestamp) rather than a plain Text, so the
+      // label's style must be read off its own TextSpan in that tree instead
+      // of via find.text/tester.widget<Text>. The label span itself carries
+      // no per-span style override -- the contrastColor is set once on the
+      // root TextSpan and inherited -- so the color is read off the root
+      // span, while the label's own text is still asserted on the child
+      // span to prove it is the label, not the timestamp, span.
+      final richText = tester.widget<RichText>(find.byType(RichText).first);
+      final rootSpan = richText.text as TextSpan;
+      final labelSpan = rootSpan.children!.first as TextSpan;
+      expect(labelSpan.text, 'Disconnected');
+      expect(rootSpan.style?.color, theme.tokens.colors.fg1.contrastColor);
+      expect(rootSpan.style?.color, isNot(theme.tokens.colors.fg1));
     });
 
     guardedTestWidgets('does not render LayrzBadgeVisual or LayrzTooltip in full mode', (tester) async {
@@ -375,15 +397,15 @@ void main() {
         theme: theme,
       );
 
-      expect(find.text('Connected'), findsOneWidget);
+      expect(find.textContaining('Connected', findRichText: true), findsOneWidget);
       var decoration = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first).decoration as BoxDecoration;
       expect(decoration.color, theme.tokens.colors.success);
 
       clock.value = fixedNow.add(const Duration(hours: 3));
       await tester.pump();
 
-      expect(find.text('Connected'), findsNothing);
-      expect(find.text('Offline'), findsOneWidget);
+      expect(find.textContaining('Connected', findRichText: true), findsNothing);
+      expect(find.textContaining('Offline', findRichText: true), findsOneWidget);
       decoration = tester.widget<DecoratedBox>(find.byType(DecoratedBox).first).decoration as BoxDecoration;
       expect(decoration.color, theme.tokens.colors.danger);
     });
@@ -563,7 +585,9 @@ void main() {
       }
     });
 
-    guardedTestWidgets('the .full chip announces just the state label, exactly once', (tester) async {
+    guardedTestWidgets('the .full chip announces the state label and appended timestamp, exactly once', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -579,11 +603,19 @@ void main() {
           ),
         );
 
+        // The chip's RichText concatenates the text of every TextSpan into
+        // one semantics label (RenderParagraph.describeSemanticsConfiguration
+        // merges all of its spans' plain text), so the announced string
+        // includes the appended timestamp suffix, not just the bare label --
+        // this is the correct, intended announcement: a sighted user reading
+        // the chip sees "Connected (2026-01-01 12:00 PM)", and a screen
+        // reader user should hear the same content, not a truncated one.
+        const announcement = 'Connected (2026-01-01 12:00 PM)';
         expect(
-          tester.getSemantics(find.text('Connected')),
-          matchesSemantics(label: 'Connected'),
+          tester.getSemantics(find.byType(RichText).first),
+          matchesSemantics(label: announcement),
         );
-        expect(_countSemanticsWithExactLabel(tester, 'Connected'), 1);
+        expect(_countSemanticsWithExactLabel(tester, announcement), 1);
       } finally {
         handle.dispose();
       }

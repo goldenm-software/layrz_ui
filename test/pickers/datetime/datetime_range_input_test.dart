@@ -105,7 +105,7 @@ void main() {
       expect(find.text('Choose a range'), findsWidgets);
     });
 
-    guardedTestWidgets('formats a non-null pair with the default %Y-%m-%d %H:%M pattern joined by the range '
+    guardedTestWidgets('formats a non-null pair with the default %Y-%m-%d %I:%M %p pattern joined by the range '
         'separator', (tester) async {
       setWide(tester);
       await pumpThemedApp(
@@ -120,7 +120,10 @@ void main() {
       );
 
       final l10n = const LayrzUiL10nDefault();
-      expect(find.text('2026-09-01 09:00${l10n.dateTimePickerRangeSeparator}2026-09-03 17:30'), findsOneWidget);
+      expect(
+        find.text('2026-09-01 09:00 AM${l10n.dateTimePickerRangeSeparator}2026-09-03 05:30 PM'),
+        findsOneWidget,
+      );
     });
 
     guardedTestWidgets('formats a non-null pair with a custom pattern', (tester) async {
@@ -633,6 +636,7 @@ void main() {
               savedStart = s;
               savedEnd = e;
             },
+            pattern: '%Y-%m-%d %H:%M',
           ),
         ),
       );
@@ -685,6 +689,7 @@ void main() {
               savedStart = s;
               savedEnd = e;
             },
+            pattern: '%Y-%m-%d %H:%M',
           ),
         ),
       );
@@ -1132,8 +1137,8 @@ void main() {
     });
   });
 
-  group('LayrzDateTimeRangeInput — showSeconds', () {
-    guardedTestWidgets('showSeconds true opens a panel with six EditableText fields per cluster (twelve total)', (
+  group('LayrzDateTimeRangeInput — seconds column is derived from pattern, not showSeconds', () {
+    guardedTestWidgets('a %S pattern opens a panel with six EditableText fields per cluster (twelve total)', (
       tester,
     ) async {
       setWide(tester);
@@ -1144,7 +1149,7 @@ void main() {
             labelText: 'Trip',
             startValue: DateTime(2026, 9, 1, 9, 0, 0),
             endValue: DateTime(2026, 9, 3, 17, 0, 0),
-            showSeconds: true,
+            pattern: '%Y-%m-%d %H:%M:%S',
           ),
         ),
       );
@@ -1157,28 +1162,54 @@ void main() {
       expect(find.byType(EditableText), findsNWidgets(6));
     });
 
-    guardedTestWidgets('anchor row height is identical with showSeconds true vs false (D15, no reflow)', (
+    guardedTestWidgets('anchor row height is identical with a %S pattern vs without (D15, no reflow)', (
       tester,
     ) async {
       setWide(tester);
       await pumpThemedApp(
         tester,
-        _bounded(LayrzDateTimeRangeInput(labelText: 'Trip', showSeconds: false)),
+        _bounded(LayrzDateTimeRangeInput(labelText: 'Trip', pattern: '%Y-%m-%d %I:%M %p')),
       );
       final heightWithout = tester.getSize(find.byType(LayrzInputChrome).first).height;
 
       await pumpThemedApp(
         tester,
-        _bounded(LayrzDateTimeRangeInput(labelText: 'Trip', showSeconds: true)),
+        _bounded(LayrzDateTimeRangeInput(labelText: 'Trip', pattern: '%Y-%m-%d %I:%M:%S %p')),
       );
       final heightWith = tester.getSize(find.byType(LayrzInputChrome).first).height;
 
       expect(heightWith, heightWithout);
     });
+
+    guardedTestWidgets('deprecated showSeconds is inert: a pattern without %S stays at four fields even when true', (
+      tester,
+    ) async {
+      setWide(tester);
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzDateTimeRangeInput(
+            labelText: 'Trip',
+            startValue: DateTime(2026, 9, 1, 9, 0, 0),
+            endValue: DateTime(2026, 9, 3, 17, 0, 0),
+            pattern: '%Y-%m-%d %H:%M',
+            // ignore: deprecated_member_use
+            showSeconds: true,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await _switchToTimeTab(tester);
+
+      expect(find.byType(EditableText), findsNWidgets(4));
+    });
   });
 
   group('LayrzDateTimeRangeInput — 24h / 12h and clamping', () {
-    guardedTestWidgets('use24HourFormat defaults to true (no meridiem control rendered)', (tester) async {
+    guardedTestWidgets('default pattern renders a meridiem control (12h by default)', (tester) async {
       setWide(tester);
       await pumpThemedApp(
         tester,
@@ -1198,7 +1229,58 @@ void main() {
 
       // LayrzButton's label renders via RichText (a TextSpan, not a plain
       // Text widget), so find.textContaining never matches it -- a widget
-      // predicate is the correct finder here.
+      // predicate is the correct finder here. Two clusters (Start and End)
+      // each render their own meridiem control.
+      expect(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'AM'), findsNWidgets(2));
+      expect(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'PM'), findsNWidgets(2));
+    });
+
+    guardedTestWidgets('%H pattern renders no meridiem control', (tester) async {
+      setWide(tester);
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzDateTimeRangeInput(
+            labelText: 'Trip',
+            startValue: DateTime(2026, 9, 1, 9, 0),
+            endValue: DateTime(2026, 9, 3, 17, 0),
+            pattern: '%Y-%m-%d %H:%M',
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await _switchToTimeTab(tester);
+
+      expect(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'AM'), findsNothing);
+      expect(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'PM'), findsNothing);
+    });
+
+    guardedTestWidgets('deprecated use24HourFormat is inert: a %H pattern stays 24h even when it is false', (
+      tester,
+    ) async {
+      setWide(tester);
+      await pumpThemedApp(
+        tester,
+        _bounded(
+          LayrzDateTimeRangeInput(
+            labelText: 'Trip',
+            startValue: DateTime(2026, 9, 1, 9, 0),
+            endValue: DateTime(2026, 9, 3, 17, 0),
+            pattern: '%Y-%m-%d %H:%M',
+            // ignore: deprecated_member_use
+            use24HourFormat: false,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await _switchToTimeTab(tester);
+
       expect(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'AM'), findsNothing);
       expect(find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'PM'), findsNothing);
     });
@@ -1257,6 +1339,7 @@ void main() {
               savedStart = s;
               savedEnd = e;
             },
+            pattern: '%Y-%m-%d %H:%M',
           ),
         ),
       );

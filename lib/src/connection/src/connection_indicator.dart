@@ -37,12 +37,18 @@ import 'connection_times.dart';
 /// - [LayrzConnectionIndicatorMode.full] — a **self-contained chip**: it
 ///   renders the resolved state's localized label (e.g. "Online", "Idle",
 ///   "Offline", "Disconnected", "No data") on a state-colored chip-like
-///   chrome. [child] is **ignored** in this mode — `.full` never wraps or
-///   displays caller content; it is a standalone status chip, not a
-///   decorator. The label text color is derived via
-///   [LayrzColorExtensions.contrastColor] against the resolved state color
-///   for legibility on every state background, most notably the dark `fg1`
-///   Disconnected chip.
+///   chrome, followed by a formatted-timestamp suffix — e.g. `"Connected
+///   (2026-01-01 12:00 PM)"` — when [receivedAt] is non-`null`. The
+///   timestamp is rendered from [receivedAt] via [pattern] (default
+///   `'%Y-%m-%d %I:%M %p'`) and appended as a second, smaller `TextSpan`
+///   (`tokens.typography.label` rather than the label's `body` style); the
+///   suffix is omitted entirely — the chip shows the bare label — when
+///   [receivedAt] is `null`. [child] is **ignored** in this mode — `.full`
+///   never wraps or displays caller content; it is a standalone status
+///   chip, not a decorator. Both the label and timestamp text color are
+///   derived via [LayrzColorExtensions.contrastColor] against the resolved
+///   state color for legibility on every state background, most notably the
+///   dark `fg1` Disconnected chip.
 ///
 /// **Clock source — caller-owned and reactive, not self-ticking.** This
 /// widget is [StatelessWidget] and owns no `Timer` of its own. Elapsed time
@@ -115,6 +121,10 @@ class LayrzConnectionIndicator extends StatelessWidget {
   /// `package:timezone` itself.
   final ValueListenable<DateTime> clock;
 
+  /// A strftime-style pattern used to format [value] for display, when
+  /// [formatter] is not supplied. Defaults to `'%Y-%m-%d %H:%M'`.
+  final String pattern;
+
   /// Creates a new [LayrzConnectionIndicator].
   ///
   /// [child] places no restriction in either mode: it is optional in
@@ -128,6 +138,7 @@ class LayrzConnectionIndicator extends StatelessWidget {
     required this.mode,
     this.child,
     required this.clock,
+    this.pattern = '%Y-%m-%d %I:%M %p',
   });
 
   @override
@@ -188,10 +199,12 @@ class LayrzConnectionIndicator extends StatelessWidget {
           );
         }
 
-        // No outer `Semantics` wrapper is added here: the `Text` below already
-        // contributes `stateLabel` as its own semantics label, so wrapping it
-        // would merge into a duplicated "label\nlabel" announcement instead
-        // of a single clean one.
+        // No outer `Semantics` wrapper is added here: the `RichText` below
+        // already contributes its own semantics label -- the concatenation
+        // of the state-label span and, when present, the appended-timestamp
+        // span -- so wrapping it would merge into a duplicated announcement
+        // instead of the single clean "label (timestamp)" one it produces on
+        // its own.
         return DecoratedBox(
           decoration: BoxDecoration(
             color: color,
@@ -203,9 +216,18 @@ class LayrzConnectionIndicator extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1 / 2),
             // `color.contrastColor` guarantees the label stays legible on every
             // state color, most notably the dark `fg1` Disconnected chip.
-            child: Text(
-              stateLabel,
-              style: tokens.typography.label.copyWith(color: color.contrastColor),
+            child: RichText(
+              text: TextSpan(
+                style: tokens.typography.body.copyWith(color: color.contrastColor),
+                children: [
+                  TextSpan(text: stateLabel),
+                  if (receivedAt != null)
+                    TextSpan(
+                      text: ' (${receivedAt?.format(context, pattern)})',
+                      style: tokens.typography.label.copyWith(color: color.contrastColor),
+                    ),
+                ],
+              ),
             ),
           ),
         );

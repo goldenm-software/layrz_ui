@@ -80,7 +80,7 @@ void main() {
         tester,
         LayrzDateTimeInput(labelText: 'When', value: DateTime(2026, 9, 5, 14, 30)),
       );
-      expect(find.text('2026-09-05 14:30'), findsOneWidget);
+      expect(find.text('2026-09-05 02:30 PM'), findsOneWidget);
     });
 
     guardedTestWidgets('formats value using a custom pattern', (tester) async {
@@ -138,6 +138,111 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(EditableText), findsWidgets);
+    });
+  });
+
+  group('LayrzDateTimeInput — picker surface is derived from pattern, not showSeconds/use24HourFormat', () {
+    /// Locates the [LayrzButton] rendering [label] ("AM" or "PM") within the
+    /// Time tab's meridiem control -- [LayrzButton]'s label renders via
+    /// [RichText] (a [TextSpan], not a plain [Text] widget), so `find.text`
+    /// never matches it.
+    Finder meridiemButton(String label) {
+      return find.byWidgetPredicate((widget) => widget is LayrzButton && widget.labelText == label);
+    }
+
+    guardedTestWidgets('%I/%p pattern renders a meridiem control on the Time tab', (tester) async {
+      setWide(tester);
+      await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When', pattern: '%Y-%m-%d %I:%M %p'));
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
+      expect(meridiemButton('AM'), findsOneWidget);
+      expect(meridiemButton('PM'), findsOneWidget);
+    });
+
+    guardedTestWidgets('%H pattern renders no meridiem control on the Time tab', (tester) async {
+      setWide(tester);
+      await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When', pattern: '%Y-%m-%d %H:%M'));
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
+      expect(meridiemButton('AM'), findsNothing);
+      expect(meridiemButton('PM'), findsNothing);
+    });
+
+    guardedTestWidgets('%S pattern shows three time fields on the Time tab', (tester) async {
+      setWide(tester);
+      await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When', pattern: '%Y-%m-%d %H:%M:%S'));
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditableText), findsNWidgets(3));
+    });
+
+    guardedTestWidgets('a pattern without %S shows only two time fields on the Time tab', (tester) async {
+      setWide(tester);
+      await pumpThemedApp(tester, LayrzDateTimeInput(labelText: 'When', pattern: '%Y-%m-%d %H:%M'));
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditableText), findsNWidgets(2));
+    });
+
+    guardedTestWidgets('deprecated use24HourFormat is inert: a %H pattern stays 24h even when it is false', (
+      tester,
+    ) async {
+      setWide(tester);
+      await pumpThemedApp(
+        tester,
+        LayrzDateTimeInput(
+          labelText: 'When',
+          pattern: '%Y-%m-%d %H:%M',
+          // ignore: deprecated_member_use
+          use24HourFormat: false,
+        ),
+      );
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
+      expect(meridiemButton('AM'), findsNothing);
+      expect(meridiemButton('PM'), findsNothing);
+    });
+
+    guardedTestWidgets('deprecated showSeconds is inert: a pattern without %S stays two fields even when true', (
+      tester,
+    ) async {
+      setWide(tester);
+      await pumpThemedApp(
+        tester,
+        LayrzDateTimeInput(
+          labelText: 'When',
+          pattern: '%Y-%m-%d %H:%M',
+          // ignore: deprecated_member_use
+          showSeconds: true,
+        ),
+      );
+      await tester.tap(find.byType(LayrzInputChrome).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Time'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditableText), findsNWidgets(2));
     });
   });
 
@@ -346,7 +451,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(changed, isNull);
-      expect(find.text('2026-09-01 08:00'), findsOneWidget);
+      expect(find.text('2026-09-01 08:00 AM'), findsOneWidget);
     });
 
     guardedTestWidgets('typing in a time field never closes the drawer (trap 4)', (tester) async {
@@ -477,7 +582,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(changed, isNull);
-      expect(find.text('2026-09-01 08:00'), findsOneWidget);
+      expect(find.text('2026-09-01 08:00 AM'), findsOneWidget);
 
       // Reopen: a fresh drawer route means a fresh LayrzTabView State, so the
       // Date tab is selected by default again -- the draft must be gone: the
@@ -643,7 +748,7 @@ void main() {
       setCompact(tester);
       await pumpThemedApp(
         tester,
-        LayrzDateTimeInput(labelText: 'When', showSeconds: true, use24HourFormat: false),
+        LayrzDateTimeInput(labelText: 'When', pattern: '%Y-%m-%d %I:%M:%S %p'),
       );
 
       await tester.tap(find.byType(LayrzInputChrome).first);

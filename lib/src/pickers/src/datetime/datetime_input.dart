@@ -102,13 +102,36 @@ class LayrzDateTimeInput extends StatefulWidget {
   final bool showWeekNumbers;
 
   /// Whether the seconds field is shown.
+  ///
+  /// **Deprecated and inert** — see [pattern]. Include `%S` in [pattern] to
+  /// show the seconds field instead.
+  @Deprecated(
+    'The picker surface is now derived from `pattern` (use %I/%p for a 12-hour '
+    'clock, %H for 24-hour, %S to show seconds). This flag is ignored and will '
+    'be removed in a future release.',
+  )
   final bool showSeconds;
 
-  /// Whether the hour field uses 24-hour form. Defaults to `true`.
+  /// Whether the hour field uses 24-hour form.
+  ///
+  /// **Deprecated and inert** — see [pattern]. Include `%I` or `%p` in
+  /// [pattern] for a 12-hour clock, or `%H` for a 24-hour clock, instead.
+  @Deprecated(
+    'The picker surface is now derived from `pattern` (use %I/%p for a 12-hour '
+    'clock, %H for 24-hour, %S to show seconds). This flag is ignored and will '
+    'be removed in a future release.',
+  )
   final bool use24HourFormat;
 
   /// A strftime-style pattern used to format [value] for display, when
-  /// [formatter] is not supplied. Defaults to `'%Y-%m-%d %H:%M'`.
+  /// [formatter] is not supplied. Defaults to `'%Y-%m-%d %I:%M %p'`.
+  ///
+  /// **This pattern is also the single source of truth for the picker
+  /// surface's time part**, superseding [showSeconds] and
+  /// [use24HourFormat]: the surface renders a 12-hour AM/PM cluster when
+  /// [pattern] contains `%I` or `%p`, a 24-hour digit box otherwise (see
+  /// `strftimePatternUses24HourClock`), and shows a seconds column iff
+  /// [pattern] contains `%S` (see `strftimePatternShowsSeconds`).
   final String pattern;
 
   /// A full-control override for formatting [value] into display text,
@@ -160,9 +183,11 @@ class LayrzDateTimeInput extends StatefulWidget {
     this.disabledDays = const {},
     this.firstDayOfWeek = DateTime.monday,
     this.showWeekNumbers = true,
+    // ignore: deprecated_member_use_from_same_package
     this.showSeconds = false,
+    // ignore: deprecated_member_use_from_same_package
     this.use24HourFormat = true,
-    this.pattern = '%Y-%m-%d %H:%M',
+    this.pattern = '%Y-%m-%d %I:%M %p',
     this.formatter,
     this.controller,
     this.focusNode,
@@ -336,8 +361,8 @@ class _LayrzDateTimeInputState extends State<LayrzDateTimeInput> {
         disabledDays: widget.disabledDays,
         firstDayOfWeek: widget.firstDayOfWeek,
         showWeekNumbers: widget.showWeekNumbers,
-        showSeconds: widget.showSeconds,
-        use24HourFormat: widget.use24HourFormat,
+        showSeconds: strftimePatternShowsSeconds(widget.pattern),
+        use24HourFormat: strftimePatternUses24HourClock(widget.pattern),
         labelText: widget.labelText,
         showInlineFooter: false,
         onDraftChanged: syncDraftState,
