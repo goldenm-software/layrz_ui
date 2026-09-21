@@ -115,6 +115,10 @@ class LayrzConnectionIndicator extends StatelessWidget {
   /// `package:timezone` itself.
   final ValueListenable<DateTime> clock;
 
+  /// A strftime-style pattern used to format [value] for display, when
+  /// [formatter] is not supplied. Defaults to `'%Y-%m-%d %H:%M'`.
+  final String pattern;
+
   /// Creates a new [LayrzConnectionIndicator].
   ///
   /// [child] places no restriction in either mode: it is optional in
@@ -128,6 +132,7 @@ class LayrzConnectionIndicator extends StatelessWidget {
     required this.mode,
     this.child,
     required this.clock,
+    this.pattern = '%Y-%m-%d %I:%M %p',
   });
 
   @override
@@ -203,9 +208,18 @@ class LayrzConnectionIndicator extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp2, vertical: tokens.spacing.sp1 / 2),
             // `color.contrastColor` guarantees the label stays legible on every
             // state color, most notably the dark `fg1` Disconnected chip.
-            child: Text(
-              stateLabel,
-              style: tokens.typography.label.copyWith(color: color.contrastColor),
+            child: RichText(
+              text: TextSpan(
+                style: tokens.typography.body.copyWith(color: color.contrastColor),
+                children: [
+                  TextSpan(text: stateLabel),
+                  if (receivedAt != null)
+                    TextSpan(
+                      text: ' (${receivedAt?.format(context, pattern)})',
+                      style: tokens.typography.label.copyWith(color: color.contrastColor),
+                    ),
+                ],
+              ),
             ),
           ),
         );
