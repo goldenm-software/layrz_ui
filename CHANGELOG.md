@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0
+
+- Added `DateTime.format(context, pattern)` (`LayrzDateTimeExtensions`), a strftime-style formatter on `DateTime`; resolves `LayrzUiL10n` from the optional `BuildContext` and falls back to the English default when it is `null`.
+- The date and time pickers now derive their picker surface (12-hour vs 24-hour clock and the seconds column) from the `pattern` itself via the new `strftimePatternUses24HourClock` / `strftimePatternShowsSeconds` helpers.
+- **Breaking (rendered output):** default patterns are now 12-hour — `LayrzDateTimeInput` and `LayrzDateTimeRangeInput` default to `'%Y-%m-%d %I:%M %p'`, and `LayrzTimeInput` and `LayrzTimeRangeInput` to `'%I:%M %p'`. Pickers that relied on the old 24-hour defaults now render 12-hour time; pass an explicit `pattern` (e.g. `'%H:%M'`) to restore the previous format.
+- **Deprecated:** `use24HourFormat` and `showSeconds` on the time and datetime pickers are now `@Deprecated` and inert — the clock format and seconds column are driven by `pattern`. They will be removed in a future release.
+
 ## 1.3.0
 
 - **BREAKING — `LayrzConnectionIndicator.clock` is now a required `ValueListenable<DateTime>`** (was an optional `DateTime Function()?` with a `DateTime.now` fallback). The widget is now a `StatelessWidget` and rebuilds only its own subtree via a `ValueListenableBuilder` driven by the caller's clock — the caller owns the ticker (e.g. one shared `ValueNotifier<DateTime>` feeding many indicators), instead of each indicator running its own `Timer`. A caller may drive it with a `TZDateTime`-valued notifier; the widget stays timezone-agnostic. Callers must now supply a clock.
