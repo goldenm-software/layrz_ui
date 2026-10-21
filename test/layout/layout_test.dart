@@ -578,4 +578,63 @@ void main() {
       expect(textRect.right, lessThanOrEqualTo(500.0));
     });
   });
+
+  group('LayrzLayout - body state across presentations', () {
+    for (final (from, to) in [
+      (const Size(1400, 900), const Size(500, 900)),
+      (const Size(500, 900), const Size(1400, 900)),
+    ]) {
+      testWidgets('keeps the body state when resizing from ${from.width} to ${to.width}', (WidgetTester tester) async {
+        var inits = 0;
+        var disposes = 0;
+
+        await _pumpThemedLayout(
+          tester,
+          LayrzLayout(
+            logo: 'assets/test-logo.png',
+            items: [LayrzNavigatorPage(id: 'home', labelText: 'Home', isSelected: true)],
+            body: _LifecycleProbe(onInit: () => inits++, onDispose: () => disposes++),
+          ),
+          size: from,
+          devicePixelRatio: 1.0,
+        );
+
+        tester.view.physicalSize = to;
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(_LifecycleProbe), findsOneWidget);
+        expect(inits, 1);
+        expect(disposes, 0);
+      });
+    }
+  });
+}
+
+/// Reports its own initState and dispose, to detect a body being torn down.
+class _LifecycleProbe extends StatefulWidget {
+  const _LifecycleProbe({required this.onInit, required this.onDispose});
+
+  final VoidCallback onInit;
+  final VoidCallback onDispose;
+
+  @override
+  State<_LifecycleProbe> createState() => _LifecycleProbeState();
+}
+
+class _LifecycleProbeState extends State<_LifecycleProbe> {
+  @override
+  void initState() {
+    super.initState();
+    widget.onInit();
+  }
+
+  @override
+  void dispose() {
+    widget.onDispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const Text('Body');
 }

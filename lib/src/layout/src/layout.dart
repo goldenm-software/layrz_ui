@@ -167,6 +167,27 @@ class _LayrzLayoutState extends State<LayrzLayout> {
   /// Disposed when the state is disposed. Only created if [selectableContent] is true.
   late FocusNode _selectableFocusNode;
 
+  /// Keeps the body subtree, and its state, alive when the presentation
+  /// switches between expanded and drawer: each builds it under a different
+  /// parent, which would otherwise tear it down and recreate it.
+  final GlobalKey _bodyKey = GlobalKey(debugLabel: 'LayrzLayout.body');
+
+  /// The body wrapped in [_bodyKey], inside a [SelectableRegion] when
+  /// [LayrzLayout.selectableContent] is `true`.
+  Widget _keyedBody() {
+    return KeyedSubtree(
+      key: _bodyKey,
+      child: widget.selectableContent
+          ? SelectableRegion(
+              focusNode: _selectableFocusNode,
+              selectionControls: _selectionControls,
+              contextMenuBuilder: _buildContextMenu,
+              child: widget.body,
+            )
+          : widget.body,
+    );
+  }
+
   /// The effective [LayrzLayoutController] this layout is using — either
   /// [LayrzLayout.controller] when supplied, or an internally-created
   /// instance when it is null. See [_ownsController].
@@ -366,14 +387,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
   }
 
   Widget _buildExpanded(BuildContext context, LayrzTokens tokens, Color backgroundColor) {
-    final bodyWidget = widget.selectableContent
-        ? SelectableRegion(
-            focusNode: _selectableFocusNode,
-            selectionControls: _selectionControls,
-            contextMenuBuilder: _buildContextMenu,
-            child: widget.body,
-          )
-        : widget.body;
+    final bodyWidget = _keyedBody();
 
     // Scaffold-style keyboard handling: reduce the bottom of both the body and the rail
     // panel by viewInsets.bottom, then zero viewInsets for their subtrees so nested widgets
@@ -441,14 +455,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
   }
 
   Widget _buildDrawer(BuildContext context, LayrzTokens tokens, Color backgroundColor) {
-    final bodyWidget = widget.selectableContent
-        ? SelectableRegion(
-            focusNode: _selectableFocusNode,
-            selectionControls: _selectionControls,
-            contextMenuBuilder: _buildContextMenu,
-            child: widget.body,
-          )
-        : widget.body;
+    final bodyWidget = _keyedBody();
 
     return LayrzLayoutDrawerScaffold(
       backgroundColor: backgroundColor,
