@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:emojis/emoji.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -700,6 +701,65 @@ void main() {
       expect(find.text('Required'), findsOneWidget);
       final avatarFinder = find.byWidgetPredicate((widget) => widget is LayrzAvatar);
       expect(avatarFinder, findsWidgets);
+    });
+  });
+
+  group('LayrzDynamicAvatarInput — color', () {
+    Future<LayrzAvatar> pumpAvatar(WidgetTester tester, LayrzAvatarSource source, {Color? color}) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await pumpThemedApp(tester, LayrzDynamicAvatarInput(labelText: 'Avatar', value: source, color: color));
+      return tester.widget<LayrzAvatar>(
+        find.descendant(of: find.byType(LayrzDynamicAvatarTile), matching: find.byType(LayrzAvatar)),
+      );
+    }
+
+    const color = Color(0xFFC2185B);
+
+    guardedTestWidgets('paints an icon avatar with color', (tester) async {
+      final source = LayrzAvatarIcon(findMdiRemapIconByName('mdi-check-circle-outline')!);
+
+      final avatar = await pumpAvatar(tester, source, color: color);
+
+      expect(avatar.color, color);
+    });
+
+    guardedTestWidgets('ignores color for an emoji avatar', (tester) async {
+      final avatar = await pumpAvatar(tester, const LayrzAvatarEmoji('😀'), color: color);
+
+      expect(avatar.color, isNull);
+    });
+
+    guardedTestWidgets('ignores color for a base64 avatar', (tester) async {
+      final avatar = await pumpAvatar(tester, const LayrzAvatarBase64(''), color: color);
+
+      expect(avatar.color, isNull);
+    });
+
+    guardedTestWidgets('hovering an icon avatar with color keeps the border in that color', (tester) async {
+      final source = LayrzAvatarIcon(findMdiRemapIconByName('mdi-check-circle-outline')!);
+      await pumpAvatar(tester, source, color: color);
+
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      await mouse.moveTo(tester.getCenter(find.byType(LayrzDynamicAvatarTile)));
+      await tester.pumpAndSettle();
+
+      final container = tester.widget<AnimatedContainer>(
+        find.descendant(of: find.byType(LayrzDynamicAvatarTile), matching: find.byType(AnimatedContainer)),
+      );
+      final border = (container.decoration! as BoxDecoration).border! as Border;
+      expect(border.top.color, color);
+    });
+
+    guardedTestWidgets('without color an icon avatar keeps its default color', (tester) async {
+      final source = LayrzAvatarIcon(findMdiRemapIconByName('mdi-check-circle-outline')!);
+
+      final avatar = await pumpAvatar(tester, source);
+
+      expect(avatar.color, isNull);
     });
   });
 }

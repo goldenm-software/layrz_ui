@@ -26,6 +26,26 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('Wrong arguments should not produce a valid tooltip', (tester) async {
+      // When no Overlay exists, tooltip should return child unchanged.
+      try {
+        await tester.pumpWidget(
+          LayrzTooltip(
+            titleText: 'Some title',
+            contentText: null,
+            child: SizedBox(
+              width: 50,
+              height: 50,
+            ),
+          ),
+        );
+        fail('Expected an assertion error due to invalid tooltip arguments.');
+      } catch (e) {
+        // Ignore any exceptions thrown during widget pumping.
+        expect(e, isA<AssertionError>());
+      }
+    });
+
     testWidgets('shows tooltip on long-press', (tester) async {
       await pumpThemed(
         tester,

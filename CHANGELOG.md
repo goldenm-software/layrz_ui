@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.0
+
+- `LayrzDynamicAvatarInput` accepts an optional `color` that paints the populated tile and its border when the value is a `LayrzAvatarIcon` (ignored for emoji, URL and base64), so the tile matches `LayrzAvatar(color:)` elsewhere.
+- Fixed: `LayrzLayout` no longer recreates its `body` when the presentation switches between expanded and drawer (resizing the window or opening the browser dev tools); the body state, and the controllers it owns, survive the switch.
+
 ## 1.4.0
 
 - Added `DateTime.format(context, pattern)` (`LayrzDateTimeExtensions`), a strftime-style formatter on `DateTime`; resolves `LayrzUiL10n` from the optional `BuildContext` and falls back to the English default when it is `null`.

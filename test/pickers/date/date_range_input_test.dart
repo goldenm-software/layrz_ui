@@ -802,11 +802,13 @@ void main() {
       addTearDown(tester.view.reset);
 
       LayrzDateRange? changed;
+      // The picker opens on the current month, so the disabled day must be in it.
+      final now = DateTime.now();
       await pumpThemedApp(
         tester,
         LayrzDateRangeInput(
           labelText: 'Range',
-          disabledDays: {DateTime(2026, 9, 15)},
+          disabledDays: {DateTime(now.year, now.month, 15)},
           onChanged: (r) => changed = r,
         ),
       );
