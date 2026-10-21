@@ -124,6 +124,15 @@ class LayrzDynamicAvatarInput extends StatefulWidget {
   /// rendered anywhere by the tile presentation.
   final String? helpContentText;
 
+  /// The background color of the populated avatar when [value] is a
+  /// [LayrzAvatarIcon], forwarded to [LayrzAvatar.color].
+  ///
+  /// Pass the color of the entity the avatar belongs to (for example a tag
+  /// color) so the tile matches how [LayrzAvatar] renders it elsewhere. It is
+  /// ignored for emoji, URL and base64 sources. When `null`, [LayrzAvatar]
+  /// falls back to its own default color.
+  final Color? color;
+
   /// Creates a new [LayrzDynamicAvatarInput].
   const LayrzDynamicAvatarInput({
     super.key,
@@ -140,6 +149,7 @@ class LayrzDynamicAvatarInput extends StatefulWidget {
     this.dense = false,
     this.helpTitleText,
     this.helpContentText,
+    this.color,
   }) : assert(
          labelText != null || hintText != null,
          'At least one of labelText or hintText must be non-null.',
@@ -275,6 +285,7 @@ class _LayrzDynamicAvatarInputState extends State<LayrzDynamicAvatarInput> {
         if (widget.labelText != null) _buildLabel(tokens),
         LayrzDynamicAvatarTile(
           source: _displayedValue,
+          color: widget.color,
           onTap: widget.disabled ? null : _openPicker,
           onClear: widget.disabled ? null : _handleCleared,
           disabled: widget.disabled,

@@ -62,6 +62,12 @@ class LayrzDynamicAvatarTile extends StatefulWidget {
   /// field's `labelText` or `hintText`.
   final String? semanticLabel;
 
+  /// The background color of the populated avatar when [source] is a
+  /// [LayrzAvatarIcon], forwarded to [LayrzAvatar.color] and used for the
+  /// tile border too (except while showing errors). Ignored for emoji, URL
+  /// and base64 sources. `null` keeps the default colors.
+  final Color? color;
+
   /// Creates a new [LayrzDynamicAvatarTile].
   const LayrzDynamicAvatarTile({
     super.key,
@@ -72,6 +78,7 @@ class LayrzDynamicAvatarTile extends StatefulWidget {
     required this.hasErrors,
     required this.focusNode,
     required this.semanticLabel,
+    this.color,
   });
 
   @override
@@ -81,6 +88,9 @@ class LayrzDynamicAvatarTile extends StatefulWidget {
 class _LayrzDynamicAvatarTileState extends State<LayrzDynamicAvatarTile> {
   /// Whether the pointer is hovering the tile (desktop/mouse only).
   bool _isHovered = false;
+
+  /// The color painting the avatar and its border, only for icon sources.
+  Color? get _accent => widget.source is LayrzAvatarIcon ? widget.color : null;
 
   /// Resolves the tile's current [LayrzFileInputState] -- this tile never
   /// enters [LayrzFileInputState.dragging] (it has no drop-target
@@ -121,7 +131,10 @@ class _LayrzDynamicAvatarTileState extends State<LayrzDynamicAvatarTile> {
         decoration: BoxDecoration(
           color: spec.backgroundColor,
           borderRadius: tokens.radius.br3,
-          border: Border.all(color: spec.borderColor, width: spec.borderWidth),
+          border: Border.all(
+            color: _accent != null && !widget.hasErrors ? _accent! : spec.borderColor,
+            width: spec.borderWidth,
+          ),
         ),
         child: isEmpty ? _buildEmptyContent(spec) : _buildPopulatedContent(),
       ),
@@ -194,6 +207,7 @@ class _LayrzDynamicAvatarTileState extends State<LayrzDynamicAvatarTile> {
     return ExcludeSemantics(
       child: LayrzAvatar(
         source: widget.source,
+        color: _accent,
         size: kDynamicAvatarTileSize,
         borderRadius: 0,
         elevation: 0,
