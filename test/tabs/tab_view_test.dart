@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:layrz_ui/layrz_ui.dart';
 
@@ -441,6 +442,145 @@ void main() {
 
       expect(tappable.color, tokens.colors.sf1);
       expect(tappable.color!.a, 1.0, reason: 'an unselected pill must paint a solid color, never transparent');
+    });
+  });
+
+  group('LayrzTabView — hasErrors', () {
+    List<LayrzTab> errorTabs({Widget? trailing}) => [
+      LayrzTab(labelText: 'First', child: const Text('First content')),
+      LayrzTab(labelText: 'Second', hasErrors: true, trailing: trailing, child: const Text('Second content')),
+    ];
+
+    LayrzTappable pillOf(WidgetTester tester, String label) => tester.widget<LayrzTappable>(
+      find.ancestor(of: find.text(label), matching: find.byType(LayrzTappable)).first,
+    );
+
+    Finder errorBorderOf(String label, LayrzTokens tokens) => find.ancestor(
+      of: find.text(label),
+      matching: find.byWidgetPredicate((widget) {
+        if (widget is! Container) return false;
+        final decoration = widget.foregroundDecoration;
+        return decoration is BoxDecoration &&
+            decoration.border == Border.all(color: tokens.colors.danger, width: tokens.border.base);
+      }),
+    );
+
+    guardedTestWidgets('an unselected pill with errors paints the input error fill, border and label', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final tokens = LayrzTokens.light();
+      await pumpThemed(tester, LayrzTabView(tabs: errorTabs(), expandContent: false));
+
+      final pill = pillOf(tester, 'Second');
+      expect(pill.color, const Color(0xFFFFEBEE));
+      expect(pill.hoverColor, const Color(0xFFFFEBEE));
+      expect(pill.pressedColor, const Color(0xFFFFEBEE));
+      expect(tester.widget<Text>(find.text('Second')).style?.color, tokens.colors.danger);
+      expect(errorBorderOf('Second', tokens), findsOneWidget);
+      expect(errorBorderOf('First', tokens), findsNothing);
+    });
+
+    guardedTestWidgets('a selected pill with errors keeps the error fill instead of primary', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final tokens = LayrzTokens.light();
+      await pumpThemed(tester, LayrzTabView(tabs: errorTabs(), initialIndex: 1, expandContent: false));
+
+      expect(pillOf(tester, 'Second').color, const Color(0xFFFFEBEE));
+      final style = tester.widget<Text>(find.text('Second')).style;
+      expect(style?.color, tokens.colors.danger);
+      expect(style?.fontWeight, FontWeight.w600);
+    });
+
+    guardedTestWidgets('dark theme uses the tonal danger fill of the inputs', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final tokens = LayrzTokens.dark();
+      await pumpThemed(
+        tester,
+        LayrzTabView(tabs: errorTabs(), expandContent: false),
+        theme: LayrzThemeData.dark(),
+      );
+
+      expect(pillOf(tester, 'Second').color, tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2));
+    });
+
+    guardedTestWidgets('a pill with errors shows the danger alert icon when no trailing slot is set', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final tokens = LayrzTokens.light();
+      await pumpThemed(tester, LayrzTabView(tabs: errorTabs(), expandContent: false));
+
+      final icon = tester.widget<Icon>(find.byIcon(MdiIcons.alertOutline));
+      expect(icon.color, tokens.colors.danger);
+      expect(icon.size, kLayrzButtonIconSize);
+    });
+
+    guardedTestWidgets('a custom trailing slot replaces the default alert icon', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(
+        tester,
+        LayrzTabView(tabs: errorTabs(trailing: const Text('custom')), expandContent: false),
+      );
+
+      expect(find.text('custom'), findsOneWidget);
+      expect(find.byIcon(MdiIcons.alertOutline), findsNothing);
+    });
+
+    guardedTestWidgets('errors do not change the pill size', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      Future<Size> sizeOf({required bool hasErrors}) async {
+        await pumpThemed(
+          tester,
+          LayrzTabView(
+            tabs: [
+              LayrzTab(labelText: 'First', child: const SizedBox()),
+              LayrzTab(
+                labelText: 'Second',
+                trailingIcon: MdiIcons.alertOutline,
+                hasErrors: hasErrors,
+                child: const SizedBox(),
+              ),
+            ],
+            expandContent: false,
+          ),
+        );
+        return tester.getSize(find.ancestor(of: find.text('Second'), matching: find.byType(LayrzTappable)).first);
+      }
+
+      expect(await sizeOf(hasErrors: true), await sizeOf(hasErrors: false));
+    });
+
+    guardedTestWidgets('a pill with errors keeps its button semantics', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      final handle = tester.ensureSemantics();
+      try {
+        await pumpThemed(tester, LayrzTabView(tabs: errorTabs(), expandContent: false));
+
+        expect(
+          tester.getSemantics(find.text('Second')),
+          matchesSemantics(label: 'Second', isButton: true, hasSelectedState: true, hasTapAction: true),
+        );
+      } finally {
+        handle.dispose();
+      }
     });
   });
 
