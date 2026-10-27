@@ -2,6 +2,7 @@ import "package:flutter/widgets.dart";
 import "package:flutter_material_design_icons/flutter_material_design_icons.dart";
 import "package:layrz_ui/src/buttons/buttons.dart";
 import "package:layrz_ui/src/cards/cards.dart";
+import "package:layrz_ui/src/constants/constants.dart";
 import "package:layrz_ui/src/extensions/extensions.dart";
 import "package:layrz_ui/src/refresh/refresh.dart";
 import "package:layrz_ui/src/scaffold/src/scaffold_item.dart";
@@ -175,6 +176,14 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// default.
   final String? showActionLabel;
 
+  /// The fraction of the screen height the narrow-layout detail sheet opens at.
+  ///
+  /// Defaults to [kLayrzScaffoldSheetInitialSize] (half the screen). Must lie
+  /// within the sheet's `0.25`..`0.95` bounds. A value other than the default is
+  /// also added to the sheet's snap points, so dragging can return to it. Ignored
+  /// by the wide layout.
+  final double sheetInitialSize;
+
   /// Whether the wide layout always renders the list-detail split, instead of
   /// the default full-width table.
   ///
@@ -293,6 +302,8 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   ///   shell never disposes it). Idle-but-valid on a compact-only shell.
   /// - [showActionLabel]: Label/tooltip for the desktop table's built-in per-row open
   ///   button. Defaults to null, which uses the localized "Open item" string.
+  /// - [sheetInitialSize]: The fraction of the screen height the narrow-layout detail
+  ///   sheet opens at. Defaults to [kLayrzScaffoldSheetInitialSize] (`0.5`).
   /// - [preferDualPane]: Whether the wide layout always renders the list-detail split
   ///   instead of the default full-width table. Defaults to false. Ignored on the
   ///   compact/narrow layout, which is unaffected regardless of this value.
@@ -323,12 +334,16 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
     required this.tableColumns,
     required this.tableController,
     this.showActionLabel,
+    this.sheetInitialSize = kLayrzScaffoldSheetInitialSize,
     this.preferDualPane = false,
     this.dualPaneEmptyState,
     this.multiselectActionsBuilder,
     this.multiselectCountLabel,
     this.multiselectClearLabel,
-  });
+  }) : assert(
+         sheetInitialSize >= 0.25 && sheetInitialSize <= 0.95,
+         'sheetInitialSize must lie within the sheet bounds 0.25..0.95. Got $sheetInitialSize.',
+       );
 
   @override
   State<LayrzScaffoldShell<T>> createState() => _LayrzScaffoldShellState<T>();
@@ -936,6 +951,8 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
           },
         );
       },
+      initialSize: widget.sheetInitialSize,
+      snapSizes: _sheetSnapSizes(widget.sheetInitialSize),
     );
 
     // Mark the sheet as closed
@@ -953,3 +970,9 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
     }
   }
 }
+
+/// The snap points of the narrow detail sheet: the historical `[0.5, 0.95]` plus
+/// [initialSize] when it is not one of them.
+///
+/// - [initialSize]: the fraction the sheet opens at.
+List<double> _sheetSnapSizes(double initialSize) => ({0.5, initialSize, 0.95}.toList()..sort());
