@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.0
 
 - `LayrzScaffoldShell` accepts `sheetInitialSize` (default `kLayrzScaffoldSheetInitialSize`, `0.5`): the fraction of the screen height the narrow-layout detail sheet opens at. A non-default value is also added to the sheet's snap points (`[0.5, value, 0.95]`), so dragging can return to it. Asserted within `0.25..0.95`.
 - Fixed: on web, `LayrzContextMenu` (e.g. the `LayrzTable` column headers) no longer re-enables a browser context menu the app disabled in `main()`. The suppressor only restores the state it found before its first use, so `LayrzLayout(selectableContent: true)` no longer trips its context-menu assertion after a table is disposed.
