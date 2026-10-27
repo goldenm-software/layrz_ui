@@ -42,3 +42,6 @@ const double kLayrzScaffoldDetailBodyPadding = 26.0;
 
 /// Detail pane maximum content width in logical pixels.
 const double kLayrzScaffoldDetailMaxWidth = 1080.0;
+
+/// The default fraction of the screen height a `LayrzScaffoldShell` detail sheet opens at.
+const double kLayrzScaffoldSheetInitialSize = 0.5;

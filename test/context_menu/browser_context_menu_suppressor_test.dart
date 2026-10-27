@@ -6,11 +6,7 @@ void main() {
     // The reference count is a static, process-wide value shared by every
     // test in this file (and, in a real app, every LayrzContextMenu
     // instance) -- reset it after each test so tests remain order-independent.
-    tearDown(() {
-      while (LayrzBrowserContextMenuSuppressor.debugRefCount > 0) {
-        LayrzBrowserContextMenuSuppressor.release();
-      }
-    });
+    tearDown(LayrzBrowserContextMenuSuppressor.debugReset);
 
     test('starts at zero', () {
       expect(LayrzBrowserContextMenuSuppressor.debugRefCount, 0);
@@ -82,6 +78,70 @@ void main() {
 
     test('release without a matching acquire throws in debug mode', () {
       expect(() => LayrzBrowserContextMenuSuppressor.release(), throwsA(isA<AssertionError>()));
+    });
+  });
+
+  group('LayrzBrowserContextMenuSuppressor — browser menu baseline', () {
+    late List<String> calls;
+
+    void fakeWeb({required bool enabled}) {
+      calls = [];
+      LayrzBrowserContextMenuSuppressor.debugIsWeb = () => true;
+      LayrzBrowserContextMenuSuppressor.debugReadEnabled = () => enabled;
+      LayrzBrowserContextMenuSuppressor.debugDisable = () async => calls.add('disable');
+      LayrzBrowserContextMenuSuppressor.debugEnable = () async => calls.add('enable');
+    }
+
+    tearDown(LayrzBrowserContextMenuSuppressor.debugReset);
+
+    test('never re-enables a browser menu the app disabled before the first acquire', () async {
+      fakeWeb(enabled: false);
+
+      LayrzBrowserContextMenuSuppressor.acquire();
+      LayrzBrowserContextMenuSuppressor.release();
+      await pumpEventQueue();
+
+      expect(calls, isEmpty);
+    });
+
+    test('disables an enabled browser menu on the first acquire and restores it on the last release', () async {
+      fakeWeb(enabled: true);
+
+      LayrzBrowserContextMenuSuppressor.acquire();
+      LayrzBrowserContextMenuSuppressor.acquire();
+      LayrzBrowserContextMenuSuppressor.release();
+      await pumpEventQueue();
+      expect(calls, ['disable']);
+
+      LayrzBrowserContextMenuSuppressor.release();
+      await pumpEventQueue();
+      expect(calls, ['disable', 'enable']);
+    });
+
+    test('keeps the first baseline across cycles while an earlier enable is still pending', () async {
+      var enabled = true;
+      fakeWeb(enabled: true);
+      LayrzBrowserContextMenuSuppressor.debugReadEnabled = () => enabled;
+
+      LayrzBrowserContextMenuSuppressor.acquire();
+      enabled = false;
+      LayrzBrowserContextMenuSuppressor.release();
+      LayrzBrowserContextMenuSuppressor.acquire();
+      LayrzBrowserContextMenuSuppressor.release();
+      await pumpEventQueue();
+
+      expect(calls, ['disable', 'enable', 'disable', 'enable']);
+    });
+
+    test('makes no browser calls off web', () async {
+      fakeWeb(enabled: true);
+      LayrzBrowserContextMenuSuppressor.debugIsWeb = () => false;
+
+      LayrzBrowserContextMenuSuppressor.acquire();
+      LayrzBrowserContextMenuSuppressor.release();
+      await pumpEventQueue();
+
+      expect(calls, isEmpty);
     });
   });
 }

@@ -82,6 +82,16 @@ void main() {
       expect(tab.trailing, isNull);
     });
 
+    test('hasErrors defaults to false', () {
+      final tab = LayrzTab(labelText: 'One', child: const SizedBox());
+      expect(tab.hasErrors, isFalse);
+    });
+
+    test('stores hasErrors when set', () {
+      final tab = LayrzTab(labelText: 'One', hasErrors: true, child: const SizedBox());
+      expect(tab.hasErrors, isTrue);
+    });
+
     test('stores the required child widget', () {
       const child = Text('Content');
       final tab = LayrzTab(labelText: 'One', child: child);

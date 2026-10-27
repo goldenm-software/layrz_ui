@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/services.dart';
 
 /// Refcounts app-wide requests to suppress the browser's native
@@ -65,28 +65,72 @@ abstract final class LayrzBrowserContextMenuSuppressor {
   /// [_refCount].
   static Future<void> _pending = Future<void>.value();
 
+  /// Whether the browser context menu was enabled before the first [acquire].
+  ///
+  /// Read once, so an app that disables the menu in `main()` (as
+  /// `LayrzLayout.selectableContent` requires on web) keeps it disabled:
+  /// [release] only re-enables a menu this class itself disabled. Reading it
+  /// on every cycle would race a still-pending [BrowserContextMenu.enableContextMenu].
+  static bool? _baselineEnabled;
+
+  /// Whether the app runs on web. Overridable for tests, which always run with
+  /// [kIsWeb] `false`.
+  @visibleForTesting
+  static bool Function() debugIsWeb = _defaultIsWeb;
+
+  /// Reads [BrowserContextMenu.enabled]. Overridable for tests.
+  @visibleForTesting
+  static bool Function() debugReadEnabled = _defaultReadEnabled;
+
+  /// Calls [BrowserContextMenu.disableContextMenu]. Overridable for tests.
+  @visibleForTesting
+  static Future<void> Function() debugDisable = BrowserContextMenu.disableContextMenu;
+
+  /// Calls [BrowserContextMenu.enableContextMenu]. Overridable for tests.
+  @visibleForTesting
+  static Future<void> Function() debugEnable = BrowserContextMenu.enableContextMenu;
+
+  static bool _defaultIsWeb() => kIsWeb;
+
+  static bool _defaultReadEnabled() => BrowserContextMenu.enabled;
+
+  /// Resets the count, the captured baseline and every test override.
+  @visibleForTesting
+  static void debugReset() {
+    _refCount = 0;
+    _baselineEnabled = null;
+    _pending = Future<void>.value();
+    debugIsWeb = _defaultIsWeb;
+    debugReadEnabled = _defaultReadEnabled;
+    debugDisable = BrowserContextMenu.disableContextMenu;
+    debugEnable = BrowserContextMenu.enableContextMenu;
+  }
+
   /// Registers one new request to suppress the browser's native context
   /// menu.
   ///
   /// Increments the shared reference count. If this is the first live
-  /// request (count rises from 0 to 1) and the app is running on web,
-  /// schedules [BrowserContextMenu.disableContextMenu]; otherwise the
+  /// request (count rises from 0 to 1), the app is running on web and the
+  /// menu was enabled before the first [acquire], schedules
+  /// [BrowserContextMenu.disableContextMenu]; otherwise the
   /// browser's context menu was already suppressed by an earlier request
   /// and no platform call is made. Every call to [acquire] must be paired
   /// with exactly one later call to [release].
   static void acquire() {
     _refCount++;
-    if (_refCount == 1 && kIsWeb) {
-      _pending = _pending.then((_) => BrowserContextMenu.disableContextMenu());
-    }
+    if (_refCount != 1 || !debugIsWeb()) return;
+
+    final baselineEnabled = _baselineEnabled ??= debugReadEnabled();
+    if (baselineEnabled) _pending = _pending.then((_) => debugDisable());
   }
 
   /// Releases one previously-registered request to suppress the browser's
   /// native context menu.
   ///
   /// Decrements the shared reference count. If this was the last live
-  /// request (count falls from 1 to 0) and the app is running on web,
-  /// schedules [BrowserContextMenu.enableContextMenu] once any
+  /// request (count falls from 1 to 0), the app is running on web and the
+  /// menu was enabled before the first [acquire], schedules
+  /// [BrowserContextMenu.enableContextMenu] once any
   /// still-pending [acquire] call has resolved; otherwise another widget
   /// elsewhere is still relying on suppression and no platform call is
   /// made. Calling [release] without a matching prior [acquire] is a
@@ -94,8 +138,8 @@ abstract final class LayrzBrowserContextMenuSuppressor {
   static void release() {
     assert(_refCount > 0, 'LayrzBrowserContextMenuSuppressor.release() called without a matching acquire().');
     _refCount--;
-    if (_refCount == 0 && kIsWeb) {
-      _pending = _pending.then((_) => BrowserContextMenu.enableContextMenu());
+    if (_refCount == 0 && debugIsWeb() && _baselineEnabled == true) {
+      _pending = _pending.then((_) => debugEnable());
     }
   }
 }
