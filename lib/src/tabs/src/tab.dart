@@ -58,6 +58,14 @@ class LayrzTab {
   /// The content shown by [LayrzTabView] when this tab is the active one.
   final Widget child;
 
+  /// Whether the content of this tab has validation errors.
+  ///
+  /// When true, [LayrzTabView] paints the pill with the same error style as the
+  /// inputs (error fill, `danger` border and `danger` label and icons) in every
+  /// selection state, and shows an alert icon in the trailing slot when neither
+  /// [trailing] nor [trailingIcon] is set. Defaults to false.
+  final bool hasErrors;
+
   /// Creates a new [LayrzTab].
   ///
   /// Exactly one of [labelText] or [label] must be non-null. At most one of
@@ -71,6 +79,7 @@ class LayrzTab {
     this.trailing,
     this.trailingIcon,
     required this.child,
+    this.hasErrors = false,
   }) : assert(
          (labelText == null) != (label == null),
          'Provide exactly one of labelText or label, not both and not neither.',

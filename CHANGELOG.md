@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.0
+
+- `LayrzScaffoldShell` accepts `sheetInitialSize` (default `kLayrzScaffoldSheetInitialSize`, `0.5`): the fraction of the screen height the narrow-layout detail sheet opens at. A non-default value is also added to the sheet's snap points (`[0.5, value, 0.95]`), so dragging can return to it. Asserted within `0.25..0.95`.
+- Fixed: on web, `LayrzContextMenu` (e.g. the `LayrzTable` column headers) no longer re-enables a browser context menu the app disabled in `main()`. The suppressor only restores the state it found before its first use, so `LayrzLayout(selectableContent: true)` no longer trips its context-menu assertion after a table is disposed.
+- `LayrzTab` accepts `hasErrors`: `LayrzTabView` paints that pill with the input error style (error fill, `danger` border, label and icons) in every selection state, and shows `MdiIcons.alertOutline` in the trailing slot when neither `trailing` nor `trailingIcon` is set. Geometry is unchanged (D15).
+
 ## 1.5.0
 
 - `LayrzDynamicAvatarInput` accepts an optional `color` that paints the populated tile and its border when the value is a `LayrzAvatarIcon` (ignored for emoji, URL and base64), so the tile matches `LayrzAvatar(color:)` elsewhere.

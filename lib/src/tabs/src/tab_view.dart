@@ -1,7 +1,9 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
+import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
 import 'package:layrz_ui/src/tappable/tappable.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -281,9 +283,15 @@ class _LayrzTabPillState extends State<_LayrzTabPill> {
 
     final idleColor = tokens.colors.sf1;
     final selectedColor = tokens.colors.primary;
-    final labelColor = widget.isSelected
-        ? (selectedColor.computeLuminance() > 0.5 ? tokens.colors.fg1 : tokens.colors.sf1)
-        : (_isFocused ? tokens.colors.fg1 : tokens.colors.fg2);
+    // Errors take the input error style in every selection state.
+    final errorSpec = tab.hasErrors
+        ? LayrzInputStyleSpec.resolve(states: const {}, tokens: tokens, hasErrors: true)
+        : null;
+    final labelColor =
+        errorSpec?.textColor ??
+        (widget.isSelected
+            ? (selectedColor.computeLuminance() > 0.5 ? tokens.colors.fg1 : tokens.colors.sf1)
+            : (_isFocused ? tokens.colors.fg1 : tokens.colors.fg2));
     final borderRadius = tokens.radius.br2;
 
     final labelWidget = tab.labelText != null
@@ -306,6 +314,9 @@ class _LayrzTabPillState extends State<_LayrzTabPill> {
     Widget? trailingWidget = tab.trailing;
     if (trailingWidget == null && tab.trailingIcon != null) {
       trailingWidget = Icon(tab.trailingIcon, size: kLayrzButtonIconSize, color: labelColor);
+    }
+    if (trailingWidget == null && tab.hasErrors) {
+      trailingWidget = Icon(MdiIcons.alertOutline, size: kLayrzButtonIconSize, color: labelColor);
     }
 
     final content = Row(
@@ -333,24 +344,44 @@ class _LayrzTabPillState extends State<_LayrzTabPill> {
       child: SelectionContainer.disabled(
         child: Focus(
           focusNode: _focusNode,
-          child: LayrzTappable(
-            onTap: widget.onTap,
-            borderRadius: borderRadius,
-            color: widget.isSelected ? selectedColor : idleColor,
-            hoverColor: widget.isSelected ? selectedColor : tokens.colors.sf3,
-            pressedColor: widget.isSelected ? selectedColor : tokens.colors.sf4,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: kLayrzButtonHeight),
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3),
-                  child: content,
+          child: _withErrorBorder(
+            errorSpec,
+            borderRadius,
+            LayrzTappable(
+              onTap: widget.onTap,
+              borderRadius: borderRadius,
+              color: errorSpec?.backgroundColor ?? (widget.isSelected ? selectedColor : idleColor),
+              hoverColor: errorSpec?.backgroundColor ?? (widget.isSelected ? selectedColor : tokens.colors.sf3),
+              pressedColor: errorSpec?.backgroundColor ?? (widget.isSelected ? selectedColor : tokens.colors.sf4),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: kLayrzButtonHeight),
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3),
+                    child: content,
+                  ),
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  /// Paints the [errorSpec] border over [child] without changing its size (D15); returns [child] when `null`.
+  ///
+  /// - [errorSpec]: the resolved input error style, or `null` when the tab has no errors.
+  /// - [borderRadius]: the pill corner radius the border follows.
+  /// - [child]: the pill surface the border is painted over.
+  Widget _withErrorBorder(LayrzInputStyleSpec? errorSpec, BorderRadius borderRadius, Widget child) {
+    if (errorSpec == null) return child;
+    return Container(
+      foregroundDecoration: BoxDecoration(
+        border: Border.all(color: errorSpec.borderColor, width: errorSpec.borderWidth),
+        borderRadius: borderRadius,
+      ),
+      child: child,
     );
   }
 }
