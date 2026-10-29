@@ -58,7 +58,6 @@ Future<void> _pumpShell(
   String? showActionLabel,
   bool wireTap = true,
   List<LayrzTableAction> Function(_TestItem item)? tableActionsBuilder,
-  int tableActionsCount = 0,
 }) async {
   addTearDown(tester.view.reset);
   tester.view.devicePixelRatio = 1.0;
@@ -74,7 +73,6 @@ Future<void> _pumpShell(
       tableController: tableController,
       showActionLabel: showActionLabel,
       tableActionsBuilder: tableActionsBuilder,
-      tableActionsCount: tableActionsCount,
       onItemTap: wireTap
           ? (item) => controller.open(key: item.key, builder: (_) => Text("detail:${item.item.name}"))
           : null,
@@ -317,7 +315,6 @@ void main() {
         tableController: tableController,
         size: _kWideSize,
         showActionLabel: "Open",
-        tableActionsCount: 2,
         tableActionsBuilder: (item) => [
           LayrzTableAction(icon: const IconData(0xe000), labelText: "Edit", onTap: () {}),
           LayrzTableAction(icon: const IconData(0xe001), labelText: "Delete", onTap: () {}),
@@ -341,7 +338,6 @@ void main() {
         controller: controller,
         tableController: tableController,
         size: _kWideSize,
-        tableActionsCount: 1,
         tableActionsBuilder: (item) => [
           LayrzTableAction(icon: const IconData(0xe000), labelText: "Edit", onTap: () => edited.add(item.id)),
         ],
@@ -353,19 +349,28 @@ void main() {
       expect(controller.isOpen, isFalse);
     });
 
-    test("a tableActionsCount without tableActionsBuilder asserts", () {
-      expect(
-        () => LayrzScaffoldShell<_TestItem>(
-          controller: LayrzScaffoldController(),
-          items: const [],
-          itemExtent: 56,
-          title: const Text("Title"),
-          tableColumns: _columns(),
-          tableController: LayrzTableController<_TestItem>(),
-          tableActionsCount: 1,
-        ),
-        throwsA(isA<AssertionError>()),
+    testWidgets("the pinned column fits the row with the most actions", (tester) async {
+      final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
+      addTearDown(controller.dispose);
+
+      await _pumpShell(
+        tester,
+        controller: controller,
+        tableController: tableController,
+        size: _kWideSize,
+        showActionLabel: "Open",
+        tableActionsBuilder: (item) => [
+          LayrzTableAction(icon: const IconData(0xe000), labelText: "Edit", onTap: () {}),
+          if (item.id == "1") LayrzTableAction(icon: const IconData(0xe001), labelText: "Delete", onTap: () {}),
+        ],
       );
+
+      final table = tableOf(tester);
+      expect(table.actionsCount, 3);
+      expect(table.actionsBuilder!(_items[0]).map((action) => action.labelText), ["Edit", "Delete", "Open"]);
+      expect(table.actionsBuilder!(_items[1]).map((action) => action.labelText), ["Edit", "Open"]);
     });
   });
 }

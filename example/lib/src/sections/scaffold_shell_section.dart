@@ -200,7 +200,6 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
             ),
           ],
           // Extra row actions are pinned before the built-in open button.
-          tableActionsCount: 1,
           tableActionsBuilder: (item) => [
             LayrzTableAction(
               icon: MdiIcons.pencilOutline,

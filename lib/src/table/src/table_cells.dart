@@ -218,9 +218,10 @@ class LayrzTableActionsCell<T> extends StatelessWidget {
   /// The row-level actions to render.
   final List<LayrzTableAction> actions;
 
+  /// Right-aligned, so a row with fewer actions keeps its last one in place.
   Widget _buildWideActions(BuildContext context) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
         for (final action in actions)
           Padding(

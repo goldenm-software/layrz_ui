@@ -264,6 +264,40 @@ void main() {
       expect(find.byType(LayrzButtonGroup), findsNothing);
     });
 
+    testWidgets('wide actions are right-aligned so a shorter row keeps its last action in place', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      double lastButtonRightGap(WidgetTester tester) {
+        final cellRight = tester.getRect(find.byType(LayrzTableActionsCell<TableTestRow>)).right;
+        return cellRight - tester.getRect(find.byType(LayrzButton).last).right;
+      }
+
+      await pumpTable(
+        tester,
+        Center(
+          child: LayrzTableActionsCell<TableTestRow>(rowIndex: 0, height: 50, width: 200, actions: actions()),
+        ),
+      );
+      final fullRowGap = lastButtonRightGap(tester);
+
+      await pumpTable(
+        tester,
+        Center(
+          child: LayrzTableActionsCell<TableTestRow>(
+            rowIndex: 0,
+            height: 50,
+            width: 200,
+            actions: [actions().last],
+          ),
+        ),
+      );
+
+      expect(lastButtonRightGap(tester), fullRowGap);
+      expect(fullRowGap, lessThan(20));
+    });
+
     testWidgets('compact viewport collapses actions into a single ButtonGroup', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;

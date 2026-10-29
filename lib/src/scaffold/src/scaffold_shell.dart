@@ -1,3 +1,5 @@
+import "dart:math" as math;
+
 import "package:flutter/widgets.dart";
 import "package:flutter_material_design_icons/flutter_material_design_icons.dart";
 import "package:layrz_ui/src/buttons/buttons.dart";
@@ -179,15 +181,12 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// Builds extra per-row actions pinned to the right of the desktop table,
   /// before the built-in "open" button, for the row of [item].
   ///
-  /// Only used while the desktop table default view is showing. When null, the
-  /// open button is the only pinned action.
+  /// Each row may return a different number of actions (e.g. omit delete when
+  /// it is not allowed); the pinned column fits the row with the most, and the
+  /// open button always stays rightmost. Only used while the desktop table
+  /// default view is showing. When null, the open button is the only pinned
+  /// action.
   final List<LayrzTableAction> Function(T item)? tableActionsBuilder;
-
-  /// How many actions [tableActionsBuilder] returns per row.
-  ///
-  /// Sizes the pinned actions column (see [LayrzTable.actionsCount]). Defaults
-  /// to `0`; must be `0` when [tableActionsBuilder] is null.
-  final int tableActionsCount;
 
   /// The fraction of the screen height the narrow-layout detail sheet opens at.
   ///
@@ -316,9 +315,7 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// - [showActionLabel]: Label/tooltip for the desktop table's built-in per-row open
   ///   button. Defaults to null, which uses the localized "Open item" string.
   /// - [tableActionsBuilder]: Extra per-row actions pinned before the open button in the
-  ///   desktop table. Defaults to null (only the open button).
-  /// - [tableActionsCount]: How many actions [tableActionsBuilder] returns per row.
-  ///   Defaults to `0`.
+  ///   desktop table; the count may vary per row. Defaults to null (only the open button).
   /// - [sheetInitialSize]: The fraction of the screen height the narrow-layout detail
   ///   sheet opens at. Defaults to [kLayrzScaffoldSheetInitialSize] (`0.5`).
   /// - [preferDualPane]: Whether the wide layout always renders the list-detail split
@@ -352,7 +349,6 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
     required this.tableController,
     this.showActionLabel,
     this.tableActionsBuilder,
-    this.tableActionsCount = 0,
     this.sheetInitialSize = kLayrzScaffoldSheetInitialSize,
     this.preferDualPane = false,
     this.dualPaneEmptyState,
@@ -362,10 +358,6 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   }) : assert(
          sheetInitialSize >= 0.25 && sheetInitialSize <= 0.95,
          'sheetInitialSize must lie within the sheet bounds 0.25..0.95. Got $sheetInitialSize.',
-       ),
-       assert(
-         tableActionsCount >= 0 && (tableActionsBuilder != null || tableActionsCount == 0),
-         'tableActionsCount must be 0 or positive, and 0 when tableActionsBuilder is null.',
        );
 
   @override
@@ -766,6 +758,10 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   /// publish is needed here.
   Widget _buildDefaultTable(BuildContext context, LayrzTokens tokens) {
     final openLabel = widget.showActionLabel ?? context.l10n.scaffoldOpenItem;
+    final extraActions = widget.tableActionsBuilder;
+    final extraActionsCount = extraActions == null
+        ? 0
+        : _cachedTableRows.fold<int>(0, (most, row) => math.max(most, extraActions(row).length));
 
     // The table gets the same sp3 gutter the split's detail card uses, so it
     // reads as a padded surface rather than sitting flush against the shell's
@@ -785,9 +781,9 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
               controller: widget.tableController,
               canSearch: widget.searchable,
               hasMultiselect: widget.multiselectActionsBuilder != null,
-              actionsCount: widget.tableActionsCount + 1,
+              actionsCount: extraActionsCount + 1,
               actionsBuilder: (data) => [
-                ...?widget.tableActionsBuilder?.call(data),
+                ...?extraActions?.call(data),
                 LayrzTableAction(
                   icon: MdiIcons.eyeOutline,
                   labelText: openLabel,
