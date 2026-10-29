@@ -78,13 +78,15 @@ const double _kTableTopProgressHeight = 2.0;
 /// there is no separate full-table spinner, and the header/body are always
 /// rendered regardless of [isLoading].
 ///
-/// **Column widths**: every column has a fixed pixel width — there is no flex
-/// distribution. Each column's effective width is its [LayrzTableController]
-/// resize override when present, otherwise its own [LayrzColumn.width], clamped
-/// to `[minColumnWidth, LayrzColumn.maxWidth]`. When the visible columns sum to
-/// more than the available width the data area scrolls horizontally; when they
-/// sum to less, the surplus is left as trailing whitespace (columns are never
-/// stretched to fill). The same resolved widths are handed to
+/// **Column widths**: a column with a [LayrzColumn.width] is fixed; a column
+/// without one is flexible and shares, in equal parts, the width left after the
+/// fixed columns, the multiselect cell and the actions column. Each column's
+/// effective width is its [LayrzTableController] resize override when present
+/// (so a resized flexible column becomes fixed), otherwise its fixed width or
+/// its share, clamped to `[minColumnWidth, LayrzColumn.maxWidth]`. When the
+/// visible columns sum to more than the available width the data area scrolls
+/// horizontally; when only fixed columns sum to less, the surplus is left as
+/// trailing whitespace. The same resolved widths are handed to
 /// [LayrzTableHeader] (as a `Map<Key, double>`) and to every [LayrzTableRow]
 /// (as a parallel `List<double>`, in the same order as that row's visible
 /// columns), so header and body columns always agree pixel-for-pixel. Columns
@@ -656,21 +658,30 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
 
   /// Computes each visible column's resolved width.
   ///
-  /// Every column has a fixed pixel width — there is no flex distribution, so
-  /// the available width does not enter here (the table's data area scrolls
-  /// horizontally when the columns sum wider than it). Each column's effective
-  /// width is its [LayrzTableController] override when present, otherwise its
-  /// own [LayrzColumn.width], clamped in both cases to
+  /// A column's [LayrzTableController] override or its own [LayrzColumn.width]
+  /// makes it fixed; the remaining (flexible) columns split what is left of
+  /// [freeWidth] after the fixed ones. Every width is clamped to
   /// `[minColumnWidth, LayrzColumn.maxWidth]` (an absent `maxWidth` means no
-  /// upper bound).
+  /// upper bound), so a narrow table scrolls instead of squeezing columns.
   ///
   /// Returns a `List<double>` parallel to [visibleColumns], which callers use
   /// both to build the `Map<Key, double>` handed to [LayrzTableHeader] and as
   /// the per-row `List<double>` handed to every [LayrzTableRow].
-  List<double> _resolveColumnWidths(List<LayrzColumn<T>> visibleColumns) {
-    return [
+  List<double> _resolveColumnWidths(List<LayrzColumn<T>> visibleColumns, double freeWidth) {
+    final fixed = [
       for (final column in visibleColumns)
-        _clampColumnWidth(column, _controller.columnWidthOverride(column.key) ?? column.width),
+        switch (_controller.columnWidthOverride(column.key) ?? column.width) {
+          final width? => _clampColumnWidth(column, width),
+          null => null,
+        },
+    ];
+    final flexCount = fixed.where((width) => width == null).length;
+    final fixedWidth = fixed.fold<double>(0, (sum, width) => sum + (width ?? 0));
+    final share = flexCount == 0 || !freeWidth.isFinite
+        ? widget.minColumnWidth
+        : ((freeWidth - fixedWidth) / flexCount).floorToDouble();
+    return [
+      for (var i = 0; i < visibleColumns.length; i++) fixed[i] ?? _clampColumnWidth(visibleColumns[i], share),
     ];
   }
 
@@ -800,7 +811,10 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final visibleColumns = _visibleColumns();
-              final widths = _resolveColumnWidths(visibleColumns);
+              final actionsColumnWidth = _computeActionsColumnWidth(context);
+              final freeWidth =
+                  constraints.maxWidth - (widget.hasMultiselect ? widget.height : 0) - (actionsColumnWidth ?? 0);
+              final widths = _resolveColumnWidths(visibleColumns, freeWidth);
               final columnWidths = <Key, double>{
                 for (var i = 0; i < visibleColumns.length; i++) visibleColumns[i].key: widths[i],
               };
@@ -808,7 +822,6 @@ class _LayrzTableState<T> extends State<LayrzTable<T>> {
               final items = _displayedItems;
               final isEmpty = items.isEmpty;
               final isSearchMiss = isEmpty && widget.items.isNotEmpty;
-              final actionsColumnWidth = _computeActionsColumnWidth(context);
 
               final totalColumnsWidth = widths.fold<double>(0, (sum, w) => sum + w);
               final hasActionsColumn = actionsColumnWidth != null && actionsColumnWidth > 0;

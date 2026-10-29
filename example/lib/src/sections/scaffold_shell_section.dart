@@ -197,7 +197,6 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
               key: const ValueKey('description'),
               headerText: 'Description',
               valueBuilder: (item) => item.description,
-              width: 420,
             ),
           ],
           onItemTap: (item) => _controller.open(

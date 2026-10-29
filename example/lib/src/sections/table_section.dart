@@ -182,7 +182,6 @@ class _TableSectionState extends State<TableSection> {
       key: const ValueKey('driver'),
       headerText: 'Driver',
       valueBuilder: (vehicle) => vehicle.driver,
-      width: 200,
     ),
     LayrzColumn<_DemoVehicle>(
       key: const ValueKey('odometer'),
@@ -226,7 +225,6 @@ class _TableSectionState extends State<TableSection> {
       headerText: 'Notes',
       valueBuilder: (vehicle) => 'See dispatch log',
       isSortable: false,
-      width: 180,
     ),
   ];
 

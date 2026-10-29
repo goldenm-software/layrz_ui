@@ -1115,6 +1115,110 @@ void main() {
       expect(actionButtons(), findsNWidgets(rows.length));
     });
   });
+
+  group('LayrzTable flexible columns', () {
+    const rows = [TableTestRow(id: 1, name: 'Ana', amount: 10)];
+
+    LayrzColumn<TableTestRow> column(String key, {double? width, double? maxWidth}) => LayrzColumn<TableTestRow>(
+      key: ValueKey(key),
+      headerText: key,
+      valueBuilder: (row) => row.name,
+      width: width,
+      maxWidth: maxWidth,
+    );
+
+    Map<Key, double> resolvedWidths(WidgetTester tester) =>
+        tester.widget<LayrzTableHeader<TableTestRow>>(find.byType(LayrzTableHeader<TableTestRow>)).columnWidths;
+
+    testWidgets('columns without width share the free width after the fixed ones', (tester) async {
+      useWideViewport(tester);
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: [column('a', width: 200), column('b'), column('c')]),
+        size: const Size(1000, 600),
+      );
+
+      final widths = resolvedWidths(tester);
+      expect(widths[const ValueKey('a')], 200);
+      expect(widths[const ValueKey('b')], 400);
+      expect(widths[const ValueKey('c')], 400);
+    });
+
+    testWidgets('the multiselect and actions columns are taken out of the free width', (tester) async {
+      useWideViewport(tester);
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(
+          items: rows,
+          columns: [column('a')],
+          hasMultiselect: true,
+          actionsCount: 1,
+          actionsBuilder: (_) => [
+            LayrzTableAction(labelText: 'Edit', icon: MdiIcons.pencil, onTap: () {}),
+          ],
+        ),
+        size: const Size(1000, 600),
+      );
+
+      final actionsWidth = tester
+          .widget<LayrzTableHeader<TableTestRow>>(find.byType(LayrzTableHeader<TableTestRow>))
+          .actionsColumnWidth!;
+      expect(resolvedWidths(tester)[const ValueKey('a')], 1000 - 50 - actionsWidth);
+    });
+
+    testWidgets('a flexible column never goes below minColumnWidth', (tester) async {
+      useWideViewport(tester);
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: [column('a', width: 900), column('b')]),
+        size: const Size(1000, 600),
+      );
+
+      expect(resolvedWidths(tester)[const ValueKey('b')], 150);
+    });
+
+    testWidgets('a flexible column respects its maxWidth', (tester) async {
+      useWideViewport(tester);
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: [column('a', maxWidth: 300)]),
+        size: const Size(1000, 600),
+      );
+
+      expect(resolvedWidths(tester)[const ValueKey('a')], 300);
+    });
+
+    testWidgets('resizing a flexible column fixes it and the others re-share the rest', (tester) async {
+      useWideViewport(tester);
+      final controller = LayrzTableController<TableTestRow>();
+      addTearDown(controller.dispose);
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, controller: controller, columns: [column('a'), column('b')]),
+        size: const Size(1000, 600),
+      );
+
+      controller.setColumnWidth(const ValueKey('a'), 300);
+      await tester.pump();
+
+      final widths = resolvedWidths(tester);
+      expect(widths[const ValueKey('a')], 300);
+      expect(widths[const ValueKey('b')], 700);
+    });
+
+    testWidgets('fixed-width columns still leave the surplus blank', (tester) async {
+      useWideViewport(tester);
+      await pumpTable(
+        tester,
+        LayrzTable<TableTestRow>(items: rows, columns: [column('a', width: 200), column('b', width: 200)]),
+        size: const Size(1000, 600),
+      );
+
+      final widths = resolvedWidths(tester);
+      expect(widths[const ValueKey('a')], 200);
+      expect(widths[const ValueKey('b')], 200);
+    });
+  });
 }
 
 /// Reproduces the exact widget shape that surfaced the
