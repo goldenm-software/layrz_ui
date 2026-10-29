@@ -22,12 +22,40 @@ class NumericInputFormatter extends TextInputFormatter {
   /// Whether negative values are allowed (true if minimum is null or < 0).
   final bool allowNegative;
 
+  /// Whether the integer part is grouped in thousands with the separator opposite to
+  /// [decimalSeparator] (see [groupSeparatorOf]), keeping the caret next to the same digit.
+  final bool groupThousands;
+
   /// Creates a new [NumericInputFormatter] with the given configuration.
   NumericInputFormatter({
     required this.decimalSeparator,
     required this.maximumDecimalDigits,
     required this.allowNegative,
+    this.groupThousands = false,
   });
+
+  /// The thousands separator paired with [separator]: the opposite character.
+  static String groupSeparatorOf(LayrzDecimalSeparator separator) {
+    return separator == LayrzDecimalSeparator.dot ? ',' : '.';
+  }
+
+  /// Inserts [groupSeparator] every three digits of the leading integer run of [text]
+  /// (after an optional minus); everything from the first non-digit on is left as is.
+  static String groupIntegerPart(String text, String groupSeparator) {
+    final start = text.startsWith('-') ? 1 : 0;
+    var end = start;
+    while (end < text.length && text.codeUnitAt(end) >= 48 && text.codeUnitAt(end) <= 57) {
+      end++;
+    }
+    final digits = text.substring(start, end);
+    final buffer = StringBuffer(text.substring(0, start));
+    for (var i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(groupSeparator);
+      buffer.write(digits[i]);
+    }
+    buffer.write(text.substring(end));
+    return buffer.toString();
+  }
 
   @override
   TextEditingValue formatEditUpdate(
@@ -49,8 +77,11 @@ class NumericInputFormatter extends TextInputFormatter {
     var hasLeadingMinus = false;
     var hasSeparator = false;
     var decimalDigitCount = 0;
+    final caret = newValue.selection.isValid ? newValue.selection.extentOffset : text.length;
+    var keptBeforeCaret = 0;
 
     for (int i = 0; i < text.length; i++) {
+      if (i == caret) keptBeforeCaret = buffer.length;
       final char = text[i];
 
       // Minus is allowed only at the start and only if negatives are allowed
@@ -92,7 +123,21 @@ class NumericInputFormatter extends TextInputFormatter {
       // Any other character is skipped (filtered out)
     }
 
+    if (caret >= text.length) keptBeforeCaret = buffer.length;
     final formattedText = buffer.toString();
+
+    if (groupThousands) {
+      final groupSeparator = groupSeparatorOf(decimalSeparator);
+      final grouped = groupIntegerPart(formattedText, groupSeparator);
+      var offset = 0;
+      for (var kept = 0; offset < grouped.length && kept < keptBeforeCaret; offset++) {
+        if (grouped[offset] != groupSeparator) kept++;
+      }
+      return TextEditingValue(
+        text: grouped,
+        selection: TextSelection.collapsed(offset: offset),
+      );
+    }
 
     // If the formatted text differs from the input, the user tried to enter invalid characters
     // But we still accept the valid part, so return the formatted text

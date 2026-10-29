@@ -73,6 +73,14 @@ class LayrzNumberInput extends StatefulWidget {
   /// parsing is stable across locale changes.
   final LayrzDecimalSeparator decimalSeparator;
 
+  /// Whether the integer part is grouped in thousands, both while typing and on display.
+  ///
+  /// The thousands separator is always the opposite of [decimalSeparator]:
+  /// [LayrzDecimalSeparator.comma] shows `"12.000,5"` and [LayrzDecimalSeparator.dot]
+  /// shows `"12,000.5"`. The emitted value is never affected (`12000.5` in both cases).
+  /// Ignored while typing when [inputFormatters] is supplied. Defaults to `false`.
+  final bool groupThousands;
+
   /// Optional formatter callback for the parsed numeric value.
   ///
   /// If provided, the field calls this function to format the number for display
@@ -231,6 +239,7 @@ class LayrzNumberInput extends StatefulWidget {
     this.value,
     this.onChanged,
     this.decimalSeparator = LayrzDecimalSeparator.dot,
+    this.groupThousands = false,
     this.format,
     this.minimum,
     this.maximum,
@@ -390,13 +399,11 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
 
   /// Updates the text controller to display the given numeric value, formatted.
   void _updateControllerFromValue(num? value) {
+    final formatted = value == null ? '' : _formatNumber(value);
+    // Rewriting identical text would move the caret to the end mid-edit.
+    if (_controller.text == formatted) return;
     _isInternalUpdate = true;
-    if (value == null) {
-      _controller.text = '';
-    } else {
-      final formatted = _formatNumber(value);
-      _controller.text = formatted;
-    }
+    _controller.text = formatted;
     _isInternalUpdate = false;
   }
 
@@ -405,6 +412,10 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
   num? _parseNumber(String text) {
     if (text.isEmpty) {
       return null;
+    }
+
+    if (widget.groupThousands) {
+      text = text.replaceAll(NumericInputFormatter.groupSeparatorOf(widget.decimalSeparator), '');
     }
 
     // Normalize to dot separator for parsing
@@ -426,6 +437,13 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     // Replace dot with the configured separator if needed
     if (widget.decimalSeparator == LayrzDecimalSeparator.comma) {
       formatted = formatted.replaceAll('.', ',');
+    }
+
+    if (widget.groupThousands) {
+      formatted = NumericInputFormatter.groupIntegerPart(
+        formatted,
+        NumericInputFormatter.groupSeparatorOf(widget.decimalSeparator),
+      );
     }
 
     return formatted;
@@ -558,6 +576,7 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
             decimalSeparator: widget.decimalSeparator,
             maximumDecimalDigits: widget.maximumDecimalDigits,
             allowNegative: widget.minimum == null || widget.minimum! < 0,
+            groupThousands: widget.groupThousands,
           ),
         ];
 
