@@ -199,6 +199,18 @@ class _ScaffoldShellSectionState extends State<ScaffoldShellSection> {
               valueBuilder: (item) => item.description,
             ),
           ],
+          // Extra row actions are pinned before the built-in open button.
+          tableActionsCount: 1,
+          tableActionsBuilder: (item) => [
+            LayrzTableAction(
+              icon: MdiIcons.pencilOutline,
+              labelText: 'Edit',
+              onTap: () => _controller.open(
+                key: ValueKey(item.id),
+                builder: (context) => _buildDetails(item),
+              ),
+            ),
+          ],
           onItemTap: (item) => _controller.open(
             key: item.key,
             builder: (context) => _buildDetails(item.item),

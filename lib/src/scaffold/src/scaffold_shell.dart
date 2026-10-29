@@ -176,6 +176,19 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   /// default.
   final String? showActionLabel;
 
+  /// Builds extra per-row actions pinned to the right of the desktop table,
+  /// before the built-in "open" button, for the row of [item].
+  ///
+  /// Only used while the desktop table default view is showing. When null, the
+  /// open button is the only pinned action.
+  final List<LayrzTableAction> Function(T item)? tableActionsBuilder;
+
+  /// How many actions [tableActionsBuilder] returns per row.
+  ///
+  /// Sizes the pinned actions column (see [LayrzTable.actionsCount]). Defaults
+  /// to `0`; must be `0` when [tableActionsBuilder] is null.
+  final int tableActionsCount;
+
   /// The fraction of the screen height the narrow-layout detail sheet opens at.
   ///
   /// Defaults to [kLayrzScaffoldSheetInitialSize] (half the screen). Must lie
@@ -302,6 +315,10 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   ///   shell never disposes it). Idle-but-valid on a compact-only shell.
   /// - [showActionLabel]: Label/tooltip for the desktop table's built-in per-row open
   ///   button. Defaults to null, which uses the localized "Open item" string.
+  /// - [tableActionsBuilder]: Extra per-row actions pinned before the open button in the
+  ///   desktop table. Defaults to null (only the open button).
+  /// - [tableActionsCount]: How many actions [tableActionsBuilder] returns per row.
+  ///   Defaults to `0`.
   /// - [sheetInitialSize]: The fraction of the screen height the narrow-layout detail
   ///   sheet opens at. Defaults to [kLayrzScaffoldSheetInitialSize] (`0.5`).
   /// - [preferDualPane]: Whether the wide layout always renders the list-detail split
@@ -334,6 +351,8 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
     required this.tableColumns,
     required this.tableController,
     this.showActionLabel,
+    this.tableActionsBuilder,
+    this.tableActionsCount = 0,
     this.sheetInitialSize = kLayrzScaffoldSheetInitialSize,
     this.preferDualPane = false,
     this.dualPaneEmptyState,
@@ -343,6 +362,10 @@ class LayrzScaffoldShell<T> extends StatefulWidget {
   }) : assert(
          sheetInitialSize >= 0.25 && sheetInitialSize <= 0.95,
          'sheetInitialSize must lie within the sheet bounds 0.25..0.95. Got $sheetInitialSize.',
+       ),
+       assert(
+         tableActionsCount >= 0 && (tableActionsBuilder != null || tableActionsCount == 0),
+         'tableActionsCount must be 0 or positive, and 0 when tableActionsBuilder is null.',
        );
 
   @override
@@ -724,8 +747,9 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
   /// off [T] directly. No per-item cell data lives on [LayrzScaffoldItem].
   ///
   /// [LayrzTable] has no whole-row tap affordance, so the shell recycles the
-  /// table's own per-row actions slot ([LayrzTable.actionsBuilder] with
-  /// [LayrzTable.actionsCount] `1`) for a single built-in "open" button. Its tap
+  /// table's own per-row actions slot ([LayrzTable.actionsBuilder]) for a
+  /// built-in "open" button, pinned last after any
+  /// [LayrzScaffoldShell.tableActionsBuilder] actions. Its tap
   /// resolves the tapped data object back to its [LayrzScaffoldItem] and fires
   /// [LayrzScaffoldShell.onItemTap] — the same callback the list rows use — so
   /// the app opens the detail exactly as it does from the list, collapsing the
@@ -761,8 +785,9 @@ class _LayrzScaffoldShellState<T> extends State<LayrzScaffoldShell<T>> {
               controller: widget.tableController,
               canSearch: widget.searchable,
               hasMultiselect: widget.multiselectActionsBuilder != null,
-              actionsCount: 1,
+              actionsCount: widget.tableActionsCount + 1,
               actionsBuilder: (data) => [
+                ...?widget.tableActionsBuilder?.call(data),
                 LayrzTableAction(
                   icon: MdiIcons.eyeOutline,
                   labelText: openLabel,
