@@ -77,11 +77,10 @@ class NumericInputFormatter extends TextInputFormatter {
     var hasLeadingMinus = false;
     var hasSeparator = false;
     var decimalDigitCount = 0;
-    final caret = newValue.selection.isValid ? newValue.selection.extentOffset : text.length;
-    var keptBeforeCaret = 0;
+    final keptBefore = List<int>.filled(text.length + 1, 0);
 
     for (int i = 0; i < text.length; i++) {
-      if (i == caret) keptBeforeCaret = buffer.length;
+      keptBefore[i] = buffer.length;
       final char = text[i];
 
       // Minus is allowed only at the start and only if negatives are allowed
@@ -123,20 +122,11 @@ class NumericInputFormatter extends TextInputFormatter {
       // Any other character is skipped (filtered out)
     }
 
-    if (caret >= text.length) keptBeforeCaret = buffer.length;
+    keptBefore[text.length] = buffer.length;
     final formattedText = buffer.toString();
 
     if (groupThousands) {
-      final groupSeparator = groupSeparatorOf(decimalSeparator);
-      final grouped = groupIntegerPart(formattedText, groupSeparator);
-      var offset = 0;
-      for (var kept = 0; offset < grouped.length && kept < keptBeforeCaret; offset++) {
-        if (grouped[offset] != groupSeparator) kept++;
-      }
-      return TextEditingValue(
-        text: grouped,
-        selection: TextSelection.collapsed(offset: offset),
-      );
+      return _group(newValue, formattedText, keptBefore);
     }
 
     // If the formatted text differs from the input, the user tried to enter invalid characters
@@ -151,4 +141,47 @@ class NumericInputFormatter extends TextInputFormatter {
       );
     }
   }
+
+  /// Drops redundant leading zeros from [filtered], groups its integer part and maps the
+  /// selection and composing offsets of [newValue] onto the result.
+  ///
+  /// [keptBefore] holds, for every offset of `newValue.text`, how many characters of
+  /// [filtered] come before it.
+  TextEditingValue _group(TextEditingValue newValue, String filtered, List<int> keptBefore) {
+    final sign = filtered.startsWith('-') ? 1 : 0;
+    var zeros = 0;
+    while (sign + zeros + 1 < filtered.length &&
+        filtered[sign + zeros] == '0' &&
+        _isDigit(filtered.codeUnitAt(sign + zeros + 1))) {
+      zeros++;
+    }
+
+    final groupSeparator = groupSeparatorOf(decimalSeparator);
+    final grouped = groupIntegerPart(filtered.substring(0, sign) + filtered.substring(sign + zeros), groupSeparator);
+    if (grouped == newValue.text) {
+      return newValue;
+    }
+
+    int map(int offset) {
+      var kept = keptBefore[offset.clamp(0, newValue.text.length)];
+      if (kept > sign) kept = sign + (kept - sign - zeros).clamp(0, kept);
+      var mapped = 0;
+      for (var seen = 0; mapped < grouped.length && seen < kept; mapped++) {
+        if (grouped[mapped] != groupSeparator) seen++;
+      }
+      return mapped;
+    }
+
+    final selection = newValue.selection;
+    final composing = newValue.composing;
+    return TextEditingValue(
+      text: grouped,
+      selection: selection.isValid
+          ? selection.copyWith(baseOffset: map(selection.baseOffset), extentOffset: map(selection.extentOffset))
+          : TextSelection.collapsed(offset: grouped.length),
+      composing: composing.isValid ? TextRange(start: map(composing.start), end: map(composing.end)) : TextRange.empty,
+    );
+  }
+
+  static bool _isDigit(int codeUnit) => codeUnit >= 48 && codeUnit <= 57;
 }

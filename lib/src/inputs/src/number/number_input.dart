@@ -78,6 +78,7 @@ class LayrzNumberInput extends StatefulWidget {
   /// The thousands separator is always the opposite of [decimalSeparator]:
   /// [LayrzDecimalSeparator.comma] shows `"12.000,5"` and [LayrzDecimalSeparator.dot]
   /// shows `"12,000.5"`. The emitted value is never affected (`12000.5` in both cases).
+  /// Redundant leading zeros are dropped while typing (`"0001"` becomes `"1"`).
   /// Ignored while typing when [inputFormatters] is supplied. Defaults to `false`.
   final bool groupThousands;
 
