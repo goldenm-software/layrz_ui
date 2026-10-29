@@ -834,4 +834,41 @@ void main() {
       },
     );
   });
+
+  group('LayrzTabView — selected label contrast', () {
+    Color labelColorOf(WidgetTester tester, String label) => tester.widget<Text>(find.text(label)).style!.color!;
+
+    Future<void> pumpTabs(WidgetTester tester, LayrzThemeData theme) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await pumpThemed(tester, LayrzTabView(tabs: _buildTabs(), expandContent: false), theme: theme);
+    }
+
+    guardedTestWidgets('a dark primary in dark mode gets a white selected label', (tester) async {
+      await pumpTabs(tester, LayrzThemeData.dark(primaryColor: const Color(0xFF001E60)));
+
+      expect(labelColorOf(tester, 'First'), const Color(0xFFFFFFFF));
+    });
+
+    guardedTestWidgets('a light primary in light mode gets a black selected label', (tester) async {
+      await pumpTabs(tester, LayrzThemeData.light(primaryColor: const Color(0xFFFFEB3B)));
+
+      expect(labelColorOf(tester, 'First'), const Color(0xFF000000));
+    });
+
+    guardedTestWidgets('the selected label uses the primary contrast color in both modes', (tester) async {
+      await pumpTabs(tester, LayrzThemeData.light());
+      expect(labelColorOf(tester, 'First'), LayrzTokens.light().colors.primary.contrastColor);
+
+      await pumpTabs(tester, LayrzThemeData.dark());
+      expect(labelColorOf(tester, 'First'), LayrzTokens.dark().colors.primary.contrastColor);
+    });
+
+    guardedTestWidgets('unselected labels keep the theme foreground', (tester) async {
+      await pumpTabs(tester, LayrzThemeData.dark(primaryColor: const Color(0xFF001E60)));
+
+      expect(labelColorOf(tester, 'Second'), LayrzTokens.dark().colors.fg2);
+    });
+  });
 }
