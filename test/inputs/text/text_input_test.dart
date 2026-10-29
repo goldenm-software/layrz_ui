@@ -864,6 +864,93 @@ void main() {
       expect(editableText.controller.text, 'second');
     });
 
+    group('caret when the parent reformats value', () {
+      String groupThousands(String raw) {
+        final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+        final buffer = StringBuffer();
+        for (var i = 0; i < digits.length; i++) {
+          if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(',');
+          buffer.write(digits[i]);
+        }
+        return buffer.toString();
+      }
+
+      Future<void> pumpFormatted(WidgetTester tester, String initial) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        var value = initial;
+        await pumpThemed(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) => LayrzTextInput(
+              labelText: 'Amount',
+              value: value,
+              onChanged: (next) => setState(() => value = groupThousands(next)),
+            ),
+          ),
+        );
+        await tester.showKeyboard(find.byType(EditableText));
+      }
+
+      TextEditingController controllerOf(WidgetTester tester) =>
+          tester.widget<EditableText>(find.byType(EditableText)).controller;
+
+      testWidgets('typing at the end keeps the caret at the end', (tester) async {
+        await pumpFormatted(tester, '100');
+
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(text: '1000', selection: TextSelection.collapsed(offset: 4)),
+        );
+        await tester.pump();
+
+        expect(controllerOf(tester).text, '1,000');
+        expect(controllerOf(tester).selection, const TextSelection.collapsed(offset: 5));
+      });
+
+      testWidgets('deleting in the middle keeps the caret after the same character', (tester) async {
+        await pumpFormatted(tester, '1,234');
+
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(text: '1,34', selection: TextSelection.collapsed(offset: 2)),
+        );
+        await tester.pump();
+
+        expect(controllerOf(tester).text, '134');
+        expect(controllerOf(tester).selection, const TextSelection.collapsed(offset: 1));
+      });
+
+      testWidgets('a value shorter than the caret distance clamps the caret to the start', (tester) async {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        var value = 'abcdef';
+        late StateSetter rebuild;
+        await pumpThemed(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return LayrzTextInput(labelText: 'Text', value: value);
+            },
+          ),
+        );
+        await tester.showKeyboard(find.byType(EditableText));
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(text: 'abcdef', selection: TextSelection.collapsed(offset: 1)),
+        );
+        await tester.pump();
+
+        rebuild(() => value = 'xy');
+        await tester.pump();
+
+        expect(controllerOf(tester).text, 'xy');
+        expect(controllerOf(tester).selection, const TextSelection.collapsed(offset: 0));
+      });
+    });
+
     testWidgets('controller wins over value when both are supplied', (tester) async {
       tester.view.physicalSize = const Size(1200, 800);
       tester.view.devicePixelRatio = 1.0;
