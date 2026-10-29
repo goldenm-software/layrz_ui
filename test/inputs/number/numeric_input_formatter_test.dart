@@ -140,6 +140,54 @@ void main() {
         expect(result.selection, const TextSelection.collapsed(offset: 1));
       });
 
+      test('deleting the leading digit keeps the remaining zeros', () {
+        final result = formatterFor(LayrzDecimalSeparator.comma).formatEditUpdate(
+          const TextEditingValue(text: '1.000', selection: TextSelection.collapsed(offset: 1)),
+          const TextEditingValue(text: '.000', selection: TextSelection.collapsed(offset: 0)),
+        );
+
+        expect(result.text, '000');
+        expect(result.selection, const TextSelection.collapsed(offset: 0));
+      });
+
+      test('typing a new leading digit over kept zeros restores the magnitude', () {
+        final result = formatterFor(LayrzDecimalSeparator.comma).formatEditUpdate(
+          const TextEditingValue(text: '000', selection: TextSelection.collapsed(offset: 0)),
+          const TextEditingValue(text: '2000', selection: TextSelection.collapsed(offset: 1)),
+        );
+
+        expect(result.text, '2.000');
+        expect(result.selection, const TextSelection.collapsed(offset: 1));
+      });
+
+      test('leading zeros after a minus are dropped and the caret follows', () {
+        final result = _edit(formatterFor(LayrzDecimalSeparator.comma), '-0012', 5);
+
+        expect(result.text, '-12');
+        expect(result.selection, const TextSelection.collapsed(offset: 3));
+      });
+
+      test('a caret inside the dropped zeros moves to the start of the number', () {
+        final result = _edit(formatterFor(LayrzDecimalSeparator.comma), '0012', 1);
+
+        expect(result.text, '12');
+        expect(result.selection, const TextSelection.collapsed(offset: 0));
+      });
+
+      test('a composing region is remapped when the text is regrouped', () {
+        final result = formatterFor(LayrzDecimalSeparator.comma).formatEditUpdate(
+          TextEditingValue.empty,
+          const TextEditingValue(
+            text: '1234',
+            selection: TextSelection.collapsed(offset: 4),
+            composing: TextRange(start: 0, end: 4),
+          ),
+        );
+
+        expect(result.text, '1.234');
+        expect(result.composing, const TextRange(start: 0, end: 5));
+      });
+
       test('a single zero and a zero before the decimal separator are kept', () {
         expect(_edit(formatterFor(LayrzDecimalSeparator.comma), '0', 1).text, '0');
         expect(_edit(formatterFor(LayrzDecimalSeparator.comma), '-0,5', 4).text, '-0,5');

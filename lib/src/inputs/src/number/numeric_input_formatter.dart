@@ -126,7 +126,7 @@ class NumericInputFormatter extends TextInputFormatter {
     final formattedText = buffer.toString();
 
     if (groupThousands) {
-      return _group(newValue, formattedText, keptBefore);
+      return _group(oldValue, newValue, formattedText, keptBefore);
     }
 
     // If the formatted text differs from the input, the user tried to enter invalid characters
@@ -142,15 +142,25 @@ class NumericInputFormatter extends TextInputFormatter {
     }
   }
 
-  /// Drops redundant leading zeros from [filtered], groups its integer part and maps the
-  /// selection and composing offsets of [newValue] onto the result.
+  /// Groups the integer part of [filtered] and maps the selection and composing offsets of
+  /// [newValue] onto the result.
+  ///
+  /// Redundant leading zeros are dropped only when the edit grew the text, so deleting the
+  /// leading digit of `1.000` leaves `000` and typing a new one restores the magnitude.
   ///
   /// [keptBefore] holds, for every offset of `newValue.text`, how many characters of
   /// [filtered] come before it.
-  TextEditingValue _group(TextEditingValue newValue, String filtered, List<int> keptBefore) {
+  TextEditingValue _group(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+    String filtered,
+    List<int> keptBefore,
+  ) {
     final sign = filtered.startsWith('-') ? 1 : 0;
+    final grew = newValue.text.length > oldValue.text.length;
     var zeros = 0;
-    while (sign + zeros + 1 < filtered.length &&
+    while (grew &&
+        sign + zeros + 1 < filtered.length &&
         filtered[sign + zeros] == '0' &&
         _isDigit(filtered.codeUnitAt(sign + zeros + 1))) {
       zeros++;
