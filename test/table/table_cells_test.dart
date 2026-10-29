@@ -264,6 +264,82 @@ void main() {
       expect(find.byType(LayrzButtonGroup), findsNothing);
     });
 
+    testWidgets('wide actions are right-aligned so a shorter row keeps its last action in place', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      double lastButtonRightGap(WidgetTester tester) {
+        final cellRight = tester.getRect(find.byType(LayrzTableActionsCell<TableTestRow>)).right;
+        return cellRight - tester.getRect(find.byType(LayrzButton).last).right;
+      }
+
+      await pumpTable(
+        tester,
+        Center(
+          child: LayrzTableActionsCell<TableTestRow>(rowIndex: 0, height: 50, width: 200, actions: actions()),
+        ),
+      );
+      final fullRowGap = lastButtonRightGap(tester);
+
+      await pumpTable(
+        tester,
+        Center(
+          child: LayrzTableActionsCell<TableTestRow>(
+            rowIndex: 0,
+            height: 50,
+            width: 200,
+            actions: [actions().last],
+          ),
+        ),
+      );
+
+      expect(lastButtonRightGap(tester), fullRowGap);
+      expect(fullRowGap, lessThan(20));
+    });
+
+    testWidgets('a wide action forwards its controller, and a busy controller blocks taps', (tester) async {
+      tester.view.physicalSize = const Size(1600, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final controller = LayrzButtonController();
+      addTearDown(controller.dispose);
+      var taps = 0;
+
+      await pumpTable(
+        tester,
+        Center(
+          child: LayrzTableActionsCell<TableTestRow>(
+            rowIndex: 0,
+            height: 50,
+            width: 100,
+            actions: [
+              LayrzTableAction(
+                labelText: 'Export',
+                icon: MdiIcons.download,
+                controller: controller,
+                onTap: () => taps++,
+              ),
+            ],
+          ),
+        ),
+      );
+
+      expect(tester.widget<LayrzButton>(find.byType(LayrzButton)).controller, same(controller));
+
+      controller.startLoading();
+      await tester.pump();
+      await tester.tap(find.byType(LayrzButton), warnIfMissed: false);
+      await tester.pump();
+      expect(taps, 0);
+
+      controller.stopLoading();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.tap(find.byType(LayrzButton));
+      await tester.pump();
+      expect(taps, 1);
+    });
+
     testWidgets('compact viewport collapses actions into a single ButtonGroup', (tester) async {
       tester.view.physicalSize = const Size(400, 800);
       tester.view.devicePixelRatio = 1.0;

@@ -307,7 +307,7 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       // Only sync when the internal controller's text actually differs, to
       // avoid clobbering the caret mid-edit when `value` merely echoes what
       // the user already typed.
-      _controller.text = widget.value!;
+      _syncValue(widget.value!);
     }
     // If focusNode changed, update the reference
     if (widget.focusNode != oldWidget.focusNode) {
@@ -316,6 +316,22 @@ class _LayrzTextInputState extends State<LayrzTextInput> {
       }
       _focusNode = widget.focusNode ?? FocusNode();
     }
+  }
+
+  /// Replaces the controller text with [value], keeping the caret at the same
+  /// distance from the end so a parent reformatting the text does not move it.
+  void _syncValue(String value) {
+    final selection = _controller.selection;
+    if (!selection.isValid) {
+      _controller.text = value;
+      return;
+    }
+    final fromEnd = _controller.text.length - selection.extentOffset;
+    final offset = (value.length - fromEnd).clamp(0, value.length);
+    _controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: offset),
+    );
   }
 
   @override

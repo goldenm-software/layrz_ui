@@ -82,19 +82,21 @@ class LayrzColumn<T> {
   /// respond to the sort-toggle tap gesture.
   final bool isSortable;
 
-  /// The width, in logical pixels, of this column.
+  /// The width, in logical pixels, of this column, or `null` for a flexible
+  /// column.
   ///
-  /// Required. Every column has a fixed pixel width — there is no flex/
-  /// share-remaining-space behavior. When the visible columns' widths sum to
-  /// more than the table's available width, the table's data area scrolls
-  /// horizontally rather than shrinking columns to fit.
+  /// A fixed column keeps this width. Flexible columns share, in equal parts,
+  /// the width left after the fixed columns, the multiselect cell and the
+  /// actions column. When the visible columns sum to more than the table's
+  /// available width, the data area scrolls horizontally rather than
+  /// shrinking columns to fit.
   ///
-  /// This is the column's **default** width. A user can resize it by dragging
-  /// the header resize handle, which stores an override on
-  /// `LayrzTableController` (see `LayrzTableController.setColumnWidth`); the
-  /// effective width is the override when present, otherwise this value —
-  /// clamped in both cases to `[LayrzTable.minColumnWidth, maxWidth]`.
-  final double width;
+  /// A user can resize any column by dragging the header resize handle, which
+  /// stores an override on `LayrzTableController` (see
+  /// `LayrzTableController.setColumnWidth`); a resized flexible column then
+  /// keeps that width. Every effective width is clamped to
+  /// `[LayrzTable.minColumnWidth, maxWidth]`.
+  final double? width;
 
   /// The maximum width, in logical pixels, this column may be resized to, or
   /// `null` for no maximum.
@@ -133,14 +135,15 @@ class LayrzColumn<T> {
 
   /// Creates a [LayrzColumn].
   ///
-  /// [key] is required and must be unique across the column set. [headerText],
-  /// [valueBuilder] and [width] are required. All other parameters are optional
-  /// and take the defaults documented on their respective fields.
+  /// [key] is required and must be unique across the column set. [headerText]
+  /// and [valueBuilder] are required. Omit [width] for a flexible column. All
+  /// other parameters are optional and take the defaults documented on their
+  /// respective fields.
   const LayrzColumn({
     required this.key,
     required this.headerText,
     required this.valueBuilder,
-    required this.width,
+    this.width,
     this.maxWidth,
     this.richTextBuilder,
     this.alignment = Alignment.centerLeft,

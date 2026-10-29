@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- `LayrzColumn.width` is optional: a column without it is flexible and shares, in equal parts, the width left after the fixed columns, the multiselect cell and the actions column (never below `minColumnWidth`, never above `maxWidth`). Resizing a flexible column fixes it at that width. Tables whose columns all set `width` render as before. Code that reads `column.width` now gets a `double?`.
+- `LayrzScaffoldShell` accepts `tableActionsBuilder`: extra per-row actions pinned in the desktop table before the built-in open button, instead of in a regular data column. Rows may return different actions (e.g. by `canEdit`/`canDelete`); the pinned column fits the row with the most.
+- `LayrzTableAction` accepts an optional `controller` (`LayrzButtonController`): the row button shows its spinner and ignores taps while busy, so a slow action cannot fire twice. Keep one controller per item in your own state.
+- `LayrzTable` right-aligns the actions of each row, so a row with fewer actions keeps its last one (e.g. the open button) in place.
+- `LayrzNumberInput` accepts `groupThousands` (default `false`): the integer part is grouped while typing and on display, with the separator opposite to `decimalSeparator` (`comma` shows `12.000,5`, `dot` shows `12,000.5`). The emitted value is unchanged, the caret (or selection) stays next to the same digits, and redundant leading zeros are dropped.
+- Fixed: `LayrzTextInput` keeps the caret in place when the parent reformats `value` while typing (e.g. adding thousand separators), instead of jumping to the end.
+- Fixed: `LayrzNumberInput` no longer moves the caret to the end when the parent echoes back the value it just emitted.
+- Fixed: the selected `LayrzTabView` pill paints its label and icons with `primary.contrastColor` instead of a theme-relative surface color, so a dark primary in dark mode no longer gets dark text.
+- Fixed: `LayrzSearchInput` no longer reverts the typed text during the debounce. `value` is synced only when it actually changes, and never while a debounce is pending.
+
 ## 1.6.0
 
 - `LayrzScaffoldShell` accepts `sheetInitialSize` (default `kLayrzScaffoldSheetInitialSize`, `0.5`): the fraction of the screen height the narrow-layout detail sheet opens at. A non-default value is also added to the sheet's snap points (`[0.5, value, 0.95]`), so dragging can return to it. Asserted within `0.25..0.95`.

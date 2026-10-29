@@ -38,6 +38,17 @@ class LayrzTableAction {
   /// A disabled action renders non-interactive and does not invoke [onTap].
   final bool disabled;
 
+  /// An optional controller for the rendered button's loading and cooldown
+  /// states, as in [LayrzButton.controller].
+  ///
+  /// While it is busy the button shows its spinner and ignores taps, so a slow
+  /// action cannot fire twice. Only the wide layout renders it; the compact
+  /// layout lists actions in a dropdown. The table calls its actions builder
+  /// on every rebuild, so keep one controller per item in your own state
+  /// (e.g. a map by id) instead of creating it inside the builder, and dispose
+  /// it yourself.
+  final LayrzButtonController? controller;
+
   /// Creates a new [LayrzTableAction].
   const LayrzTableAction({
     required this.icon,
@@ -46,6 +57,7 @@ class LayrzTableAction {
     this.style,
     this.color,
     this.disabled = false,
+    this.controller,
   });
 
   /// Returns a copy of this action with the given fields replaced.
@@ -56,6 +68,7 @@ class LayrzTableAction {
     LayrzButtonStyle? style,
     Color? color,
     bool? disabled,
+    LayrzButtonController? controller,
   }) {
     return LayrzTableAction(
       icon: icon ?? this.icon,
@@ -64,6 +77,7 @@ class LayrzTableAction {
       style: style ?? this.style,
       color: color ?? this.color,
       disabled: disabled ?? this.disabled,
+      controller: controller ?? this.controller,
     );
   }
 
@@ -77,8 +91,9 @@ class LayrzTableAction {
           onTap == other.onTap &&
           style == other.style &&
           color == other.color &&
-          disabled == other.disabled;
+          disabled == other.disabled &&
+          controller == other.controller;
 
   @override
-  int get hashCode => Object.hash(icon, labelText, onTap, style, color, disabled);
+  int get hashCode => Object.hash(icon, labelText, onTap, style, color, disabled, controller);
 }

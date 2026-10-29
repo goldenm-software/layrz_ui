@@ -49,7 +49,8 @@ class LayrzSearchInput extends StatefulWidget {
 
   /// The current search query value.
   ///
-  /// When null or not provided, the field starts empty.
+  /// When null or not provided, the field starts empty. Later changes replace the
+  /// field text, except while a [debounce] is pending, when the typed text wins.
   final String? value;
 
   /// Callback fired when the user searches.
@@ -212,7 +213,11 @@ class _LayrzSearchInputState extends State<LayrzSearchInput> {
       _controller.addListener(_handleControllerTextChanged);
     }
 
-    if (widget.value != null && widget.value != _controller.text) {
+    // While a debounce is pending the parent still holds an older value; the typed text wins.
+    if (widget.value != null &&
+        widget.value != oldWidget.value &&
+        widget.value != _controller.text &&
+        !(_debounceTimer?.isActive ?? false)) {
       _controller.text = widget.value!;
     }
 

@@ -22,12 +22,40 @@ class NumericInputFormatter extends TextInputFormatter {
   /// Whether negative values are allowed (true if minimum is null or < 0).
   final bool allowNegative;
 
+  /// Whether the integer part is grouped in thousands with the separator opposite to
+  /// [decimalSeparator] (see [groupSeparatorOf]), keeping the caret next to the same digit.
+  final bool groupThousands;
+
   /// Creates a new [NumericInputFormatter] with the given configuration.
   NumericInputFormatter({
     required this.decimalSeparator,
     required this.maximumDecimalDigits,
     required this.allowNegative,
+    this.groupThousands = false,
   });
+
+  /// The thousands separator paired with [separator]: the opposite character.
+  static String groupSeparatorOf(LayrzDecimalSeparator separator) {
+    return separator == LayrzDecimalSeparator.dot ? ',' : '.';
+  }
+
+  /// Inserts [groupSeparator] every three digits of the leading integer run of [text]
+  /// (after an optional minus); everything from the first non-digit on is left as is.
+  static String groupIntegerPart(String text, String groupSeparator) {
+    final start = text.startsWith('-') ? 1 : 0;
+    var end = start;
+    while (end < text.length && text.codeUnitAt(end) >= 48 && text.codeUnitAt(end) <= 57) {
+      end++;
+    }
+    final digits = text.substring(start, end);
+    final buffer = StringBuffer(text.substring(0, start));
+    for (var i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(groupSeparator);
+      buffer.write(digits[i]);
+    }
+    buffer.write(text.substring(end));
+    return buffer.toString();
+  }
 
   @override
   TextEditingValue formatEditUpdate(
@@ -49,8 +77,10 @@ class NumericInputFormatter extends TextInputFormatter {
     var hasLeadingMinus = false;
     var hasSeparator = false;
     var decimalDigitCount = 0;
+    final keptBefore = List<int>.filled(text.length + 1, 0);
 
     for (int i = 0; i < text.length; i++) {
+      keptBefore[i] = buffer.length;
       final char = text[i];
 
       // Minus is allowed only at the start and only if negatives are allowed
@@ -92,7 +122,12 @@ class NumericInputFormatter extends TextInputFormatter {
       // Any other character is skipped (filtered out)
     }
 
+    keptBefore[text.length] = buffer.length;
     final formattedText = buffer.toString();
+
+    if (groupThousands) {
+      return _group(oldValue, newValue, formattedText, keptBefore);
+    }
 
     // If the formatted text differs from the input, the user tried to enter invalid characters
     // But we still accept the valid part, so return the formatted text
@@ -106,4 +141,57 @@ class NumericInputFormatter extends TextInputFormatter {
       );
     }
   }
+
+  /// Groups the integer part of [filtered] and maps the selection and composing offsets of
+  /// [newValue] onto the result.
+  ///
+  /// Redundant leading zeros are dropped only when the edit grew the text, so deleting the
+  /// leading digit of `1.000` leaves `000` and typing a new one restores the magnitude.
+  ///
+  /// [keptBefore] holds, for every offset of `newValue.text`, how many characters of
+  /// [filtered] come before it.
+  TextEditingValue _group(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+    String filtered,
+    List<int> keptBefore,
+  ) {
+    final sign = filtered.startsWith('-') ? 1 : 0;
+    final grew = newValue.text.length > oldValue.text.length;
+    var zeros = 0;
+    while (grew &&
+        sign + zeros + 1 < filtered.length &&
+        filtered[sign + zeros] == '0' &&
+        _isDigit(filtered.codeUnitAt(sign + zeros + 1))) {
+      zeros++;
+    }
+
+    final groupSeparator = groupSeparatorOf(decimalSeparator);
+    final grouped = groupIntegerPart(filtered.substring(0, sign) + filtered.substring(sign + zeros), groupSeparator);
+    if (grouped == newValue.text) {
+      return newValue;
+    }
+
+    int map(int offset) {
+      var kept = keptBefore[offset.clamp(0, newValue.text.length)];
+      if (kept > sign) kept = sign + (kept - sign - zeros).clamp(0, kept);
+      var mapped = 0;
+      for (var seen = 0; mapped < grouped.length && seen < kept; mapped++) {
+        if (grouped[mapped] != groupSeparator) seen++;
+      }
+      return mapped;
+    }
+
+    final selection = newValue.selection;
+    final composing = newValue.composing;
+    return TextEditingValue(
+      text: grouped,
+      selection: selection.isValid
+          ? selection.copyWith(baseOffset: map(selection.baseOffset), extentOffset: map(selection.extentOffset))
+          : TextSelection.collapsed(offset: grouped.length),
+      composing: composing.isValid ? TextRange(start: map(composing.start), end: map(composing.end)) : TextRange.empty,
+    );
+  }
+
+  static bool _isDigit(int codeUnit) => codeUnit >= 48 && codeUnit <= 57;
 }
