@@ -5,6 +5,7 @@
 - `LayrzNumberInput` accepts `groupThousands` (default `false`): the integer part is grouped while typing and on display, with the separator opposite to `decimalSeparator` (`comma` shows `12.000,5`, `dot` shows `12,000.5`). The emitted value is unchanged, the caret (or selection) stays next to the same digits, and redundant leading zeros are dropped.
 - Fixed: `LayrzTextInput` keeps the caret in place when the parent reformats `value` while typing (e.g. adding thousand separators), instead of jumping to the end.
 - Fixed: `LayrzNumberInput` no longer moves the caret to the end when the parent echoes back the value it just emitted.
+- Fixed: `LayrzSearchInput` no longer reverts the typed text during the debounce. `value` is synced only when it actually changes, and never while a debounce is pending.
 
 ## 1.6.0
 

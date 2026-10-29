@@ -586,6 +586,96 @@ void main() {
       });
     });
 
+    group('value sync', () {
+      const debounce = Duration(milliseconds: 300);
+
+      String fieldText(WidgetTester tester) => tester.widget<EditableText>(find.byType(EditableText)).controller.text;
+
+      Future<StateSetter> pumpHost(
+        WidgetTester tester, {
+        required String Function() value,
+        ValueChanged<String>? onSearch,
+      }) async {
+        tester.view.physicalSize = const Size(1600, 1200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+
+        late StateSetter rebuild;
+        await pumpThemedApp(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return LayrzSearchInput(
+                mode: LayrzSearchInputMode.field,
+                value: value(),
+                debounce: debounce,
+                onSearch: onSearch,
+              );
+            },
+          ),
+        );
+        return rebuild;
+      }
+
+      testWidgets('an external value change updates the field', (tester) async {
+        var value = 'first';
+        final rebuild = await pumpHost(tester, value: () => value);
+
+        rebuild(() => value = 'second');
+        await tester.pump();
+
+        expect(fieldText(tester), 'second');
+      });
+
+      testWidgets('an unrelated rebuild during the debounce keeps the typed text', (tester) async {
+        var value = '';
+        var searched = <String>[];
+        final rebuild = await pumpHost(
+          tester,
+          value: () => value,
+          onSearch: (query) => searched.add(query),
+        );
+
+        await tester.enterText(find.byType(EditableText), 'abc');
+        rebuild(() {});
+        await tester.pump();
+
+        expect(fieldText(tester), 'abc');
+
+        await tester.pump(debounce);
+        expect(searched, ['abc']);
+      });
+
+      testWidgets('echoing the searched query back as value keeps the text', (tester) async {
+        var value = '';
+        late StateSetter rebuild;
+        rebuild = await pumpHost(
+          tester,
+          value: () => value,
+          onSearch: (query) => rebuild(() => value = query),
+        );
+
+        await tester.enterText(find.byType(EditableText), 'abc');
+        await tester.pump(debounce);
+        await tester.pump();
+
+        expect(value, 'abc');
+        expect(fieldText(tester), 'abc');
+      });
+
+      testWidgets('a stale value arriving during the debounce does not overwrite newer typing', (tester) async {
+        var value = '';
+        final rebuild = await pumpHost(tester, value: () => value, onSearch: (_) {});
+
+        await tester.enterText(find.byType(EditableText), 'abcd');
+        rebuild(() => value = 'ab');
+        await tester.pump();
+
+        expect(fieldText(tester), 'abcd');
+      });
+    });
+
     group('new parameters', () {
       testWidgets('errors are forwarded to the chrome', (tester) async {
         await pumpThemedApp(
