@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.7.0
 
 - `LayrzColumn.width` is optional: a column without it is flexible and shares, in equal parts, the width left after the fixed columns, the multiselect cell and the actions column (never below `minColumnWidth`, never above `maxWidth`). Resizing a flexible column fixes it at that width. Tables whose columns all set `width` render as before. Code that reads `column.width` now gets a `double?`.
 - `LayrzScaffoldShell` accepts `tableActionsBuilder`: extra per-row actions pinned in the desktop table before the built-in open button, instead of in a regular data column. Rows may return different actions (e.g. by `canEdit`/`canDelete`); the pinned column fits the row with the most.
