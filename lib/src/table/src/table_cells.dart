@@ -233,6 +233,7 @@ class LayrzTableActionsCell<T> extends StatelessWidget {
               color: action.color,
               style: (action.style ?? LayrzButtonStyle.text).asFab,
               isDisabled: action.disabled,
+              controller: action.controller,
               onTap: action.disabled ? null : action.onTap,
             ),
           ),
