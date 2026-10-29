@@ -57,6 +57,7 @@ Future<void> _pumpShell(
   required Size size,
   String? showActionLabel,
   bool wireTap = true,
+  List<LayrzTableAction> Function(_TestItem item)? tableActionsBuilder,
 }) async {
   addTearDown(tester.view.reset);
   tester.view.devicePixelRatio = 1.0;
@@ -71,6 +72,7 @@ Future<void> _pumpShell(
       tableColumns: _columns(),
       tableController: tableController,
       showActionLabel: showActionLabel,
+      tableActionsBuilder: tableActionsBuilder,
       onItemTap: wireTap
           ? (item) => controller.open(key: item.key, builder: (_) => Text("detail:${item.item.name}"))
           : null,
@@ -275,6 +277,100 @@ void main() {
       } finally {
         handle.dispose();
       }
+    });
+  });
+
+  group("row actions next to the open button", () {
+    LayrzTable<_TestItem> tableOf(WidgetTester tester) =>
+        tester.widget<LayrzTable<_TestItem>>(find.byType(LayrzTable<_TestItem>));
+
+    testWidgets("without tableActionsBuilder only the open button is pinned", (tester) async {
+      final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
+      addTearDown(controller.dispose);
+
+      await _pumpShell(
+        tester,
+        controller: controller,
+        tableController: tableController,
+        size: _kWideSize,
+        showActionLabel: "Open",
+      );
+
+      final table = tableOf(tester);
+      expect(table.actionsCount, 1);
+      expect(table.actionsBuilder!(_items.first).map((action) => action.labelText), ["Open"]);
+    });
+
+    testWidgets("app actions are pinned before the open button and the count includes them", (tester) async {
+      final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
+      addTearDown(controller.dispose);
+
+      await _pumpShell(
+        tester,
+        controller: controller,
+        tableController: tableController,
+        size: _kWideSize,
+        showActionLabel: "Open",
+        tableActionsBuilder: (item) => [
+          LayrzTableAction(icon: const IconData(0xe000), labelText: "Edit", onTap: () {}),
+          LayrzTableAction(icon: const IconData(0xe001), labelText: "Delete", onTap: () {}),
+        ],
+      );
+
+      final table = tableOf(tester);
+      expect(table.actionsCount, 3);
+      expect(table.actionsBuilder!(_items.first).map((action) => action.labelText), ["Edit", "Delete", "Open"]);
+    });
+
+    testWidgets("an app action receives the item of its own row", (tester) async {
+      final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
+      addTearDown(controller.dispose);
+      final edited = <String>[];
+
+      await _pumpShell(
+        tester,
+        controller: controller,
+        tableController: tableController,
+        size: _kWideSize,
+        tableActionsBuilder: (item) => [
+          LayrzTableAction(icon: const IconData(0xe000), labelText: "Edit", onTap: () => edited.add(item.id)),
+        ],
+      );
+
+      tableOf(tester).actionsBuilder!(_items[1]).first.onTap();
+
+      expect(edited, ["2"]);
+      expect(controller.isOpen, isFalse);
+    });
+
+    testWidgets("the pinned column fits the row with the most actions", (tester) async {
+      final controller = LayrzScaffoldController();
+      final tableController = LayrzTableController<_TestItem>();
+      addTearDown(tableController.dispose);
+      addTearDown(controller.dispose);
+
+      await _pumpShell(
+        tester,
+        controller: controller,
+        tableController: tableController,
+        size: _kWideSize,
+        showActionLabel: "Open",
+        tableActionsBuilder: (item) => [
+          LayrzTableAction(icon: const IconData(0xe000), labelText: "Edit", onTap: () {}),
+          if (item.id == "1") LayrzTableAction(icon: const IconData(0xe001), labelText: "Delete", onTap: () {}),
+        ],
+      );
+
+      final table = tableOf(tester);
+      expect(table.actionsCount, 3);
+      expect(table.actionsBuilder!(_items[0]).map((action) => action.labelText), ["Edit", "Delete", "Open"]);
+      expect(table.actionsBuilder!(_items[1]).map((action) => action.labelText), ["Edit", "Open"]);
     });
   });
 }

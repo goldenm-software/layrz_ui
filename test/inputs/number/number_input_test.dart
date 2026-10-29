@@ -1163,6 +1163,127 @@ void main() {
             '(${expectedCapBackgroundColor.toString()}), but only found $capContainersWithCorrectColor with correct colour',
       );
     });
+
+    group('groupThousands', () {
+      void setViewport(WidgetTester tester) {
+        tester.view.physicalSize = const Size(1200, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
+      }
+
+      TextEditingController controllerOf(WidgetTester tester) =>
+          tester.widget<EditableText>(find.byType(EditableText)).controller;
+
+      testWidgets('is off by default: 12000 renders as 12000', (tester) async {
+        setViewport(tester);
+        await pumpThemed(
+          tester,
+          const LayrzNumberInput(value: 12000, decimalSeparator: LayrzDecimalSeparator.comma),
+        );
+
+        expect(controllerOf(tester).text, '12000');
+      });
+
+      testWidgets('comma separator renders 12000 as 12.000 and 12000.5 as 12.000,5', (tester) async {
+        setViewport(tester);
+        await pumpThemed(
+          tester,
+          const LayrzNumberInput(
+            value: 12000,
+            decimalSeparator: LayrzDecimalSeparator.comma,
+            groupThousands: true,
+          ),
+        );
+        expect(controllerOf(tester).text, '12.000');
+
+        await pumpThemed(
+          tester,
+          const LayrzNumberInput(
+            value: 12000.5,
+            decimalSeparator: LayrzDecimalSeparator.comma,
+            groupThousands: true,
+          ),
+        );
+        expect(controllerOf(tester).text, '12.000,5');
+      });
+
+      testWidgets('dot separator renders 12000.5 as 12,000.5', (tester) async {
+        setViewport(tester);
+        await pumpThemed(
+          tester,
+          const LayrzNumberInput(value: 12000.5, groupThousands: true),
+        );
+
+        expect(controllerOf(tester).text, '12,000.5');
+      });
+
+      testWidgets('typing 12000,5 shows 12.000,5 and emits 12000.5', (tester) async {
+        setViewport(tester);
+        num? emitted;
+        await pumpThemed(
+          tester,
+          LayrzNumberInput(
+            decimalSeparator: LayrzDecimalSeparator.comma,
+            groupThousands: true,
+            onChanged: (value) => emitted = value,
+          ),
+        );
+
+        await tester.enterText(find.byType(EditableText), '12000,5');
+        await tester.pump();
+
+        expect(controllerOf(tester).text, '12.000,5');
+        expect(emitted, 12000.5);
+      });
+
+      testWidgets('the step button parses the grouped text', (tester) async {
+        setViewport(tester);
+        num? emitted;
+        await pumpThemed(
+          tester,
+          LayrzNumberInput(
+            value: 12000,
+            decimalSeparator: LayrzDecimalSeparator.comma,
+            groupThousands: true,
+            onChanged: (value) => emitted = value,
+          ),
+        );
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.showKeyboard(find.byType(EditableText));
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+        await tester.pump();
+
+        expect(emitted, 12001);
+        expect(controllerOf(tester).text, '12.001');
+      });
+
+      testWidgets('a parent echoing the value keeps the caret after a mid-number delete', (tester) async {
+        setViewport(tester);
+        num? value = 1234567;
+        await pumpThemed(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) => LayrzNumberInput(
+              value: value,
+              decimalSeparator: LayrzDecimalSeparator.comma,
+              groupThousands: true,
+              onChanged: (next) => setState(() => value = next),
+            ),
+          ),
+        );
+        await tester.showKeyboard(find.byType(EditableText));
+
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(text: '1.34.567', selection: TextSelection.collapsed(offset: 2)),
+        );
+        await tester.pump();
+
+        expect(value, 134567);
+        expect(controllerOf(tester).text, '134.567');
+        expect(controllerOf(tester).selection, const TextSelection.collapsed(offset: 1));
+      });
+    });
   });
 }
 

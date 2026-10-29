@@ -30,7 +30,9 @@ import 'tab.dart';
 /// `tokens.colors.primary`, hover/press use `tokens.colors.sf3`/
 /// `sf4`, corners use `tokens.radius.br2`, and the label uses
 /// `tokens.typography.label` at `FontWeight.w600` when selected or `w400`
-/// otherwise. Interaction states vary colour only, never geometry (D15).
+/// otherwise. The selected label and icons use `primary.contrastColor`, so they
+/// stay readable on any primary in both light and dark mode. Interaction states
+/// vary colour only, never geometry (D15).
 ///
 /// **Sizing diverges from `_LayrzPickerTab`**: pills are button-scale rather
 /// than compact — horizontal padding matches [LayrzButton]'s
@@ -289,9 +291,7 @@ class _LayrzTabPillState extends State<_LayrzTabPill> {
         : null;
     final labelColor =
         errorSpec?.textColor ??
-        (widget.isSelected
-            ? (selectedColor.computeLuminance() > 0.5 ? tokens.colors.fg1 : tokens.colors.sf1)
-            : (_isFocused ? tokens.colors.fg1 : tokens.colors.fg2));
+        (widget.isSelected ? selectedColor.contrastColor : (_isFocused ? tokens.colors.fg1 : tokens.colors.fg2));
     final borderRadius = tokens.radius.br2;
 
     final labelWidget = tab.labelText != null

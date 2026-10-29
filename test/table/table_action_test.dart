@@ -17,6 +17,22 @@ void main() {
       expect(action.style, isNull);
       expect(action.color, isNull);
       expect(action.disabled, isFalse);
+      expect(action.controller, isNull);
+    });
+
+    test('controller is kept, replaced by copyWith and part of equality', () {
+      final controller = LayrzButtonController();
+      addTearDown(controller.dispose);
+      final other = LayrzButtonController();
+      addTearDown(other.dispose);
+
+      final action = LayrzTableAction(icon: MockIcon.icon, labelText: 'Export', onTap: _onTap, controller: controller);
+
+      expect(action.controller, same(controller));
+      expect(action.copyWith().controller, same(controller));
+      expect(action.copyWith(controller: other).controller, same(other));
+      expect(action == action.copyWith(controller: other), isFalse);
+      expect(action.hashCode, action.copyWith().hashCode);
     });
 
     test('constructor honors explicit style, color and disabled', () {

@@ -367,6 +367,44 @@ class NumberInputDemoSections extends StatelessWidget {
             ),
 
             tokens.spacing.sb3,
+            Text('Thousands Grouping', style: tokens.typography.title),
+            LayrzRow(
+              spacing: tokens.spacing.sp3,
+              children: [
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzNumberInput(
+                    labelText: 'Comma Separator',
+                    helperText: 'Groups with dots: 12.000,5',
+                    value: 12000.5,
+                    decimalSeparator: LayrzDecimalSeparator.comma,
+                    groupThousands: true,
+                    maximumDecimalDigits: 2,
+                    onChanged: (value) {
+                      onStateChanged();
+                    },
+                  ),
+                ),
+                LayrzCol(
+                  xs: 12,
+                  md: 6,
+                  child: LayrzNumberInput(
+                    labelText: 'Dot Separator',
+                    helperText: 'Groups with commas: 12,000.5',
+                    value: 12000.5,
+                    decimalSeparator: LayrzDecimalSeparator.dot,
+                    groupThousands: true,
+                    maximumDecimalDigits: 2,
+                    onChanged: (value) {
+                      onStateChanged();
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            tokens.spacing.sb3,
             Text('Decimal Precision', style: tokens.typography.title),
             LayrzRow(
               spacing: tokens.spacing.sp3,
