@@ -235,10 +235,12 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
     // State precedence: disabled > error > hover/focused/pressed > default
     late Color backgroundColor;
     late Color borderColor;
+    late Color checkColor;
 
     if (isDisabled) {
       backgroundColor = tokens.colors.sf3;
       borderColor = tokens.colors.fg4;
+      checkColor = tokens.colors.fg4;
     } else if (widget.errors.isNotEmpty) {
       final uncheckedBackground = tokens.colors.danger
           .withOpacityValue(tokens.colors.tonalOpacity)
@@ -246,16 +248,19 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
       final checkedBackground = tokens.colors.danger;
       backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
       borderColor = tokens.colors.danger;
+      checkColor = checkedBackground.contrastColor;
     } else if (_states.contains(WidgetState.hovered) || isFocusVisible || _states.contains(WidgetState.pressed)) {
       final uncheckedBackground = tokens.colors.sf3;
       final checkedBackground = tokens.colors.primary;
       backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
       borderColor = isFocusVisible ? tokens.colors.primary : tokens.colors.fg2;
+      checkColor = checkedBackground.contrastColor;
     } else {
       final uncheckedBackground = tokens.colors.sf2;
       final checkedBackground = tokens.colors.primary;
       backgroundColor = Color.lerp(uncheckedBackground, checkedBackground, animationProgress)!;
       borderColor = tokens.colors.fg2;
+      checkColor = checkedBackground.contrastColor;
     }
 
     return SizedBox.square(
@@ -276,7 +281,7 @@ class _LayrzCheckboxInputState extends State<LayrzCheckboxInput> with TickerProv
                   child: Icon(
                     MdiIcons.check,
                     size: 14,
-                    color: tokens.colors.sf1,
+                    color: checkColor,
                   ),
                 ),
               )
