@@ -198,7 +198,7 @@ class LayrzProgressBar extends StatefulWidget {
   State<LayrzProgressBar> createState() => _LayrzProgressBarState();
 }
 
-class _LayrzProgressBarState extends State<LayrzProgressBar> with SingleTickerProviderStateMixin {
+class _LayrzProgressBarState extends State<LayrzProgressBar> with TickerProviderStateMixin {
   AnimationController? _sweepController;
 
   bool get _isIndeterminate => widget.value == null;

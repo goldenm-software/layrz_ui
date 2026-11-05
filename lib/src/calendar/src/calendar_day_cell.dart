@@ -274,6 +274,8 @@ class LayrzCalendarDayCell extends StatelessWidget {
 
     final dateNumberOnTap = dayNumberOpensDayView && onDateNumberTap != null ? () => onDateNumberTap!(date) : null;
 
+    final dateNumber = _DateNumber(date: date, isToday: isToday, color: spec.dateColor, onTap: dateNumberOnTap);
+
     final cellBody = DecoratedBox(
       decoration: BoxDecoration(
         color: spec.backgroundColor,
@@ -294,24 +296,45 @@ class LayrzCalendarDayCell extends StatelessWidget {
           children: [
             SizedBox(
               height: kLayrzCalendarDateRowHeight,
-              child: _DateNumber(
-                date: date,
-                isToday: isToday,
-                color: spec.dateColor,
-                onTap: dateNumberOnTap,
-              ),
+              child: !mustForceOverflow
+                  ? dateNumber
+                  // No slot fits below the date: the forced overflow chip shares the date row.
+                  : Row(
+                      children: [
+                        Flexible(child: dateNumber),
+                        SizedBox(width: tokens.spacing.sp1),
+                        // Scales down in very narrow cells instead of overflowing the row.
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: SizedBox(
+                              height: kLayrzCalendarEventSlotHeight,
+                              child: _OverflowChip(
+                                count: effectiveOverflowCount,
+                                date: date,
+                                l10n: l10n,
+                                onTap: onOverflowTap == null ? null : () => onOverflowTap!(date),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
-            SizedBox(height: tokens.spacing.sp1),
-            ExcludeSemantics(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (var i = 0; i < reservedCount; i++) const _ReservedEventSlot(),
-                  for (final entry in visibleEntries) _EventChip(entry: entry, fallbackColor: spec.eventColor),
-                ],
+            if (!mustForceOverflow) ...[
+              SizedBox(height: tokens.spacing.sp1),
+              ExcludeSemantics(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < reservedCount; i++) const _ReservedEventSlot(),
+                    for (final entry in visibleEntries) _EventChip(entry: entry, fallbackColor: spec.eventColor),
+                  ],
+                ),
               ),
-            ),
-            if (showOverflow)
+            ],
+            if (showOverflow && !mustForceOverflow)
               SizedBox(
                 height: kLayrzCalendarEventSlotHeight,
                 child: _OverflowChip(

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.0
+
+- `LayrzCalendar` header: below 560 px of width the view-mode buttons (month, week, day) render as icon-only fab buttons with their labels as tooltips; Today stays a text button.
+- Fixed: a `LayrzCalendar` month cell too short for any event slot no longer overflows; its `+N` chip moves into the date row and scales down when the cell is narrow.
+- Fixed: `LayrzProgressBar` no longer throws ("multiple tickers were created") when `value` switches back to indeterminate (`null`) after having been determinate.
+- Fixed: the `LayrzCheckboxInput` check mark uses the contrast color of its fill (`primary` or `danger`) instead of a surface color, so a dark primary in dark mode no longer gets a dark check.
+
 ## 1.7.0
 
 - `LayrzColumn.width` is optional: a column without it is flexible and shares, in equal parts, the width left after the fixed columns, the multiselect cell and the actions column (never below `minColumnWidth`, never above `maxWidth`). Resizing a flexible column fixes it at that width. Tables whose columns all set `width` render as before. Code that reads `column.width` now gets a `double?`.

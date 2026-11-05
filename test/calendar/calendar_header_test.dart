@@ -216,7 +216,10 @@ void main() {
         final buttons = tester.widgetList<LayrzButton>(find.byType(LayrzButton)).toList();
         final previousRect = tester.getRect(find.byWidgetPredicate((w) => w == buttons[0]));
         final nextRect = tester.getRect(find.byWidgetPredicate((w) => w == buttons[1]));
-        final todayRect = tester.getRect(find.byWidgetPredicate((w) => w == buttons[2]));
+        // Looked up by label: narrow headers add the view-mode buttons before Today.
+        final todayRect = tester.getRect(
+          find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == 'Today'),
+        );
         final labelRect = tester.getRect(find.text('August 2026'));
 
         expect(previousRect.right, lessThanOrEqualTo(labelRect.left));

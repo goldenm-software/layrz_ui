@@ -93,12 +93,22 @@ class LayrzCalendarHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.tokens;
     final l10n = LayrzUiL10n.of(context);
     final today = DateTime.now();
     final isFocusedOnToday =
         focusedDate.year == today.year && focusedDate.month == today.month && focusedDate.day == today.day;
 
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactModes = constraints.maxWidth < kLayrzCalendarCompactHeaderWidth;
+        return _buildRegular(context, l10n, isFocusedOnToday, compactModes: compactModes);
+      },
+    );
+  }
+
+  /// [compactModes] turns the view-mode row into icon-only fab buttons (labels become tooltips) for narrow headers.
+  Widget _buildRegular(BuildContext context, LayrzUiL10n l10n, bool isFocusedOnToday, {required bool compactModes}) {
+    final tokens = context.tokens;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -121,40 +131,7 @@ class LayrzCalendarHeader extends StatelessWidget {
             // trailing edge. That is precisely the regression this
             // structure fixes — see `calendar_header_test.dart` for the
             // geometry assertion.
-            Expanded(
-              child: Row(
-                children: [
-                  LayrzButton(
-                    labelText: _previousLabel(l10n),
-                    icon: MdiIcons.chevronLeft,
-                    style: LayrzButtonStyle.textFab,
-                    onTap: onPrevious,
-                    // The nav row sits directly above the mode switcher, so
-                    // a bottom-anchored tooltip (the button's own default)
-                    // would render on top of the switcher's buttons and
-                    // obscure them.
-                    tooltipPosition: LayrzPreferredSide.top,
-                  ),
-                  SizedBox(width: tokens.spacing.sp1),
-                  Flexible(
-                    child: Text(
-                      _periodLabel(l10n),
-                      style: tokens.typography.title,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  SizedBox(width: tokens.spacing.sp1),
-                  LayrzButton(
-                    labelText: _nextLabel(l10n),
-                    icon: MdiIcons.chevronRight,
-                    style: LayrzButtonStyle.textFab,
-                    onTap: onNext,
-                    // See the previous button's tooltipPosition comment above.
-                    tooltipPosition: LayrzPreferredSide.top,
-                  ),
-                ],
-              ),
-            ),
+            Expanded(child: _buildNavigation(context, l10n)),
             LayrzButton(
               labelText: l10n.calendarToday,
               // Filled draws attention back to today when the calendar is
@@ -168,7 +145,44 @@ class LayrzCalendarHeader extends StatelessWidget {
           ],
         ),
         SizedBox(height: tokens.spacing.sp2),
-        _ModeSwitcher(mode: mode, onModeChanged: onModeChanged),
+        _ModeSwitcher(mode: mode, onModeChanged: onModeChanged, compact: compactModes),
+      ],
+    );
+  }
+
+  /// Previous / period label / next group; the label ellipsizes when the row is short.
+  Widget _buildNavigation(BuildContext context, LayrzUiL10n l10n) {
+    final tokens = context.tokens;
+    return Row(
+      children: [
+        LayrzButton(
+          labelText: _previousLabel(l10n),
+          icon: MdiIcons.chevronLeft,
+          style: LayrzButtonStyle.textFab,
+          onTap: onPrevious,
+          // The nav row sits directly above the mode switcher, so
+          // a bottom-anchored tooltip (the button's own default)
+          // would render on top of the switcher's buttons and
+          // obscure them.
+          tooltipPosition: LayrzPreferredSide.top,
+        ),
+        SizedBox(width: tokens.spacing.sp1),
+        Flexible(
+          child: Text(
+            _periodLabel(l10n),
+            style: tokens.typography.title,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        SizedBox(width: tokens.spacing.sp1),
+        LayrzButton(
+          labelText: _nextLabel(l10n),
+          icon: MdiIcons.chevronRight,
+          style: LayrzButtonStyle.textFab,
+          onTap: onNext,
+          // See the previous button's tooltipPosition comment above.
+          tooltipPosition: LayrzPreferredSide.top,
+        ),
       ],
     );
   }
@@ -239,37 +253,49 @@ class LayrzCalendarHeader extends StatelessWidget {
   }
 }
 
+/// Header width under which [LayrzCalendarHeader] shows its view-mode buttons as icon-only fabs.
+const double kLayrzCalendarCompactHeaderWidth = 560;
+
 /// The row of view-mode buttons under [LayrzCalendarHeader]'s navigation row.
 class _ModeSwitcher extends StatelessWidget {
-  const _ModeSwitcher({required this.mode, required this.onModeChanged});
+  const _ModeSwitcher({required this.mode, required this.onModeChanged, this.compact = false});
 
   final LayrzCalendarMode mode;
   final void Function(LayrzCalendarMode mode)? onModeChanged;
+
+  /// Icon-only fab buttons with the label as tooltip, for narrow headers.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
     final l10n = LayrzUiL10n.of(context);
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        spacing: tokens.spacing.sp1,
-        children: [
-          _buildButton(context, LayrzCalendarMode.month, l10n.calendarViewMonth),
-          _buildButton(context, LayrzCalendarMode.week, l10n.calendarViewWeek),
-          _buildButton(context, LayrzCalendarMode.day, l10n.calendarViewDay),
-        ],
-      ),
+    final buttons = Row(
+      // Compact fabs spread across the row; labeled buttons keep their natural width.
+      mainAxisSize: compact ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisAlignment: compact ? MainAxisAlignment.spaceAround : MainAxisAlignment.start,
+      spacing: tokens.spacing.sp1,
+      children: [
+        _buildButton(context, LayrzCalendarMode.month, l10n.calendarViewMonth, MdiIcons.calendarMonth),
+        _buildButton(context, LayrzCalendarMode.week, l10n.calendarViewWeek, MdiIcons.calendarWeek),
+        _buildButton(context, LayrzCalendarMode.day, l10n.calendarViewDay, MdiIcons.viewDay),
+      ],
     );
+    if (compact) return buttons;
+    return SingleChildScrollView(scrollDirection: Axis.horizontal, child: buttons);
   }
 
-  Widget _buildButton(BuildContext context, LayrzCalendarMode buttonMode, String label) {
+  Widget _buildButton(BuildContext context, LayrzCalendarMode buttonMode, String label, IconData icon) {
     final isSelected = buttonMode == mode;
+    final style = compact
+        ? (isSelected ? LayrzButtonStyle.filledFab : LayrzButtonStyle.outlinedFab)
+        : (isSelected ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined);
 
     return LayrzButton(
       labelText: label,
-      style: isSelected ? LayrzButtonStyle.filled : LayrzButtonStyle.outlined,
+      icon: compact ? icon : null,
+      style: style,
       onTap: onModeChanged != null ? () => onModeChanged!(buttonMode) : null,
     );
   }
