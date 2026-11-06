@@ -207,6 +207,9 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
   /// normal token-styled one in both light and dark mode. It is safe to apply
   /// unconditionally because these ARE the field's resting colors, so a non-autofilled
   /// field is unchanged. Omitted for the one-time-code field, which paints its own boxes.
+  ///
+  /// It also hides the decorative placeholder while the input matches the browser's
+  /// autofill pseudo-class, so autofilled text never renders on top of the hint.
   String _buildStyleSheet({
     required String selectionBackground,
     required String selectionTextColor,
@@ -224,8 +227,19 @@ extension _LayrzLoginWebFieldThemeMixin on _LayrzLoginWebFieldState {
         'color: ${colors.textColor} !important;'
         '-webkit-text-fill-color: ${colors.textColor} !important;'
         'caret-color: ${colors.textColor} !important; }';
-    return '$selectionRule$autofillRule';
+    // Autofill preview and fill-on-load paint text into the input without exposing
+    // `input.value` or firing `input`, so the JS empty-check leaves the placeholder
+    // showing underneath. The browser's autofill pseudo-class is the only reliable signal.
+    // Kept as two rules: an unknown pseudo-class in a selector list voids the whole rule.
+    final placeholderHideRules =
+        '.$_selectionClass:-webkit-autofill ~ .$_placeholderClass { visibility: hidden !important; }'
+        '.$_selectionClass:autofill ~ .$_placeholderClass { visibility: hidden !important; }';
+    return '$selectionRule$autofillRule$placeholderHideRules';
   }
+
+  /// Unique class name on the decorative placeholder span, targeted by the autofill
+  /// rules in [_buildStyleSheet].
+  String get _placeholderClass => '$_viewType-placeholder';
 
   /// Unique class name used to scope this instance's `::selection` rule — derived from
   /// [_viewType] so it's stable across `_registerViewFactory` (which assigns it to

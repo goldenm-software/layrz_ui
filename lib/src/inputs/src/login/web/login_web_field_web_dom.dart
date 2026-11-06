@@ -159,6 +159,7 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
         placeholder.style.setProperty('text-overflow', 'ellipsis');
         placeholder.style.fontSize = '${bodyFontSize}px';
         placeholder.setAttribute('aria-hidden', 'true');
+        placeholder.className = _placeholderClass;
         placeholder.style.display = widget.value.isEmpty ? 'block' : 'none';
       }
 
@@ -307,10 +308,12 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       // takes it out of flex flow), and it is only ever visible while `input` is empty
       // — see `applyPlaceholderVisibility` below. Null for the one-time-code field,
       // which has no in-box placeholder — see where it is (conditionally) created above.
+      stack.appendChild(input);
+      // Appended AFTER `input` on purpose: the stylesheet hides the placeholder with a
+      // `:autofill ~ placeholder` sibling selector, which only matches later siblings.
       if (placeholder != null) {
         stack.appendChild(placeholder);
       }
-      stack.appendChild(input);
 
       container.appendChild(selectionStyle);
       // `iconSlot` is only appended here for username/password — see where it is
@@ -455,24 +458,29 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       input.addEventListener(
         'keydown',
         (web.Event event) {
-          final keyboardEvent = event as web.KeyboardEvent;
-          if (keyboardEvent.key == 'Enter') {
-            widget.onSubmit?.call(input.value);
-            return;
-          }
-          // Ctrl+A (Cmd+A on macOS) must select this input's own text, not the whole
-          // page. Flutter web's platform-view/pointer-interceptor layer otherwise lets
-          // the shortcut escape to the document, which the browser then resolves as
-          // "select all" over the entire page instead of this field's content.
-          // `stopPropagation` keeps it from bubbling up to Flutter/the document at all,
-          // and `preventDefault` suppresses the browser's own document-wide fallback;
-          // `input.select()` performs the actual field-scoped selection. Every other
-          // key (typing, Enter above) is left untouched.
-          final isSelectAll = (keyboardEvent.ctrlKey || keyboardEvent.metaKey) && keyboardEvent.key == 'a';
-          if (isSelectAll) {
-            keyboardEvent.preventDefault();
-            keyboardEvent.stopPropagation();
-            input.select();
+          try {
+            final keyboardEvent = event as web.KeyboardEvent?;
+            if (keyboardEvent?.key == 'Enter') {
+              widget.onSubmit?.call(input.value);
+              return;
+            }
+            // Ctrl+A (Cmd+A on macOS) must select this input's own text, not the whole
+            // page. Flutter web's platform-view/pointer-interceptor layer otherwise lets
+            // the shortcut escape to the document, which the browser then resolves as
+            // "select all" over the entire page instead of this field's content.
+            // `stopPropagation` keeps it from bubbling up to Flutter/the document at all,
+            // and `preventDefault` suppresses the browser's own document-wide fallback;
+            // `input.select()` performs the actual field-scoped selection. Every other
+            // key (typing, Enter above) is left untouched.
+            final isSelectAll =
+                (keyboardEvent?.ctrlKey == true || keyboardEvent?.metaKey == true) && keyboardEvent?.key == 'a';
+            if (isSelectAll) {
+              keyboardEvent?.preventDefault();
+              keyboardEvent?.stopPropagation();
+              input.select();
+            }
+          } catch (e) {
+            // Ignore any errors that occur during keyboard event handling.
           }
         }.toJS,
       );
