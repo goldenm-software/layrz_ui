@@ -6,6 +6,7 @@ import 'package:layrz_ui/src/fonts/fonts.dart';
 import 'border.dart';
 import 'breakpoints.dart';
 import 'colors.dart';
+import 'input.dart';
 import 'motion.dart';
 import 'radius.dart';
 import 'shadow.dart';
@@ -49,6 +50,9 @@ class LayrzTokens {
   /// All breakpoint tokens (band thresholds for responsive design).
   final LayrzBreakpointTokens breakpoints;
 
+  /// Input fill color tokens for the text-field family (idle, focused, disabled, error, overlays).
+  final LayrzInputColorTokens input;
+
   /// Whether this token set is the light or dark appearance.
   ///
   /// Defaults to [Brightness.light]. [LayrzTokens.light] sets [Brightness.light]
@@ -68,6 +72,7 @@ class LayrzTokens {
     required this.border,
     required this.motion,
     required this.breakpoints,
+    this.input = const LayrzInputColorTokens.light(),
     this.brightness = Brightness.light,
   });
 
@@ -132,6 +137,7 @@ class LayrzTokens {
       border: borderTokens,
       motion: motionTokens,
       breakpoints: breakpointTokens,
+      input: const LayrzInputColorTokens.light(),
       brightness: Brightness.light,
     );
   }
@@ -196,6 +202,7 @@ class LayrzTokens {
       border: borderTokens,
       motion: motionTokens,
       breakpoints: breakpointTokens,
+      input: const LayrzInputColorTokens.dark(),
       brightness: Brightness.dark,
     );
   }
@@ -210,6 +217,7 @@ class LayrzTokens {
     LayrzBorderTokens? border,
     LayrzMotionTokens? motion,
     LayrzBreakpointTokens? breakpoints,
+    LayrzInputColorTokens? input,
     Brightness? brightness,
   }) {
     return LayrzTokens(
@@ -221,6 +229,7 @@ class LayrzTokens {
       border: border ?? this.border,
       motion: motion ?? this.motion,
       breakpoints: breakpoints ?? this.breakpoints,
+      input: input ?? this.input,
       brightness: brightness ?? this.brightness,
     );
   }
@@ -238,8 +247,10 @@ class LayrzTokens {
           border == other.border &&
           motion == other.motion &&
           breakpoints == other.breakpoints &&
+          input == other.input &&
           brightness == other.brightness;
 
   @override
-  int get hashCode => Object.hash(colors, typography, spacing, radius, shadow, border, motion, breakpoints, brightness);
+  int get hashCode =>
+      Object.hash(colors, typography, spacing, radius, shadow, border, motion, breakpoints, input, brightness);
 }

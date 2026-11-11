@@ -101,16 +101,16 @@ class _LayrzCardState extends State<LayrzCard> {
     super.dispose();
   }
 
-  /// Resolves the shadow list for the current elevation level.
-  List<BoxShadow> _resolveShadow(LayrzTokens tokens) {
-    return switch (_currentElevation) {
-      1 => tokens.shadow.elevation1,
-      2 => tokens.shadow.elevation2,
-      3 => tokens.shadow.elevation3,
-      4 => tokens.shadow.elevation4,
-      5 => tokens.shadow.elevation5,
-      _ => tokens.shadow.elevation1,
-    };
+  /// Resolves the card [BoxDecoration] (fill, radius and elevation shadows) for the current elevation level.
+  ///
+  /// [tokens] supplies the shadow elevation builder, [color] is the fill and [radius] the corner radius.
+  BoxDecoration _resolveDecoration({
+    required LayrzTokens tokens,
+    required Color color,
+    required double radius,
+  }) {
+    // if (context.isDark) return tokens.shadow.elevation(elevation: 0, radius: radius, color: color);
+    return tokens.shadow.elevation(elevation: _currentElevation.toDouble(), radius: radius, color: color);
   }
 
   /// Handles pointer down to set the pressed state.
@@ -154,15 +154,11 @@ class _LayrzCardState extends State<LayrzCard> {
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
-    final backgroundColor = widget.backgroundColor ?? (context.isDark ? tokens.colors.sf3 : tokens.colors.sf1);
+    final backgroundColor = widget.backgroundColor ?? tokens.colors.sf2;
 
     final content = Container(
       padding: EdgeInsets.all(tokens.spacing.sp3),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: tokens.radius.br3,
-        boxShadow: _resolveShadow(tokens),
-      ),
+      decoration: _resolveDecoration(tokens: tokens, color: backgroundColor, radius: tokens.radius.r3),
       child: widget.child,
     );
 
@@ -204,10 +200,10 @@ class _LayrzCardState extends State<LayrzCard> {
             child: AnimatedContainer(
               duration: tokens.motion.dHover,
               curve: tokens.motion.easing,
-              decoration: BoxDecoration(
+              decoration: _resolveDecoration(
+                tokens: tokens,
                 color: backgroundColor,
-                borderRadius: tokens.radius.br3,
-                boxShadow: _resolveShadow(tokens),
+                radius: tokens.radius.r3,
               ),
               padding: EdgeInsets.all(tokens.spacing.sp3),
               child: widget.child,

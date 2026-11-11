@@ -33,7 +33,9 @@ void main() {
     group('Elevation levels', () {
       testWidgets('elevation 1 uses elevation1 shadow', (tester) async {
         final themeData = LayrzThemeData.light();
-        final expectedShadow = themeData.tokens.shadow.elevation1;
+        final expectedShadow = themeData.tokens.shadow
+            .elevation(elevation: 1, radius: themeData.tokens.radius.r3)
+            .boxShadow;
 
         await pumpThemed(
           tester,
@@ -49,7 +51,9 @@ void main() {
 
       testWidgets('elevation 2 uses elevation2 shadow', (tester) async {
         final themeData = LayrzThemeData.light();
-        final expectedShadow = themeData.tokens.shadow.elevation2;
+        final expectedShadow = themeData.tokens.shadow
+            .elevation(elevation: 2, radius: themeData.tokens.radius.r3)
+            .boxShadow;
 
         await pumpThemed(
           tester,
@@ -64,7 +68,9 @@ void main() {
 
       testWidgets('elevation 3 uses elevation3 shadow', (tester) async {
         final themeData = LayrzThemeData.light();
-        final expectedShadow = themeData.tokens.shadow.elevation3;
+        final expectedShadow = themeData.tokens.shadow
+            .elevation(elevation: 3, radius: themeData.tokens.radius.r3)
+            .boxShadow;
 
         await pumpThemed(
           tester,
@@ -79,7 +85,9 @@ void main() {
 
       testWidgets('elevation 4 uses elevation4 shadow', (tester) async {
         final themeData = LayrzThemeData.light();
-        final expectedShadow = themeData.tokens.shadow.elevation4;
+        final expectedShadow = themeData.tokens.shadow
+            .elevation(elevation: 4, radius: themeData.tokens.radius.r3)
+            .boxShadow;
 
         await pumpThemed(
           tester,
@@ -94,7 +102,9 @@ void main() {
 
       testWidgets('elevation 5 uses elevation5 shadow', (tester) async {
         final themeData = LayrzThemeData.light();
-        final expectedShadow = themeData.tokens.shadow.elevation5;
+        final expectedShadow = themeData.tokens.shadow
+            .elevation(elevation: 5, radius: themeData.tokens.radius.r3)
+            .boxShadow;
 
         await pumpThemed(
           tester,
@@ -125,7 +135,7 @@ void main() {
     group('Background color', () {
       testWidgets('null backgroundColor uses surface token', (tester) async {
         final themeData = LayrzThemeData.light();
-        final expectedColor = themeData.tokens.colors.sf1;
+        final expectedColor = themeData.tokens.colors.sf2;
 
         await pumpThemed(
           tester,
@@ -275,8 +285,12 @@ void main() {
       testWidgets('pressing lowers shadow and releasing restores it', (tester) async {
         final themeData = LayrzThemeData.light();
         const baseElevation = 3;
-        final expectedBaseShadow = themeData.tokens.shadow.elevation3;
-        final expectedPressedShadow = themeData.tokens.shadow.elevation2;
+        final expectedBaseShadow = themeData.tokens.shadow
+            .elevation(elevation: 3, radius: themeData.tokens.radius.r3)
+            .boxShadow;
+        final expectedPressedShadow = themeData.tokens.shadow
+            .elevation(elevation: 2, radius: themeData.tokens.radius.r3)
+            .boxShadow;
 
         await pumpThemed(
           tester,
@@ -315,7 +329,9 @@ void main() {
 
       testWidgets('elevation 5 pressed clamps to elevation 4', (tester) async {
         final themeData = LayrzThemeData.light();
-        final expectedPressedShadow = themeData.tokens.shadow.elevation4;
+        final expectedPressedShadow = themeData.tokens.shadow
+            .elevation(elevation: 4, radius: themeData.tokens.radius.r3)
+            .boxShadow;
 
         await pumpThemed(
           tester,
@@ -341,7 +357,9 @@ void main() {
 
       testWidgets('elevation 1 pressed clamps to elevation 1', (tester) async {
         final themeData = LayrzThemeData.light();
-        final expectedShadow = themeData.tokens.shadow.elevation1;
+        final expectedShadow = themeData.tokens.shadow
+            .elevation(elevation: 1, radius: themeData.tokens.radius.r3)
+            .boxShadow;
 
         await pumpThemed(
           tester,

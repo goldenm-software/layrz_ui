@@ -4,6 +4,7 @@ export 'src/button.dart';
 export 'src/chip.dart';
 export 'src/code.dart';
 export 'src/colors.dart';
+export 'src/input.dart';
 export 'src/durations.dart';
 export 'src/layout.dart';
 export 'src/menu.dart';

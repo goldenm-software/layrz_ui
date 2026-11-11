@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/theme/theme.dart';
 import 'package:layrz_ui/src/tokenizer/tokenizer.dart';
@@ -15,6 +16,12 @@ extension LayrzContextExtensions on BuildContext {
   /// Provides direct access to [LayrzThemeData.tokens]. This is the preferred
   /// way to access design values in new code.
   LayrzTokens get tokens => LayrzTheme.of(this).tokens;
+
+  /// The painted outer height of a standard (non-dense) text-field input for the current viewport.
+  ///
+  /// [kLayrzInputCompactHeight] (50) when [isCompact], otherwise [kLayrzInputHeight] (45). Both
+  /// match the corresponding [LayrzButton] heights.
+  double get inputHeight => isCompact ? kLayrzInputCompactHeight : kLayrzInputHeight;
 
   /// The active breakpoint band, resolved from the viewport width.
   ///

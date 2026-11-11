@@ -409,7 +409,7 @@ class _DigitFieldState extends State<_DigitField> {
             curve: tokens.motion.easing,
             padding: EdgeInsets.symmetric(horizontal: tokens.spacing.sp3, vertical: tokens.spacing.sp2),
             decoration: BoxDecoration(
-              color: tokens.colors.sf2,
+              color: _focusNode.hasFocus ? tokens.input.focused : tokens.input.idle,
               borderRadius: tokens.radius.br2,
               border: Border.all(
                 color: _focusNode.hasFocus ? tokens.colors.primary : const Color(0x00000000),

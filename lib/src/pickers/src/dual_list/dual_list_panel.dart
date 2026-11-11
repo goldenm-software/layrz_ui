@@ -121,13 +121,13 @@ class _LayrzDualListPanelState<T> extends State<LayrzDualListPanel<T>> {
           child: DecoratedBox(
             // Mirrors `LayrzInputStyleSpec`'s own enabled-state resolution
             // (`input_style_spec.dart`, default branch) so the panel reads as
-            // an input surface rather than a bare bordered box -- `sf2` fill,
+            // an input surface rather than a bare bordered box -- `input.idle` fill,
             // a transparent border at the input's own `borderWidth`. This
             // does not modify the frozen `input_chrome.dart`/
             // `input_style_spec.dart` files; it just matches their resolved
             // values from this panel's own decoration.
             decoration: BoxDecoration(
-              color: tokens.colors.sf2,
+              color: tokens.input.idle,
               border: Border.all(color: const Color(0x00000000), width: tokens.border.base),
               borderRadius: tokens.radius.br2,
             ),
@@ -212,7 +212,7 @@ class _DualListItemRow<T> extends StatelessWidget {
       child: LayrzTappable(
         onTap: onTap,
         disabled: disabled,
-        color: tokens.colors.sf2,
+        color: tokens.input.idle,
         hoverColor: tokens.colors.sf4,
         pressedColor: pressedColor,
         child: Container(

@@ -24,7 +24,7 @@ import 'package:flutter/widgets.dart';
 /// partial-alpha ring at top and bottom — the hairline seam.
 ///
 /// Nudging the shape's height (as a previous fix attempted, moving
-/// `kLayrzSkeletonInputHeight` from `43.0` to `43.5`) cannot fix this: whichever
+/// `kLayrzSkeletonInputHeight` by half a pixel) cannot fix this: whichever
 /// edge lands on a fractional device pixel still carries Skia's antialiasing,
 /// so the mismatch just relocates to a different edge. The only
 /// edge-independent fix is to remove the mismatch itself, by making the

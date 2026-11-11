@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 import 'package:layrz_ui/src/extensions/extensions.dart';
@@ -12,17 +14,14 @@ import 'input_style_spec.dart';
 /// Comfortable (normal) density specification for input fields.
 ///
 /// Encapsulates all dimensions that define the comfortable density mode:
-/// padding (10px regular / 14px compact on all sides, or 6px regular / 10px
-/// compact when [dense] is true), icon size (fontSize + 6px), text style
-/// (body), and content height that accommodates both icons and text.
+/// padding (10px on all sides, or 6px when [dense] is true), icon size
+/// (fontSize + 6px), text style (body), and content height that accommodates
+/// both icons and text.
 ///
-/// Padding and icon size scale on compact viewports (width < 960px) to improve touch targets:
-/// - Padding: pd2 (10px) → pd3 (14px), or pd1 (6px) → pd2 (10px) when [dense]
-/// - Icon size: grows proportionally with text content
-/// - Text style remains body (16px) in both regular and compact viewports
-///
-/// This ensures input fields on mobile/narrow tablets have larger touch targets comparable
-/// to button sizing (see DESIGN-103 for button compact sizing strategy).
+/// Padding is the same on regular and compact viewports. The field's overall height is not
+/// derived from padding alone: non-dense fields are stretched to the button height
+/// (45px regular / 50px compact, see `LayrzContextExtensions.inputHeight`) by the chrome, while
+/// dense fields keep their natural 35px.
 class _InputComfortableSpec {
   final LayrzTokens tokens;
   final bool dense;
@@ -31,10 +30,7 @@ class _InputComfortableSpec {
 
   /// The padding applied to all sides inside the input field.
   ///
-  /// Returns 10px (pd2) on regular viewports and 14px (pd3) on compact viewports
-  /// (width < 960px) to ensure adequate touch targets on mobile. When [dense] is
-  /// true, each of those drops one spacing level: 6px (pd1) regular, 10px (pd2)
-  /// compact.
+  /// Returns 10px (pd2), or 6px (pd1) when [dense] is true, on every viewport.
   EdgeInsets get padding => dense ? tokens.spacing.pd1 : tokens.spacing.pd2;
 
   /// The size of icons in slots and state indicators.
@@ -125,12 +121,11 @@ class LayrzInputChrome extends StatelessWidget {
 
   /// Whether the field uses the dense density variant.
   ///
-  /// When false (default), the internal padding is `tokens.spacing.pd3` (14px)
-  /// on compact viewports and `tokens.spacing.pd2` (10px) on regular viewports.
-  /// When true, each of those drops one spacing level: `tokens.spacing.pd2`
-  /// (10px) on compact viewports and `tokens.spacing.pd1` (6px) on regular
-  /// viewports. No other dimension (height, label sizing, typography, error
-  /// block spacing) changes with this flag.
+  /// When false (default), the internal padding is `tokens.spacing.pd2` (10px) and the
+  /// painted field height is the button height (45px regular / 50px compact).
+  /// When true, the padding is `tokens.spacing.pd1` (6px) and the field keeps its
+  /// natural 35px height. Label sizing, typography and error block spacing do not
+  /// change with this flag.
   final bool dense;
 
   /// Maximum length of the input text.
@@ -282,6 +277,13 @@ class LayrzInputChrome extends StatelessWidget {
     // icons and the text line without clipping.
     final contentHeight = density.contentHeight;
 
+    // Non-dense fields are as tall as a button (45 regular / 50 compact painted, border included).
+    // The box content grows to fill whatever the padding and border leave of that height; dense
+    // fields keep their natural height.
+    final boxContentHeight = dense
+        ? contentHeight
+        : math.max(contentHeight, context.inputHeight - density.padding.vertical - 2 * spec.borderWidth);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,7 +333,7 @@ class LayrzInputChrome extends StatelessWidget {
           child: _expandHeight
               ? ConstrainedBox(
                   constraints: BoxConstraints(
-                    minHeight: _minContentHeight ?? contentHeight,
+                    minHeight: math.max(_minContentHeight ?? contentHeight, boxContentHeight),
                     maxHeight: _maxContentHeight ?? double.infinity,
                   ),
                   child: _buildRowContent(
@@ -344,7 +346,7 @@ class LayrzInputChrome extends StatelessWidget {
                   ),
                 )
               : SizedBox(
-                  height: contentHeight,
+                  height: boxContentHeight,
                   child: _buildRowContent(
                     context: context,
                     tokens: tokens,

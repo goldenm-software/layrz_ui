@@ -72,7 +72,7 @@ const LayrzSkeletonBox.input({
   super.key,
   required this.width,
   double? borderRadius,
-}) : height = kLayrzSkeletonInputHeight,           // 43.0
+}) : height = kLayrzSkeletonInputHeight,           // 45.0 (50.0 on compact, resolved at build)
      borderRadius = borderRadius ?? kLayrzSkeletonInputRadius; // 10.0
 ```
 
@@ -111,7 +111,7 @@ No constructor asserts on any of these four types.
 | Property | Type | Default | Notes |
 |---|---|---|---|
 | `width` | `double` | — | **Required.** Box width in logical pixels, honored exactly (no minimum imposed). |
-| `height` | `double` | — | **Required** on the default constructor; fixed to `kLayrzSkeletonInputHeight` (43.0) on `.input`. |
+| `height` | `double` | — | **Required** on the default constructor; preset to `kLayrzSkeletonInputHeight` (45.0) on `.input`, painted as 50.0 on compact viewports. |
 | `borderRadius` | `double` | `0.0` | Corner radius, in logical pixels. On `.input`, defaults to `kLayrzSkeletonInputRadius` (10.0) when not overridden. |
 
 ### `LayrzSkeletonCircle`
@@ -137,7 +137,7 @@ No constructor asserts on any of these four types.
 
 ### `LayrzSkeletonBox.input` — known limitation
 
-The preset's fixed `height` (43.0) matches only the **non-dense, regular-viewport** (≥ 960px) `LayrzInput` chrome. It does **not** cover the dense variant (~35lp tall) or the compact-viewport variant (~51lp tall) — use the default `LayrzSkeletonBox` constructor with an explicit `height` for those.
+The preset follows the non-dense input height: 45 on regular viewports, 50 when `context.isCompact`. It does **not** cover the dense variant (~35lp tall) — use the default `LayrzSkeletonBox` constructor with an explicit `height` for that.
 
 ---
 
