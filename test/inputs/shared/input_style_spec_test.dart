@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
@@ -14,17 +13,17 @@ void main() {
 
     test('copyWith returns new instance with updated fields', () {
       final original = LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.sf2,
+        backgroundColor: tokens.input.idle,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
       );
 
       final updated = original.copyWith(
-        backgroundColor: tokens.colors.sf2,
+        backgroundColor: tokens.input.idle,
       );
 
-      expect(updated.backgroundColor, tokens.colors.sf2);
+      expect(updated.backgroundColor, tokens.input.idle);
       expect(updated.borderColor, original.borderColor);
       expect(updated.borderWidth, original.borderWidth);
       expect(updated.textColor, original.textColor);
@@ -32,14 +31,14 @@ void main() {
 
     test('equality works correctly', () {
       final spec1 = LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.sf2,
+        backgroundColor: tokens.input.idle,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
       );
 
       final spec2 = LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.sf2,
+        backgroundColor: tokens.input.idle,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
@@ -51,7 +50,7 @@ void main() {
 
     test('inequality works correctly', () {
       final spec1 = LayrzInputStyleSpec(
-        backgroundColor: tokens.colors.sf2,
+        backgroundColor: tokens.input.idle,
         borderColor: tokens.colors.divider,
         borderWidth: tokens.border.base,
         textColor: tokens.colors.fg1,
@@ -74,7 +73,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.backgroundColor, tokens.input.idle);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.borderWidth, tokens.border.base);
       expect(spec.textColor, tokens.colors.fg1);
@@ -87,7 +86,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.sf3);
+      expect(spec.backgroundColor, Color.alphaBlend(tokens.input.hoverOverlay, tokens.input.idle));
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg1);
     });
@@ -99,7 +98,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.backgroundColor, tokens.input.idle);
       expect(spec.borderColor, tokens.colors.primary);
       expect(spec.textColor, tokens.colors.primary);
     });
@@ -111,7 +110,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.sf3);
+      expect(spec.backgroundColor, Color.alphaBlend(tokens.input.pressedOverlay, tokens.input.idle));
     });
 
     test('resolve: error state', () {
@@ -123,7 +122,7 @@ void main() {
 
       expect(
         spec.backgroundColor,
-        tokens.brightness == Brightness.dark ? tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2) : const Color(0xFFFFEBEE),
+        tokens.input.error,
       );
       expect(spec.borderColor, tokens.colors.danger);
       // Text color must match the border's danger color (DESIGN-106 follow-up):
@@ -141,7 +140,7 @@ void main() {
         hasErrors: false,
       );
 
-      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.backgroundColor, tokens.input.idle);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg4);
     });
@@ -154,7 +153,7 @@ void main() {
         readOnly: true,
       );
 
-      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.backgroundColor, tokens.input.idle);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg1);
     });
@@ -177,7 +176,7 @@ void main() {
         hasErrors: true,
       );
 
-      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.backgroundColor, tokens.input.idle);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg4);
       expect(spec.textColor, isNot(tokens.colors.danger));
@@ -191,7 +190,7 @@ void main() {
         readOnly: true,
       );
 
-      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.backgroundColor, tokens.input.idle);
     });
 
     test('resolve: precedence - readOnly > error (readOnly wins, stays fg1, not danger)', () {
@@ -202,24 +201,35 @@ void main() {
         readOnly: true,
       );
 
-      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.backgroundColor, tokens.input.idle);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.textColor, tokens.colors.fg1);
       expect(spec.textColor, isNot(tokens.colors.danger));
     });
 
-    test('resolve: precedence - error > pressed', () {
+    test('resolve: precedence - error > pressed (pressed overlay composited over the error fill)', () {
       final spec = LayrzInputStyleSpec.resolve(
         states: {WidgetState.pressed},
         tokens: tokens,
         hasErrors: true,
       );
 
-      expect(
-        spec.backgroundColor,
-        tokens.brightness == Brightness.dark ? tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2) : const Color(0xFFFFEBEE),
-      );
+      expect(spec.backgroundColor, Color.alphaBlend(tokens.input.pressedOverlay, tokens.input.error));
       expect(spec.borderColor, tokens.colors.danger);
+    });
+
+    test('resolve: hover over error stays on the error fill, not the idle one', () {
+      for (final t in [LayrzTokens.light(), LayrzTokens.dark()]) {
+        final spec = LayrzInputStyleSpec.resolve(
+          states: {WidgetState.hovered},
+          tokens: t,
+          hasErrors: true,
+        );
+
+        expect(spec.backgroundColor, Color.alphaBlend(t.input.hoverOverlay, t.input.error));
+        expect(spec.backgroundColor, isNot(Color.alphaBlend(t.input.hoverOverlay, t.input.idle)));
+        expect(spec.borderColor, t.colors.danger);
+      }
     });
 
     test('resolve: precedence - error > pressed (text also follows danger, not fg1)', () {

@@ -951,9 +951,8 @@ void main() {
         ),
       );
 
-      // Light theme uses a fixed near-white error fill (#FFEBEE) — see
-      // LayrzInputStyleSpec.resolve; the dark theme uses a tonal danger tint.
-      const expectedBackgroundColor = Color(0xFFFFEBEE);
+      // The error fill is `tokens.input.error` (#FFEBEE on the light theme).
+      final expectedBackgroundColor = LayrzTokens.light().input.error;
 
       // Find the chrome container inside LayrzInputChrome that renders the field background.
       // The chrome is the first Container descendant of LayrzInputChrome with a BoxDecoration.
@@ -979,7 +978,7 @@ void main() {
       expect(chromeContainer, isNotNull, reason: 'Chrome container should be found inside LayrzInputChrome');
       final decoration = chromeContainer!.decoration as BoxDecoration;
 
-      // Assert the chrome's background color is the tonal danger fill over sf2
+      // Assert the chrome's background color is the input error fill
       expect(
         decoration.color,
         equals(expectedBackgroundColor),

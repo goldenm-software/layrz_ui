@@ -566,7 +566,7 @@ void main() {
       expect(find.byType(LayrzFileInputPreview), findsOneWidget);
     });
 
-    testWidgets('the empty box paints the sf2 background, not black', (tester) async {
+    testWidgets('the empty box paints the input idle background, not black', (tester) async {
       // Regression guard for the Impeller clip+border-on-AnimatedContainer
       // artifact: the box's rounded clip must come from its own `ClipRRect`
       // (with `AnimatedContainer.clipBehavior` left at its default `Clip.none`)
@@ -578,7 +578,7 @@ void main() {
 
       final container = tester.widget<AnimatedContainer>(find.byType(AnimatedContainer));
       final decoration = container.decoration as BoxDecoration;
-      expect(decoration.color, tokens.colors.sf2);
+      expect(decoration.color, tokens.input.idle);
       expect(container.clipBehavior, Clip.none);
 
       expect(

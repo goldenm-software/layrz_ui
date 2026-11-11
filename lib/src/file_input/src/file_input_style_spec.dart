@@ -1,6 +1,5 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
 
 /// The four visually distinct states [LayrzFileInput]'s drop-zone box can be in.
@@ -98,12 +97,12 @@ class LayrzFileInputStyleSpec {
   ///
   /// | State | Fill | Border | Content |
   /// |---|---|---|---|
-  /// | disabled | `sf2` | transparent | `fg4` |
-  /// | error | `danger.shade50` | `danger` | `danger` |
-  /// | dragging | `sf3` | `primary` (thicker) | `primary` |
-  /// | hover | `sf3` | `primary` | `primary` |
+  /// | disabled | `input.disabled` | transparent | `fg4` |
+  /// | error | `input.error` | `danger` | `danger` |
+  /// | dragging | `hoverOverlay` over `input.idle` | `primary` (thicker) | `primary` |
+  /// | hover | `hoverOverlay` over `input.idle` | `primary` | `primary` |
   /// | populated | `sf1` | `divider` | `fg1` |
-  /// | empty | `sf2` | `divider` (dashed intent) | `fg3` |
+  /// | empty | `input.idle` | `divider` (dashed intent) | `fg3` |
   ///
   /// Border width is [LayrzBorderTokens.stroke2] for every state except
   /// [LayrzFileInputState.dragging], which uses double that width -- the one
@@ -117,7 +116,7 @@ class LayrzFileInputStyleSpec {
   }) {
     if (disabled) {
       return LayrzFileInputStyleSpec(
-        backgroundColor: tokens.colors.sf2,
+        backgroundColor: tokens.input.disabled,
         borderColor: const Color(0x00000000),
         borderWidth: tokens.border.stroke2,
         contentColor: tokens.colors.fg4,
@@ -125,15 +124,9 @@ class LayrzFileInputStyleSpec {
     }
 
     if (hasErrors) {
-      // Matches the text-input error fill (see LayrzInputStyleSpec): a fixed
-      // near-white pink (#FFEBEE) on light — the historical value, unreachable by
-      // a danger-over-surface blend — and a tonal danger tint on dark where that
-      // pale wash would be invisible.
-      final backgroundColor = tokens.brightness == Brightness.dark
-          ? tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2)
-          : const Color(0xFFFFEBEE);
+      // Matches the text-input error fill (see LayrzInputStyleSpec).
       return LayrzFileInputStyleSpec(
-        backgroundColor: backgroundColor,
+        backgroundColor: tokens.input.error,
         borderColor: tokens.colors.danger,
         borderWidth: tokens.border.stroke2,
         contentColor: tokens.colors.danger,
@@ -143,14 +136,14 @@ class LayrzFileInputStyleSpec {
     switch (state) {
       case LayrzFileInputState.dragging:
         return LayrzFileInputStyleSpec(
-          backgroundColor: tokens.colors.sf3,
+          backgroundColor: Color.alphaBlend(tokens.input.hoverOverlay, tokens.input.idle),
           borderColor: tokens.colors.primary,
           borderWidth: tokens.border.stroke2 * 2,
           contentColor: tokens.colors.primary,
         );
       case LayrzFileInputState.hover:
         return LayrzFileInputStyleSpec(
-          backgroundColor: tokens.colors.sf3,
+          backgroundColor: Color.alphaBlend(tokens.input.hoverOverlay, tokens.input.idle),
           borderColor: tokens.colors.primary,
           borderWidth: tokens.border.stroke2,
           contentColor: tokens.colors.primary,
@@ -164,7 +157,7 @@ class LayrzFileInputStyleSpec {
         );
       case LayrzFileInputState.empty:
         return LayrzFileInputStyleSpec(
-          backgroundColor: tokens.colors.sf2,
+          backgroundColor: tokens.input.idle,
           borderColor: tokens.colors.divider,
           borderWidth: tokens.border.stroke2,
           contentColor: tokens.colors.fg3,

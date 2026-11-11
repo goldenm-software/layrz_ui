@@ -496,7 +496,7 @@ void main() {
       expect(style?.fontWeight, FontWeight.w600);
     });
 
-    guardedTestWidgets('dark theme uses the tonal danger fill of the inputs', (tester) async {
+    guardedTestWidgets('dark theme uses the input error fill', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -508,7 +508,7 @@ void main() {
         theme: LayrzThemeData.dark(),
       );
 
-      expect(pillOf(tester, 'Second').color, tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2));
+      expect(pillOf(tester, 'Second').color, tokens.input.error);
     });
 
     guardedTestWidgets('a pill with errors shows the danger alert icon when no trailing slot is set', (tester) async {

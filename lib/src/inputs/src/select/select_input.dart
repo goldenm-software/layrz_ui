@@ -781,8 +781,8 @@ class _SelectClearButton extends StatelessWidget {
         child: LayrzTappable(
           onTap: onTap,
           color: spec.backgroundColor,
-          hoverColor: tokens.colors.sf3,
-          pressedColor: tokens.colors.sf4,
+          hoverColor: Color.alphaBlend(tokens.input.hoverOverlay, spec.backgroundColor),
+          pressedColor: Color.alphaBlend(tokens.input.pressedOverlay, spec.backgroundColor),
           child: content,
         ),
       ),
@@ -858,8 +858,8 @@ class _SelectFieldCaret extends StatelessWidget {
       disabled: isDisabled,
       borderRadius: capRadius,
       color: spec.backgroundColor,
-      hoverColor: tokens.colors.sf3,
-      pressedColor: tokens.colors.sf4,
+      hoverColor: Color.alphaBlend(tokens.input.hoverOverlay, spec.backgroundColor),
+      pressedColor: Color.alphaBlend(tokens.input.pressedOverlay, spec.backgroundColor),
       child: content,
     );
 

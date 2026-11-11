@@ -100,25 +100,10 @@ class _NumberFieldControlState extends State<NumberFieldControl> {
       width: tokens.border.stroke2,
     );
 
-    // Compute hover and pressed colors: use real colour swaps for clear feedback.
-    // On error, stay in the danger family (shade100 hover, shade200 pressed).
-    // On non-error, use LayrzTappable's standard steps (sf3 hover, sf4 pressed).
-    final Color hoverColor;
-    final Color pressedColor;
-
-    if (widget.hasErrors) {
-      // Error state: tonal danger fills over the field surface for clearly
-      // visible feedback that reads on both light and dark themes; pressed is a
-      // touch stronger than hover.
-      hoverColor = tokens.colors.danger.withOpacityValue(tokens.colors.tonalOpacity).flattenOn(tokens.colors.sf3);
-      pressedColor = tokens.colors.danger
-          .withOpacityValue(tokens.colors.tonalOpacity * 1.6)
-          .flattenOn(tokens.colors.sf3);
-    } else {
-      // Non-error states (focused, disabled, default): use neutral surface steps
-      hoverColor = tokens.colors.sf3;
-      pressedColor = tokens.colors.sf4;
-    }
+    // Hover and pressed are the input overlay tokens composited on the cap's own fill, so they
+    // read the same on idle, focused, disabled and error fills.
+    final hoverColor = Color.alphaBlend(tokens.input.hoverOverlay, spec.backgroundColor);
+    final pressedColor = Color.alphaBlend(tokens.input.pressedOverlay, spec.backgroundColor);
 
     final capContent = Padding(
       padding: EdgeInsets.all(tokens.spacing.sp2),
