@@ -5869,8 +5869,10 @@ right painted height automatically because the chrome subtracts the border regar
 login field (`LayrzLoginWebField`) uses the same resolved height for its platform-view box.
 
 **`LayrzInputColorTokens`** (`LayrzTokens.input`) is a dedicated color group: `idle` (also read-only), `focused`,
-`disabled`, `error`, `hoverOverlay`, `pressedOverlay`. Values are placeholders equal to the previous look and
-are expected to be tuned.
+`disabled`, `error`, `hoverOverlay`, `pressedOverlay`. Final values: light `idle`/`focused`/`disabled`
+`0xFFEDEDED`, `error` `0xFFFFE0E0`; dark `idle`/`focused`/`disabled` `0xFF3E3B3F`, `error` `0xFF4E2D31` (a fixed
+color, no longer derived from `danger`); overlays are `0x0A000000`/`0x14000000` (light) and
+`0x0FFFFFFF`/`0x1AFFFFFF` (dark).
 
 **Overlay-based hover/pressed.** Hover and pressed are translucent overlays composited on top of the current
 base fill with `Color.alphaBlend(overlay, base)`, where base is `input.error` for an errored field and

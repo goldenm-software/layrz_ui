@@ -119,15 +119,15 @@ separate from `LayrzColorTokens` so input fills can be tuned without touching ca
 
 | Token | Light | Dark | Role |
 |---|---|---|---|
-| `idle` | `0xFFF7F7F7` | `0xFF322F35` | Resting fill; also read-only |
-| `focused` | `0xFFF7F7F7` | `0xFF322F35` | Fill while focused |
-| `disabled` | `0xFFF7F7F7` | `0xFF322F35` | Fill while disabled |
-| `error` | `0xFFFFEBEE` | `0xFF513235` | Fill while showing errors |
+| `idle` | `0xFFEDEDED` | `0xFF3E3B3F` | Resting fill; also read-only |
+| `focused` | `0xFFEDEDED` | `0xFF3E3B3F` | Fill while focused |
+| `disabled` | `0xFFEDEDED` | `0xFF3E3B3F` | Fill while disabled |
+| `error` | `0xFFFFE0E0` | `0xFF4E2D31` | Fill while showing errors |
 | `hoverOverlay` | `0x0A000000` | `0x0FFFFFFF` | Tint composited over the current fill on hover |
 | `pressedOverlay` | `0x14000000` | `0x1AFFFFFF` | Tint composited over the current fill on press |
 
 Hover and pressed are `Color.alphaBlend(overlay, base)` with base `error` when errored, else `idle`, so they never
-depend on a specific background. Values are placeholders equal to the previous look. Input height is not a token:
+depend on a specific background. Input height is not a token:
 it is `kLayrzInputHeight` (45) / `kLayrzInputCompactHeight` (50), equal to the button heights.
 
 ### Typography Tokens
