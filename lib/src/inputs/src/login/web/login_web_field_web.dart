@@ -75,6 +75,7 @@ import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 import 'package:layrz_ui/src/inputs/src/shared/input_style_spec.dart';
 import 'package:layrz_ui/src/l10n/l10n.dart';
 import 'package:layrz_ui/src/tokens/tokens.dart';
@@ -348,7 +349,7 @@ class _LayrzLoginWebFieldState extends State<LayrzLoginWebField> {
   @override
   Widget build(BuildContext context) {
     final tokens = widget.tokens;
-    final density = _InputComfortableHeight(tokens, dense: widget.dense);
+    final density = _InputComfortableHeight(tokens, dense: widget.dense, regularHeight: context.inputHeight);
 
     Widget field = SizedBox(
       height: density.fieldHeight,
@@ -418,8 +419,12 @@ class _InputComfortableHeight {
   /// Whether the tighter, dense padding scale applies.
   final bool dense;
 
+  /// The painted height of a non-dense field for the current viewport (button height:
+  /// 45 regular / 50 compact), from `LayrzContextExtensions.inputHeight`.
+  final double regularHeight;
+
   /// Creates a [_InputComfortableHeight] resolver.
-  const _InputComfortableHeight(this.tokens, {required this.dense});
+  const _InputComfortableHeight(this.tokens, {required this.dense, required this.regularHeight});
 
   /// The padding applied to all sides, mirroring [LayrzInputChrome]'s own
   /// `_InputComfortableSpec.padding`.
@@ -439,8 +444,8 @@ class _InputComfortableHeight {
     return textLineHeight > _iconSize ? textLineHeight : _iconSize;
   }
 
-  /// The total field height: content height plus top/bottom padding, matching the
-  /// chrome's own `SizedBox(height: contentHeight)` inside a `Container` padded by
-  /// [_padding].
-  double get fieldHeight => _contentHeight + _padding.vertical;
+  /// The total field height. Dense fields use content height plus top/bottom padding; non-dense
+  /// fields use [regularHeight] (the DOM container is `border-box`, so the border is inside it),
+  /// matching the painted height of [LayrzInputChrome].
+  double get fieldHeight => dense ? _contentHeight + _padding.vertical : regularHeight;
 }

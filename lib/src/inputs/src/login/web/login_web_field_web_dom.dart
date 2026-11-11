@@ -75,10 +75,10 @@ extension _LayrzLoginWebFieldDomMixin on _LayrzLoginWebFieldState {
       // really do resolve to a fully transparent border there too, so the "no visible
       // border at rest" look this produces is CORRECT, not a bug — the fill-color step
       // from `sf2` to `sf3` is what the real chrome uses to signal hover instead), and
-      // padding from `tokens.spacing.pd1`/`pd2` (dense) or `pd2`/`pd3` (regular) —
-      // approximated here by the single scalar `density` above, since the DOM chrome
-      // (unlike the Flutter chrome) has no separate compact/regular viewport distinction
-      // to key off of; `dense` alone selects the tighter scale.
+      // padding from `tokens.spacing.pd1` (dense) or `pd2` (regular), approximated by the
+      // single scalar `density` above. The overall height (45 regular / 50 compact for
+      // non-dense) is set on the platform view's box by `login_web_field_web.dart`; the
+      // container is a vertically centered flex row, so it fills that height.
       final container = web.document.createElement('div') as web.HTMLDivElement;
       container.style.width = '100%';
       container.style.height = '100%';
