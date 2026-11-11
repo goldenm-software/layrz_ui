@@ -275,15 +275,28 @@ class _SellingPointCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayrzCard(
-      backgroundColor: context.tokens.colors.sf1,
       child: SizedBox(
-        height: 160,
+        height: 80,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(point.icon, color: tokens.colors.primary, size: 28),
-            SizedBox(height: tokens.spacing.sp3),
-            Text(point.title, style: tokens.typography.title.copyWith(color: tokens.colors.fg1)),
+            RichText(
+              text: TextSpan(
+                children: [
+                  WidgetSpan(
+                    alignment: .middle,
+                    child: Padding(
+                      padding: EdgeInsets.only(right: context.tokens.spacing.sp1, bottom: 3),
+                      child: Icon(point.icon, color: tokens.colors.primary, size: 28),
+                    ),
+                  ),
+                  TextSpan(
+                    text: point.title,
+                    style: tokens.typography.title.copyWith(color: tokens.colors.fg1),
+                  ),
+                ],
+              ),
+            ),
             SizedBox(height: tokens.spacing.sp2),
             Expanded(
               child: Text(
