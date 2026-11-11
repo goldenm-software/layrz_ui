@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Inputs are as tall as buttons: non-dense text-field inputs (text, password, number, select, combobox, duration and every picker anchor, plus the web login fields) are now 45 px tall on wide viewports and 50 px on compact ones (`isCompact`), up from 43 px. Dense inputs (35 px) are unchanged. `LayrzSkeletonBox.input` follows the same heights, and `kLayrzSkeletonInputHeight` is now `45.0`.
+- New `kLayrzInputHeight`, `kLayrzInputCompactHeight` and `context.inputHeight`.
+- New `LayrzTokens.input` (`LayrzInputColorTokens`): `idle`, `focused`, `disabled`, `error`, `hoverOverlay` and `pressedOverlay`. Input fills no longer come from `sf2`/`sf3`; hover and pressed are translucent overlays composited on the current fill, so a hovered errored field stays red-tinted. `LayrzFileInput`, number step caps and select clear/caret use the same tokens.
+
 ## 1.8.0
 
 - `LayrzCalendar` header: below 560 px of width the view-mode buttons (month, week, day) render as icon-only fab buttons with their labels as tooltips; Today stays a text button.

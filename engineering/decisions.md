@@ -5835,3 +5835,54 @@ go away, and `LayrzUsernameInput`, `LayrzPasswordInput`, and `LayrzOtpInput` col
 Flutter widgets using `autofillHints`, the same way every other `layrz_ui` input already works. Do not
 keep extending this DOM engine past that point — restoring `oneTimeCode` here completes its intended
 scope; it does not commit to growing the workaround further once the upstream fix lands.
+
+
+## D83: Inputs Are as Tall as Buttons, and Input Fills Come From `LayrzInputColorTokens`
+
+**Date**: 2026-11-11  
+**Status**: Decided  
+**Category**: Design System / Tokens / Layout
+
+### Context
+
+Two inconsistencies in the text-field family:
+
+1. Fills were resolved from the generic surface tokens (`sf2`/`sf3`/`sf4`) with an inline
+   `isDark ? danger@16% over sf2 : 0xFFFFEBEE` ternary for the error fill, and several files carried their own
+   copies (`dual_list_panel.dart`, `time_fields_panel.dart`, `file_input_style_spec.dart`, number step caps,
+   select clear/caret). Tuning the look of inputs meant touching every copy and risked changing cards and menus.
+2. Inputs were 43px tall on every viewport (derived from chrome padding), while buttons are 45px wide / 50px
+   compact, so fields and buttons misaligned in shared rows (find bar, table toolbar, forms).
+
+### Decision
+
+**Maintainer-authorized change to the frozen `LayrzInputChrome`.** `input_chrome.dart` is normally frozen
+(CLAUDE.md rule 4). The maintainer explicitly authorized one edit, limited to height: the non-dense field box
+now has a minimum painted height equal to the button height — `kLayrzInputHeight` (45) on regular viewports and
+`kLayrzInputCompactHeight` (50) when `context.isCompact`, resolved through `LayrzContextExtensions.inputHeight`.
+The border (`spec.borderWidth`, twice) and the vertical padding are subtracted so the **painted** height, border
+included, is exactly 45/50; content stays vertically centered and horizontal padding is unchanged. Dense fields
+(35px, used inside picker panels) are unchanged. The textarea min height is `max(resolved height, minLines
+height)` and still grows. Nothing else in the chrome contract, style precedence or color resolution changed.
+Callers that paint their own border around a borderless chrome (number, select, duration, picker anchor) get the
+right painted height automatically because the chrome subtracts the border regardless of `showBorder`. The web
+login field (`LayrzLoginWebField`) uses the same resolved height for its platform-view box.
+
+**`LayrzInputColorTokens`** (`LayrzTokens.input`) is a dedicated color group: `idle` (also read-only), `focused`,
+`disabled`, `error`, `hoverOverlay`, `pressedOverlay`. Values are placeholders equal to the previous look and
+are expected to be tuned.
+
+**Overlay-based hover/pressed.** Hover and pressed are translucent overlays composited on top of the current
+base fill with `Color.alphaBlend(overlay, base)`, where base is `input.error` for an errored field and
+`input.idle` otherwise. A hover state therefore never depends on, or collides with, a specific background, and
+hovering an errored field stays red-tinted. Number step caps and select clear/caret use the same overlays on
+`spec.backgroundColor`. `LayrzFileInput` reads the same group (error and disabled fills, hover/dragging overlays;
+its populated `sf1` fill is unchanged).
+
+### Consequences
+
+- Visual change: every non-dense input is 2px taller on wide viewports and ~7px taller on compact ones.
+- `LayrzSkeletonBox.input` follows the same 45/50 height, resolved at build time.
+- Changing an input fill is now a one-place edit in `LayrzInputColorTokens`.
+- Switch, checkbox, card, skeleton shimmer and menu items still read `sf*` tokens directly (out of scope).
+- The chrome edit does not widen the freeze exception: any further chrome change still needs maintainer sign-off.
