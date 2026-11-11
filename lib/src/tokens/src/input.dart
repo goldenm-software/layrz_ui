@@ -40,19 +40,19 @@ class LayrzInputColorTokens {
 
   /// Light appearance input colors.
   const LayrzInputColorTokens.light()
-    : idle = const Color(0xFFF7F7F7),
-      focused = const Color(0xFFF7F7F7),
-      disabled = const Color(0xFFF7F7F7),
-      error = const Color(0xFFFFEBEE),
+    : idle = const Color.fromARGB(255, 237, 237, 237),
+      focused = const Color.fromARGB(255, 237, 237, 237),
+      disabled = const Color.fromARGB(255, 237, 237, 237),
+      error = const Color.fromARGB(255, 255, 224, 224),
       hoverOverlay = const Color(0x0A000000),
       pressedOverlay = const Color(0x14000000);
 
   /// BETA dark appearance input colors.
   const LayrzInputColorTokens.dark()
-    : idle = const Color(0xFF322F35),
-      focused = const Color(0xFF322F35),
-      disabled = const Color(0xFF322F35),
-      error = const Color(0xFF513235),
+    : idle = const Color.fromARGB(255, 62, 59, 63),
+      focused = const Color.fromARGB(255, 62, 59, 63),
+      disabled = const Color.fromARGB(255, 62, 59, 63),
+      error = const Color.fromARGB(255, 78, 45, 49),
       hoverOverlay = const Color(0x0FFFFFFF),
       pressedOverlay = const Color(0x1AFFFFFF);
 

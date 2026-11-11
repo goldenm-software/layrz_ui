@@ -7,10 +7,10 @@ void main() {
     test('light factory exposes the light placeholder values', () {
       const t = LayrzInputColorTokens.light();
 
-      expect(t.idle, const Color(0xFFF7F7F7));
-      expect(t.focused, const Color(0xFFF7F7F7));
-      expect(t.disabled, const Color(0xFFF7F7F7));
-      expect(t.error, const Color(0xFFFFEBEE));
+      expect(t.idle, const Color.fromARGB(255, 237, 237, 237));
+      expect(t.focused, const Color.fromARGB(255, 237, 237, 237));
+      expect(t.disabled, const Color.fromARGB(255, 237, 237, 237));
+      expect(t.error, const Color.fromARGB(255, 255, 224, 224));
       expect(t.hoverOverlay, const Color(0x0A000000));
       expect(t.pressedOverlay, const Color(0x14000000));
     });
@@ -18,19 +18,18 @@ void main() {
     test('dark factory exposes the dark placeholder values', () {
       const t = LayrzInputColorTokens.dark();
 
-      expect(t.idle, const Color(0xFF322F35));
-      expect(t.focused, const Color(0xFF322F35));
-      expect(t.disabled, const Color(0xFF322F35));
-      expect(t.error, const Color(0xFF513235));
+      expect(t.idle, const Color.fromARGB(255, 62, 59, 63));
+      expect(t.focused, const Color.fromARGB(255, 62, 59, 63));
+      expect(t.disabled, const Color.fromARGB(255, 62, 59, 63));
+      expect(t.error, const Color.fromARGB(255, 78, 45, 49));
       expect(t.hoverOverlay, const Color(0x0FFFFFFF));
       expect(t.pressedOverlay, const Color(0x1AFFFFFF));
     });
 
-    test('dark error equals danger at 16% over the dark surface', () {
-      final tokens = LayrzTokens.dark();
-      final derived = Color.alphaBlend(tokens.colors.danger.withValues(alpha: 0.16), tokens.colors.sf2);
-
-      expect(tokens.input.error.toARGB32(), derived.toARGB32());
+    test('light and dark token aggregates expose their matching input factories', () {
+      expect(LayrzTokens.light().input, const LayrzInputColorTokens.light());
+      expect(LayrzTokens.dark().input, const LayrzInputColorTokens.dark());
+      expect(LayrzTokens.dark().input.error, const Color.fromARGB(255, 78, 45, 49));
     });
 
     test('copyWith replaces only the given fields', () {

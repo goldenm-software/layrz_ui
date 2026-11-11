@@ -474,9 +474,9 @@ void main() {
       await pumpThemed(tester, LayrzTabView(tabs: errorTabs(), expandContent: false));
 
       final pill = pillOf(tester, 'Second');
-      expect(pill.color, const Color(0xFFFFEBEE));
-      expect(pill.hoverColor, const Color(0xFFFFEBEE));
-      expect(pill.pressedColor, const Color(0xFFFFEBEE));
+      expect(pill.color, const Color.fromARGB(255, 255, 224, 224));
+      expect(pill.hoverColor, const Color.fromARGB(255, 255, 224, 224));
+      expect(pill.pressedColor, const Color.fromARGB(255, 255, 224, 224));
       expect(tester.widget<Text>(find.text('Second')).style?.color, tokens.colors.danger);
       expect(errorBorderOf('Second', tokens), findsOneWidget);
       expect(errorBorderOf('First', tokens), findsNothing);
@@ -490,7 +490,7 @@ void main() {
       final tokens = LayrzTokens.light();
       await pumpThemed(tester, LayrzTabView(tabs: errorTabs(), initialIndex: 1, expandContent: false));
 
-      expect(pillOf(tester, 'Second').color, const Color(0xFFFFEBEE));
+      expect(pillOf(tester, 'Second').color, const Color.fromARGB(255, 255, 224, 224));
       final style = tester.widget<Text>(find.text('Second')).style;
       expect(style?.color, tokens.colors.danger);
       expect(style?.fontWeight, FontWeight.w600);
