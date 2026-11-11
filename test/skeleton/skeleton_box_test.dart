@@ -109,7 +109,20 @@ void main() {
       await pumpThemed(tester, const LayrzSkeletonBox.input(width: 200));
 
       final box = tester.renderObject<RenderBox>(find.byType(LayrzSkeletonBox));
-      expect(box.size, const Size(200, 43.0));
+      expect(box.size, const Size(200, 45.0));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    guardedTestWidgets('input() resolves the compact input height on narrow viewports', (tester) async {
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      await pumpThemed(tester, const LayrzSkeletonBox.input(width: 200));
+
+      final box = tester.renderObject<RenderBox>(find.byType(LayrzSkeletonBox));
+      expect(box.size, const Size(200, 50.0));
 
       await tester.pumpWidget(const SizedBox.shrink());
     });

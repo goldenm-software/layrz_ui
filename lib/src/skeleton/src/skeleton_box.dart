@@ -1,32 +1,24 @@
 import 'package:flutter/widgets.dart';
+import 'package:layrz_ui/src/constants/constants.dart';
+import 'package:layrz_ui/src/extensions/extensions.dart';
 
 import 'skeleton_fill.dart';
 import 'skeleton_shimmer_box.dart';
 
-/// The standard height of a `LayrzInput` chrome, in logical pixels, used as
-/// the preset for [LayrzSkeletonBox.input].
+/// The standard height of a `LayrzInput` chrome on regular (viewport >= 960px) layouts, in
+/// logical pixels, used as the preset for [LayrzSkeletonBox.input].
 ///
-/// Derived from the non-dense, regular (viewport ≥ 960px) input chrome:
-/// `contentHeight` (20) + two vertical paddings of `tokens.spacing.pd2` (10
-/// each, 20 total) + two borders of `tokens.border.base` (1.5 each, 3 total)
-/// = 43.0.
+/// Equal to [kLayrzInputHeight] (the button height, 45.0). On compact viewports
+/// [LayrzSkeletonBox.input] resolves [kLayrzInputCompactHeight] (50.0) at build time instead.
 ///
-/// This is the honest geometric value with no fractional-pixel adjustment.
-/// An earlier fix attempted to close a hairline seam by bumping this to
-/// `43.5` (a "half-pixel snap"), reasoning that a whole-number height was
-/// landing the box's edge on a fractional device-pixel boundary. That did
-/// not work — it only relocated the seam to the opposite edge, proving the
-/// seam was never about which physical pixel the edge fell on. The actual
-/// cause and fix live in [LayrzSkeletonFill]'s class-level doc: the seam is
-/// an antialiasing mismatch between the shape's own fill edge and the
-/// engine's `ShaderMask` mask edge, fixed by painting the fill without
-/// antialiasing so both edges agree exactly. With that fixed at the source,
-/// this constant carries no fractional-pixel hack.
+/// This is the honest geometric value with no fractional-pixel adjustment. An earlier fix
+/// attempted to close a hairline seam by bumping the height by half a pixel; that only relocated
+/// the seam. The actual cause and fix live in [LayrzSkeletonFill]'s class-level doc: the seam is
+/// an antialiasing mismatch between the shape's own fill edge and the engine's `ShaderMask` mask
+/// edge, fixed by painting the fill without antialiasing.
 ///
-/// This constant does **not** cover the dense variant (~35lp) or the
-/// compact-viewport variant (~51lp) of `LayrzInput` — matching those exactly
-/// is a known limitation of [LayrzSkeletonBox.input].
-const double kLayrzSkeletonInputHeight = 43.0;
+/// This constant does **not** cover the dense variant (~35lp) of `LayrzInput`.
+const double kLayrzSkeletonInputHeight = kLayrzInputHeight;
 
 /// The standard corner radius of a `LayrzInput` chrome, in logical pixels,
 /// used as the preset for [LayrzSkeletonBox.input].
@@ -63,7 +55,13 @@ class LayrzSkeletonBox extends StatelessWidget {
   final double width;
 
   /// The height of the box, in logical pixels.
+  ///
+  /// For [LayrzSkeletonBox.input] this is the regular-viewport value; the box actually painted
+  /// there uses `context.inputHeight` (45 regular / 50 compact), resolved at build time.
   final double height;
+
+  /// Whether the painted height follows the viewport-resolved input height instead of [height].
+  final bool _matchInputHeight;
 
   /// The corner radius applied to the box, in logical pixels.
   ///
@@ -77,24 +75,24 @@ class LayrzSkeletonBox extends StatelessWidget {
     required this.width,
     required this.height,
     this.borderRadius = 0.0,
-  });
+  }) : _matchInputHeight = false;
 
   /// Creates a [LayrzSkeletonBox] preset to simulate a standard `LayrzInput`.
   ///
   /// Presets [height] to [kLayrzSkeletonInputHeight] and [borderRadius] to
-  /// [kLayrzSkeletonInputRadius], matching the non-dense, regular
-  /// (viewport ≥ 960px) input chrome. Only [width] is required from the
-  /// caller — skeletons have no way to know the width of the real content
-  /// they stand in for.
+  /// [kLayrzSkeletonInputRadius], matching the non-dense input chrome, which is as tall as a
+  /// button: 45 on regular viewports and 50 on compact ones (`context.isCompact`). The viewport
+  /// is resolved at build time. Only [width] is required from the caller — skeletons have no way
+  /// to know the width of the real content they stand in for.
   ///
-  /// This preset does **not** account for the dense (~35lp) or
-  /// compact-viewport (~51lp) `LayrzInput` variants; use the default
-  /// constructor with an explicit [height] to match those instead.
+  /// This preset does **not** account for the dense (~35lp) `LayrzInput` variant; use the
+  /// default constructor with an explicit [height] to match that instead.
   const LayrzSkeletonBox.input({
     super.key,
     required this.width,
     double? borderRadius,
   }) : height = kLayrzSkeletonInputHeight,
+       _matchInputHeight = true,
        borderRadius = borderRadius ?? kLayrzSkeletonInputRadius;
 
   @override
@@ -102,7 +100,7 @@ class LayrzSkeletonBox extends StatelessWidget {
     return LayrzSkeletonShimmerBox(
       shape: SizedBox(
         width: width,
-        height: height,
+        height: _matchInputHeight ? context.inputHeight : height,
         child: LayrzSkeletonFill(borderRadius: borderRadius),
       ),
     );

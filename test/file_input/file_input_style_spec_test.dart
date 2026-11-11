@@ -13,7 +13,7 @@ void main() {
         hasErrors: true,
         disabled: true,
       );
-      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.backgroundColor, tokens.input.idle);
       expect(spec.borderColor, const Color(0x00000000));
       expect(spec.contentColor, tokens.colors.fg4);
     });
@@ -26,7 +26,7 @@ void main() {
       );
       expect(
         spec.backgroundColor,
-        tokens.brightness == Brightness.dark ? tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2) : const Color(0xFFFFEBEE),
+        tokens.input.error,
       );
       expect(spec.borderColor, tokens.colors.danger);
       expect(spec.contentColor, tokens.colors.danger);
@@ -43,11 +43,10 @@ void main() {
         tokens: tokens,
         hasErrors: false,
       );
-      // DESIGN-55: dragging's background is `sf3` (was `primary.shade50`) --
-      // matching hover's own background exactly, since both are the same
-      // "actively engaged" surface tint; only the border/content color and
-      // width distinguish dragging from hover.
-      expect(dragging.backgroundColor, tokens.colors.sf3);
+      // Dragging's background is the hover overlay over the idle input fill,
+      // matching hover's own background exactly; only the border/content color
+      // and width distinguish dragging from hover.
+      expect(dragging.backgroundColor, Color.alphaBlend(tokens.input.hoverOverlay, tokens.input.idle));
       expect(dragging.backgroundColor, hover.backgroundColor);
       expect(dragging.borderColor, tokens.colors.primary);
       expect(dragging.contentColor, tokens.colors.primary);
@@ -60,7 +59,7 @@ void main() {
         tokens: tokens,
         hasErrors: false,
       );
-      expect(spec.backgroundColor, tokens.colors.sf3);
+      expect(spec.backgroundColor, Color.alphaBlend(tokens.input.hoverOverlay, tokens.input.idle));
       expect(spec.borderColor, tokens.colors.primary);
       expect(spec.borderWidth, tokens.border.stroke2);
     });
@@ -82,7 +81,7 @@ void main() {
         tokens: tokens,
         hasErrors: false,
       );
-      expect(spec.backgroundColor, tokens.colors.sf2);
+      expect(spec.backgroundColor, tokens.input.idle);
       expect(spec.borderColor, tokens.colors.divider);
       expect(spec.contentColor, tokens.colors.fg3);
     });

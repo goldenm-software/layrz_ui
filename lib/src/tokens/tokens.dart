@@ -2,6 +2,7 @@ export 'src/border.dart';
 export 'src/breakpoints.dart';
 export 'src/color_swatch.dart';
 export 'src/colors.dart';
+export 'src/input.dart';
 export 'src/motion.dart';
 export 'src/palette.dart';
 export 'src/radius.dart';

@@ -474,9 +474,9 @@ void main() {
       await pumpThemed(tester, LayrzTabView(tabs: errorTabs(), expandContent: false));
 
       final pill = pillOf(tester, 'Second');
-      expect(pill.color, const Color(0xFFFFEBEE));
-      expect(pill.hoverColor, const Color(0xFFFFEBEE));
-      expect(pill.pressedColor, const Color(0xFFFFEBEE));
+      expect(pill.color, const Color.fromARGB(255, 255, 224, 224));
+      expect(pill.hoverColor, const Color.fromARGB(255, 255, 224, 224));
+      expect(pill.pressedColor, const Color.fromARGB(255, 255, 224, 224));
       expect(tester.widget<Text>(find.text('Second')).style?.color, tokens.colors.danger);
       expect(errorBorderOf('Second', tokens), findsOneWidget);
       expect(errorBorderOf('First', tokens), findsNothing);
@@ -490,13 +490,13 @@ void main() {
       final tokens = LayrzTokens.light();
       await pumpThemed(tester, LayrzTabView(tabs: errorTabs(), initialIndex: 1, expandContent: false));
 
-      expect(pillOf(tester, 'Second').color, const Color(0xFFFFEBEE));
+      expect(pillOf(tester, 'Second').color, const Color.fromARGB(255, 255, 224, 224));
       final style = tester.widget<Text>(find.text('Second')).style;
       expect(style?.color, tokens.colors.danger);
       expect(style?.fontWeight, FontWeight.w600);
     });
 
-    guardedTestWidgets('dark theme uses the tonal danger fill of the inputs', (tester) async {
+    guardedTestWidgets('dark theme uses the input error fill', (tester) async {
       tester.view.physicalSize = const Size(1600, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -508,7 +508,7 @@ void main() {
         theme: LayrzThemeData.dark(),
       );
 
-      expect(pillOf(tester, 'Second').color, tokens.colors.danger.withOpacityValue(0.16).flattenOn(tokens.colors.sf2));
+      expect(pillOf(tester, 'Second').color, tokens.input.error);
     });
 
     guardedTestWidgets('a pill with errors shows the danger alert icon when no trailing slot is set', (tester) async {

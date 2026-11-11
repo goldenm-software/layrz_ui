@@ -1,4 +1,5 @@
 import 'package:example/fonts/fonts.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -117,7 +118,7 @@ CustomTransitionPage<void> _fadePage(BuildContext context, Widget child) => Cust
 /// To revert to the original named-route implementation, replace [ShowroomApp.build]
 /// with a [LayrzApp] constructor and restore the `initialRoute` + `routes` pattern.
 final _router = GoRouter(
-  initialLocation: '/home',
+  initialLocation: kDebugMode ? '/inputs' : '/home',
   routes: [
     GoRoute(
       path: '/',
@@ -395,7 +396,7 @@ class ShowroomApp extends ConsumerWidget {
         // primaryColor: LayrzColors.cyan,
       ),
       darkTheme: LayrzThemeData.dark(font: font),
-      themeMode: mode,
+      themeMode: /* kDebugMode ? .light : */ mode,
       colorblindMode: colorblindMode,
       colorblindStrength: colorblindStrength,
       enableLayoCursorTracking: true,

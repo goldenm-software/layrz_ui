@@ -417,12 +417,27 @@ class _LayrzOtpInputState extends State<LayrzOtpInput> {
               // Mirrors `LayrzUsernameInput`/`LayrzPasswordInput`'s own web `onChanged`
               // pattern: the DOM `<input>` is the source of truth on web, so `_controller`
               // is updated directly (not via `_updateControllerFromValue`, which exists
-              // for the native path's prop-vs-controller reconciliation and would apply
-              // an irrelevant internal-update guard here) purely so `_controller.text`
-              // stays available to callers reading it directly (e.g. `LayrzForm` demos).
+              // for the native path's prop-vs-controller reconciliation) purely so
+              // `_controller.text` stays available to callers reading it directly (e.g.
+              // `LayrzForm` demos).
+              //
+              // WEB-ONLY EDGE CASE: on web there are two independent emitters —
+              // [LayrzOtpWebField] (which calls `onChanged`/`onCompleted` itself) and
+              // [_handleControllerChanged] (the controller listener, which is the sole
+              // emitter on native). Writing the controller here would trip that listener
+              // and make the caller receive `onChanged` twice and `onCompleted` twice per
+              // edit. The write is therefore flagged as an internal echo, and
+              // [_lastEmittedText]/[_wasComplete] are synced by hand so the listener's
+              // de-duplication state stays truthful for any later controller-driven change.
+              _isInternalUpdate = true;
               _controller.text = value;
+              _isInternalUpdate = false;
+              _lastEmittedText = value;
+              _wasComplete = value.length >= _kOtpLength;
               widget.onChanged?.call(value);
             },
+            // Forwarded as-is: on web [LayrzOtpWebField] is the only place that fires
+            // `onCompleted`, since the controller-listener path is suppressed above.
             onCompleted: widget.onCompleted,
             disabled: widget.disabled,
             errors: widget.errors,

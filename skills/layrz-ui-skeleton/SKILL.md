@@ -13,7 +13,7 @@ description: Use LayrzSkeleton in a layrz_ui Flutter widget. Apply when renderin
 
 - A loading placeholder for content that hasn't arrived yet — a profile card, a list row, a form about to hydrate.
 - `LayrzSkeleton` does **not** render any shape itself and cannot silhouette an arbitrary real widget automatically — you compose its `child` out of the three shape primitives (`LayrzSkeletonBox`, `LayrzSkeletonCircle`, `LayrzSkeletonLine`) in the same layout (`Row`/`Column`/nesting) the real content will eventually use.
-- Use `LayrzSkeletonBox.input` specifically to stand in for a `LayrzTextInput`/similar field at its standard (non-dense, regular-viewport) height, instead of guessing dimensions by hand.
+- Use `LayrzSkeletonBox.input` specifically to stand in for a `LayrzTextInput`/similar field at its standard non-dense height (45 regular / 50 compact), instead of guessing dimensions by hand.
 - **Do not use** for a spinner/indeterminate progress indicator with no known content shape — use a progress indicator widget instead.
 - **Do not use** to wrap a real widget expecting it to be auto-silhouetted — there is no such mode; you must build the placeholder shape yourself.
 
@@ -101,5 +101,5 @@ isLoading
 
 - Match the skeleton's shape and dimensions to the real content it stands in for — a mismatched skeleton (wrong height, wrong width) causes a layout jump the moment real content replaces it.
 - Prefer `matchTextStyle` over guessing a `height` on `LayrzSkeletonLine` whenever the real content is text with a known `TextStyle` — it derives the correct line-box height automatically.
-- Reach for `LayrzSkeletonBox.input` for standard (non-dense, regular-viewport) input placeholders; fall back to the plain `LayrzSkeletonBox` constructor with an explicit `height` for dense or compact-viewport inputs, which the preset does not cover.
+- Reach for `LayrzSkeletonBox.input` for standard non-dense input placeholders (it follows 45/50 by viewport); fall back to the plain `LayrzSkeletonBox` constructor with an explicit `height` for dense inputs, which the preset does not cover.
 - Swap the whole skeleton tree out for real content in one conditional (`isLoading ? skeleton : realWidget`) rather than toggling visibility — a skeleton hidden-but-mounted still runs its shimmer ticker needlessly.
