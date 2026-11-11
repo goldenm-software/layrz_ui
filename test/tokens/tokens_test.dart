@@ -16,6 +16,20 @@ void main() {
       expect(tokens.motion, isA<LayrzMotionTokens>());
     });
 
+    test('light and dark factories wire the matching input tokens', () {
+      expect(LayrzTokens.light().input, const LayrzInputColorTokens.light());
+      expect(LayrzTokens.dark().input, const LayrzInputColorTokens.dark());
+    });
+
+    test('copyWith replaces input tokens and equality tracks them', () {
+      final original = LayrzTokens.light();
+      final replaced = original.copyWith(input: const LayrzInputColorTokens.dark());
+
+      expect(replaced.input, const LayrzInputColorTokens.dark());
+      expect(replaced == original, isFalse);
+      expect(original.copyWith(), original);
+    });
+
     test('light factory wires shadow.surfaceColor to colors.sf1', () {
       final tokens = LayrzTokens.light();
 
