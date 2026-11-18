@@ -428,6 +428,36 @@ void main() {
         expect(decoration.color, equals(customColor));
       });
 
+      testWidgets('icon uses contrastColor: white on mid green', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzAvatar.icon(icon: MdiIcons.check, color: const Color(0xFF4CAF50)),
+        );
+
+        final icon = tester.widget<Icon>(find.byType(Icon));
+        expect(icon.color, equals(const Color(0xFFFFFFFF)));
+      });
+
+      testWidgets('icon uses contrastColor: black on light background', (tester) async {
+        await pumpThemed(
+          tester,
+          LayrzAvatar.icon(icon: MdiIcons.check, color: const Color(0xFFFFEB3B)),
+        );
+
+        final icon = tester.widget<Icon>(find.byType(Icon));
+        expect(icon.color, equals(const Color(0xFF000000)));
+      });
+
+      testWidgets('initials use contrastColor: white on mid green', (tester) async {
+        await pumpThemed(
+          tester,
+          const LayrzAvatar(nameText: 'Test', color: Color(0xFF4CAF50)),
+        );
+
+        final text = tester.widget<Text>(find.text('TE'));
+        expect(text.style?.color, equals(const Color(0xFFFFFFFF)));
+      });
+
       testWidgets('ignores background color behind URL images', (tester) async {
         const customColor = Color(0xFFFF0000);
         final source = LayrzAvatarUrl('https://example.com/avatar.png');
