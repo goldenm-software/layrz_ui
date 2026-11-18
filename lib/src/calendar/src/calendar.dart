@@ -53,6 +53,9 @@ import 'calendar_zone.dart';
 /// affected by disabled state) and never shares a render branch with an
 /// empty day — see `LayrzCalendarDayCell`'s class doc.
 ///
+/// **Restricting views:** [availableModes] limits which modes the header
+/// offers and which month-surface shortcuts navigate; see its field doc.
+///
 /// **Lifecycle:** if [controller] is null, the calendar creates and disposes
 /// its own; if non-null, the caller owns disposal and the instance must
 /// never be swapped — enforced by an assertion in [didUpdateWidget],
@@ -69,6 +72,7 @@ class LayrzCalendar extends StatefulWidget {
     this.timeFormat = LayrzTimeFormat.h24,
     this.dayNumberOpensDayView = true,
     this.showWeekNumbers = true,
+    this.availableModes = const {LayrzCalendarMode.month, LayrzCalendarMode.week, LayrzCalendarMode.day},
     this.onModeChanged,
     this.onTap,
     super.key,
@@ -144,8 +148,8 @@ class LayrzCalendar extends StatefulWidget {
   /// Defaults to `true`. When `false`, the date number renders fully inert —
   /// no hover state, no pointer cursor, no interactive semantics node —
   /// rather than merely suppressing the navigation behind a still-present
-  /// hoverable region. Has no effect on the "+N" overflow chip, which always
-  /// navigates to day view regardless of this flag. Has no effect outside
+  /// hoverable region. Has no effect on the "+N" overflow chip. Both only
+  /// navigate when [availableModes] contains [LayrzCalendarMode.day]. Has no effect outside
   /// [LayrzCalendarMode.month] — week and day views have no day-of-month
   /// number cell.
   final bool dayNumberOpensDayView;
@@ -161,6 +165,22 @@ class LayrzCalendar extends StatefulWidget {
   /// day) and for why the gutter never affects the grid's own column
   /// geometry.
   final bool showWeekNumbers;
+
+  /// The view modes this calendar may show. Must not be empty.
+  ///
+  /// Defaults to all three [LayrzCalendarMode] values. The header switcher
+  /// offers only these, in enum order, and is hidden when a single mode is
+  /// available. Month-surface shortcuts follow it too: the day-of-month
+  /// number and the "+N" chip open day view only when
+  /// [LayrzCalendarMode.day] is available, and the week-number gutter opens
+  /// week view only when [LayrzCalendarMode.week] is available (the numbers
+  /// still render, inert).
+  ///
+  /// The controller never stays on an unavailable mode: on init, on any
+  /// controller change and when this set changes, an unavailable mode is
+  /// replaced via `setMode` with the first available mode in enum order,
+  /// without calling [onModeChanged].
+  final Set<LayrzCalendarMode> availableModes;
 
   /// Called with the newly selected mode whenever the header's view
   /// switcher changes it, or whenever a month cell's date number or overflow
@@ -222,6 +242,8 @@ class _LayrzCalendarState extends State<LayrzCalendar> {
       _effectiveController = _internalController;
     }
 
+    assert(widget.availableModes.isNotEmpty, 'availableModes must not be empty.');
+    _ensureAvailableMode();
     _effectiveController.addListener(_onControllerChanged);
   }
 
@@ -234,6 +256,8 @@ class _LayrzCalendarState extends State<LayrzCalendar> {
       'LayrzCalendar does not support changing the controller instance. '
       'The same controller must be passed, or null must remain null.',
     );
+    assert(widget.availableModes.isNotEmpty, 'availableModes must not be empty.');
+    _ensureAvailableMode();
   }
 
   @override
@@ -250,10 +274,21 @@ class _LayrzCalendarState extends State<LayrzCalendar> {
   }
 
   void _onControllerChanged() {
+    // The corrective setMode re-notifies, which rebuilds.
+    if (_ensureAvailableMode()) return;
     if (mounted) setState(() {});
   }
 
+  /// Moves the controller to the first available mode when its mode is unavailable; returns whether it did.
+  bool _ensureAvailableMode() {
+    final modes = widget.availableModes;
+    if (modes.isEmpty || modes.contains(_effectiveController.mode)) return false;
+    _effectiveController.setMode(LayrzCalendarMode.values.firstWhere(modes.contains));
+    return true;
+  }
+
   void _handleModeChanged(LayrzCalendarMode mode) {
+    if (!widget.availableModes.contains(mode)) return;
     _effectiveController.setMode(mode);
     widget.onModeChanged?.call(mode);
   }
@@ -340,6 +375,7 @@ class _LayrzCalendarState extends State<LayrzCalendar> {
                 onNext: _onNext,
                 onToday: _effectiveController.goToToday,
                 onModeChanged: _handleModeChanged,
+                availableModes: widget.availableModes,
               ),
               SizedBox(height: tokens.spacing.sp2),
               Expanded(child: _buildSurface(mode)),
@@ -353,16 +389,17 @@ class _LayrzCalendarState extends State<LayrzCalendar> {
   Widget _buildSurface(LayrzCalendarMode mode) {
     switch (mode) {
       case LayrzCalendarMode.month:
+        final dayAvailable = widget.availableModes.contains(LayrzCalendarMode.day);
         return LayrzCalendarMonthSurface(
           focusedDate: _effectiveController.focusedDate,
           entries: widget.entries,
           isDateDisabled: widget.isDateDisabled,
           firstDayOfWeek: widget.firstDayOfWeek,
-          onOverflowTap: _handleDayCellNavigation,
-          dayNumberOpensDayView: widget.dayNumberOpensDayView,
+          onOverflowTap: dayAvailable ? _handleDayCellNavigation : null,
+          dayNumberOpensDayView: widget.dayNumberOpensDayView && dayAvailable,
           onDateNumberTap: _handleDayCellNavigation,
           showWeekNumbers: widget.showWeekNumbers,
-          onWeekNumberTap: _handleWeekNumberTap,
+          onWeekNumberTap: widget.availableModes.contains(LayrzCalendarMode.week) ? _handleWeekNumberTap : null,
           onTap: widget.onTap == null ? null : _handleMonthTap,
         );
       case LayrzCalendarMode.week:

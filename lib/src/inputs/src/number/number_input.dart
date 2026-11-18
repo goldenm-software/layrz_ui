@@ -403,6 +403,8 @@ class _LayrzNumberInputState extends State<LayrzNumberInput> {
     final formatted = value == null ? '' : _formatNumber(value);
     // Rewriting identical text would move the caret to the end mid-edit.
     if (_controller.text == formatted) return;
+    // Keep partial input like "2," or "22" when it already means this value.
+    if (_parseNumber(_controller.text) == value) return;
     _isInternalUpdate = true;
     _controller.text = formatted;
     _isInternalUpdate = false;

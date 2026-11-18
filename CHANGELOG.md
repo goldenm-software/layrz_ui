@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.11.0
+
+- New `LayrzOverflowBadgeVisual`: a `LayrzBadgeVisual` that shows a hidden-items count as `+N` (capped at `+99`), with the same size, colors and centering. `LayrzBadgeVisual` gains an overridable `formatLabel`; its output is unchanged.
+- Fixed: `LayrzAvatar` picks its icon and initials color with `contrastColor` (Material's threshold) instead of its own luminance formula, so mid-tone fills such as `#4CAF50` get white content.
+- Fixed: `LayrzNumberInput` no longer rewrites what the user is typing when the parent rebuilds with the same number (e.g. `22` stored as `22.0`, or a trailing `2,`); a different value set from outside still replaces the text.
+- `LayrzCalendar` and `LayrzCalendarHeader` accept `availableModes` (default all three): the header offers only those modes, in month/week/day order, and hides the switcher row when a single mode is available. The month day number and `+N` chip open day view only when day is available, and the week-number gutter opens week view only when week is available. A controller left on an unavailable mode (initial mode, `setMode`, or a narrowed set) moves to the first available one. Asserted non-empty.
+
 ## 1.10.0
 
 - New `LayrzConfirmationDialog`: a yes/no confirmation over `LayrzDialog` that always resolves to `Future<bool>` (`false` on the dismiss button, barrier tap, Escape, the X or back). `LayrzConfirmationDialog.show` takes a title, description, extra content, confirm/dismiss labels, a `LayrzButtonType` for the confirm button, an icon and `canDismiss` (default `true`). `LayrzConfirmationDialog.delete` is the delete preset: texts default to the `confirmation*` strings of `LayrzUiL10n` (plural variants when more than one item is passed) and `items` are listed below the description.

@@ -240,4 +240,119 @@ void main() {
       });
     }
   });
+
+  group('LayrzCalendarHeader availableModes', () {
+    LayrzCalendarHeader header({
+      Set<LayrzCalendarMode>? availableModes,
+      LayrzCalendarMode mode = LayrzCalendarMode.month,
+    }) {
+      return availableModes == null
+          ? LayrzCalendarHeader(
+              focusedDate: DateTime(2026, 8, 15),
+              mode: mode,
+              onPrevious: () {},
+              onNext: () {},
+              onToday: () {},
+              onModeChanged: (_) {},
+            )
+          : LayrzCalendarHeader(
+              focusedDate: DateTime(2026, 8, 15),
+              mode: mode,
+              availableModes: availableModes,
+              onPrevious: () {},
+              onNext: () {},
+              onToday: () {},
+              onModeChanged: (_) {},
+            );
+    }
+
+    Finder modeButton(String label) => find.byWidgetPredicate((w) => w is LayrzButton && w.labelText == label);
+
+    void setViewport(WidgetTester tester, Size size) {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+    }
+
+    for (final (label, size, width) in [
+      ('wide', const Size(1600, 1200), 900.0),
+      ('narrow', const Size(400, 800), 380.0),
+    ]) {
+      testWidgets('defaults to all three mode buttons ($label)', (tester) async {
+        setViewport(tester, size);
+        await pumpHeaderAtWidth(tester, header(), width);
+
+        expect(modeButton('View as month'), findsOneWidget);
+        expect(modeButton('View as week'), findsOneWidget);
+        expect(modeButton('View as day'), findsOneWidget);
+      });
+
+      testWidgets('a single available mode hides the switcher row but keeps navigation ($label)', (tester) async {
+        setViewport(tester, size);
+        await pumpHeaderAtWidth(tester, header(availableModes: {LayrzCalendarMode.month}), width);
+
+        expect(modeButton('View as month'), findsNothing);
+        expect(modeButton('View as week'), findsNothing);
+        expect(modeButton('View as day'), findsNothing);
+        expect(modeButton('Previous month'), findsOneWidget);
+        expect(modeButton('Next month'), findsOneWidget);
+        expect(modeButton('Today'), findsOneWidget);
+
+        // Only the navigation row remains: no trailing spacing below it.
+        final navRow = find.ancestor(of: modeButton('Today'), matching: find.byType(Row)).first;
+        expect(
+          tester.getSize(find.byType(LayrzCalendarHeader)).height,
+          closeTo(tester.getSize(navRow).height, 0.5),
+        );
+      });
+    }
+
+    testWidgets('{month, week} renders only month and week as labeled buttons when wide', (tester) async {
+      setViewport(tester, const Size(1600, 1200));
+      await pumpHeaderAtWidth(
+        tester,
+        header(availableModes: {LayrzCalendarMode.month, LayrzCalendarMode.week}),
+        900,
+      );
+
+      expect(tester.widget<LayrzButton>(modeButton('View as month')).style, LayrzButtonStyle.filled);
+      expect(tester.widget<LayrzButton>(modeButton('View as week')).style, LayrzButtonStyle.outlined);
+      expect(modeButton('View as day'), findsNothing);
+    });
+
+    testWidgets('{month, week} renders only month and week as fab buttons when narrow', (tester) async {
+      setViewport(tester, const Size(400, 800));
+      await pumpHeaderAtWidth(
+        tester,
+        header(availableModes: {LayrzCalendarMode.month, LayrzCalendarMode.week}),
+        380,
+      );
+
+      expect(tester.widget<LayrzButton>(modeButton('View as month')).style, LayrzButtonStyle.filledFab);
+      expect(tester.widget<LayrzButton>(modeButton('View as week')).style, LayrzButtonStyle.outlinedFab);
+      expect(modeButton('View as day'), findsNothing);
+    });
+
+    testWidgets('renders available modes in enum order regardless of set order', (tester) async {
+      setViewport(tester, const Size(1600, 1200));
+      await pumpHeaderAtWidth(
+        tester,
+        header(availableModes: {LayrzCalendarMode.day, LayrzCalendarMode.month}, mode: LayrzCalendarMode.day),
+        900,
+      );
+
+      expect(modeButton('View as week'), findsNothing);
+      expect(
+        tester.getTopLeft(modeButton('View as month')).dx,
+        lessThan(tester.getTopLeft(modeButton('View as day')).dx),
+      );
+    });
+
+    testWidgets('an empty availableModes set asserts', (tester) async {
+      setViewport(tester, const Size(1600, 1200));
+      await pumpThemed(tester, SizedBox(width: 900, height: 200, child: header(availableModes: {})));
+
+      expect(tester.takeException(), isAssertionError);
+    });
+  });
 }
