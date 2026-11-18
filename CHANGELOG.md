@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.10.0
+
+- New `LayrzConfirmationDialog`: a yes/no confirmation over `LayrzDialog` that always resolves to `Future<bool>` (`false` on the dismiss button, barrier tap, Escape, the X or back). `LayrzConfirmationDialog.show` takes a title, description, extra content, confirm/dismiss labels, a `LayrzButtonType` for the confirm button, an icon and `canDismiss` (default `true`). `LayrzConfirmationDialog.delete` is the delete preset: texts default to the `confirmation*` strings of `LayrzUiL10n` (plural variants when more than one item is passed) and `items` are listed below the description.
+
 ## 1.9.0
 
 - Inputs are as tall as buttons: non-dense text-field inputs (text, password, number, select, combobox, duration and every picker anchor, plus the web login fields) are now 45 px tall on wide viewports and 50 px on compact ones (`isCompact`), up from 43 px. Dense inputs (35 px) are unchanged. `LayrzSkeletonBox.input` follows the same heights, and `kLayrzSkeletonInputHeight` is now `45.0`.
