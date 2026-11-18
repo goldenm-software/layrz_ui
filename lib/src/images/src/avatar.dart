@@ -243,7 +243,7 @@ class LayrzAvatar extends StatelessWidget {
         backgroundColor: defaultColor,
         child: Icon(
           icon,
-          color: _pickTextColor(defaultColor),
+          color: defaultColor.contrastColor,
           size: size * 0.7,
         ),
       );
@@ -288,7 +288,7 @@ class LayrzAvatar extends StatelessWidget {
           style: TextStyle(
             fontSize: size * 0.4,
             fontWeight: FontWeight.w600,
-            color: _pickTextColor(defaultColor),
+            color: defaultColor.contrastColor,
           ),
         ),
       ),
@@ -397,7 +397,7 @@ class LayrzAvatar extends StatelessWidget {
       backgroundColor: defaultColor,
       child: Icon(
         icon,
-        color: _pickTextColor(defaultColor),
+        color: defaultColor.contrastColor,
         size: size * 0.7,
       ),
     );
@@ -416,22 +416,6 @@ class LayrzAvatar extends StatelessWidget {
     if (cleaned.isEmpty) return 'NA';
     if (cleaned.length == 1) return cleaned;
     return cleaned.substring(0, 2).toUpperCase();
-  }
-
-  /// Picks a contrasting text color (black or white) based on background brightness.
-  ///
-  /// Uses a simple luminance heuristic: if the background is bright, use black;
-  /// otherwise, use white. This ensures readability without requiring an explicit
-  /// textColor parameter.
-  static Color _pickTextColor(Color background) {
-    // Extract RGB components using the new Color API
-    final r = background.r;
-    final g = background.g;
-    final b = background.b;
-
-    // Standard relative luminance calculation
-    final lum = (0.299 * r + 0.587 * g + 0.114 * b);
-    return lum > 0.5 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
   }
 
   /// Resolves the elevation to a list of box shadows.

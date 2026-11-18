@@ -103,6 +103,11 @@ class LayrzBadgeVisual extends StatelessWidget {
     return count.toString();
   }
 
+  /// The text rendered for [count]. Defaults to [formatCount]; subclasses
+  /// override it to change the label (see `LayrzOverflowBadgeVisual`).
+  @protected
+  String formatLabel(int count) => formatCount(count);
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -130,7 +135,7 @@ class LayrzBadgeVisual extends StatelessWidget {
     Widget? content;
     if (count != null) {
       content = Text(
-        formatCount(count!),
+        formatLabel(count!),
         style: tokens.typography.label.copyWith(
           color: spec.contentColor,
           fontSize: tokens.typography.label.fontSize ?? kLayrzBadgeCountFontSize,

@@ -25,10 +25,11 @@ import 'calendar_mode.dart';
 /// selects the mode-appropriate **label**, so a screen reader never announces
 /// "Previous month" while the calendar is actually stepping by week or day.
 ///
-/// **The switcher is selectable across all three [LayrzCalendarMode]
-/// values** — month, week and day all dispatch through [onModeChanged] when
-/// tapped, and the active mode renders as [LayrzButtonStyle.filled] while
-/// the other two render [LayrzButtonStyle.outlined].
+/// **The switcher offers exactly [availableModes]** — each one dispatches
+/// through [onModeChanged] when tapped, in enum order (month, week, day), and
+/// the active mode renders as [LayrzButtonStyle.filled] while the others
+/// render [LayrzButtonStyle.outlined]. With a single available mode the
+/// switcher row is not rendered at all.
 class LayrzCalendarHeader extends StatelessWidget {
   /// Creates a [LayrzCalendarHeader].
   const LayrzCalendarHeader({
@@ -38,6 +39,7 @@ class LayrzCalendarHeader extends StatelessWidget {
     required this.onNext,
     required this.onToday,
     this.onModeChanged,
+    this.availableModes = const {LayrzCalendarMode.month, LayrzCalendarMode.week, LayrzCalendarMode.day},
     super.key,
   });
 
@@ -86,13 +88,21 @@ class LayrzCalendarHeader extends StatelessWidget {
 
   /// Called with the newly selected mode when a switcher entry is tapped.
   ///
-  /// Null disables the switcher entirely (all three buttons render but are
-  /// non-interactive). `LayrzCalendar` always supplies this, so in practice
+  /// Null disables the switcher entirely (every available mode's button
+  /// renders but is non-interactive). `LayrzCalendar` always supplies this, so in practice
   /// the switcher is always interactive when reached through that widget.
   final void Function(LayrzCalendarMode mode)? onModeChanged;
 
+  /// The view modes the switcher offers, rendered in enum order.
+  ///
+  /// Must not be empty. Defaults to all three [LayrzCalendarMode] values.
+  /// When it holds a single mode the switcher row, and its spacing, is
+  /// omitted; previous/next and "Today" always render.
+  final Set<LayrzCalendarMode> availableModes;
+
   @override
   Widget build(BuildContext context) {
+    assert(availableModes.isNotEmpty, 'availableModes must not be empty.');
     final l10n = LayrzUiL10n.of(context);
     final today = DateTime.now();
     final isFocusedOnToday =
@@ -144,8 +154,15 @@ class LayrzCalendarHeader extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: tokens.spacing.sp2),
-        _ModeSwitcher(mode: mode, onModeChanged: onModeChanged, compact: compactModes),
+        if (availableModes.length > 1) ...[
+          SizedBox(height: tokens.spacing.sp2),
+          _ModeSwitcher(
+            mode: mode,
+            availableModes: availableModes,
+            onModeChanged: onModeChanged,
+            compact: compactModes,
+          ),
+        ],
       ],
     );
   }
@@ -258,9 +275,15 @@ const double kLayrzCalendarCompactHeaderWidth = 560;
 
 /// The row of view-mode buttons under [LayrzCalendarHeader]'s navigation row.
 class _ModeSwitcher extends StatelessWidget {
-  const _ModeSwitcher({required this.mode, required this.onModeChanged, this.compact = false});
+  const _ModeSwitcher({
+    required this.mode,
+    required this.availableModes,
+    required this.onModeChanged,
+    this.compact = false,
+  });
 
   final LayrzCalendarMode mode;
+  final Set<LayrzCalendarMode> availableModes;
   final void Function(LayrzCalendarMode mode)? onModeChanged;
 
   /// Icon-only fab buttons with the label as tooltip, for narrow headers.
@@ -277,16 +300,20 @@ class _ModeSwitcher extends StatelessWidget {
       mainAxisAlignment: compact ? MainAxisAlignment.spaceAround : MainAxisAlignment.start,
       spacing: tokens.spacing.sp1,
       children: [
-        _buildButton(context, LayrzCalendarMode.month, l10n.calendarViewMonth, MdiIcons.calendarMonth),
-        _buildButton(context, LayrzCalendarMode.week, l10n.calendarViewWeek, MdiIcons.calendarWeek),
-        _buildButton(context, LayrzCalendarMode.day, l10n.calendarViewDay, MdiIcons.viewDay),
+        for (final buttonMode in LayrzCalendarMode.values)
+          if (availableModes.contains(buttonMode)) _buildButton(context, buttonMode, l10n),
       ],
     );
     if (compact) return buttons;
     return SingleChildScrollView(scrollDirection: Axis.horizontal, child: buttons);
   }
 
-  Widget _buildButton(BuildContext context, LayrzCalendarMode buttonMode, String label, IconData icon) {
+  Widget _buildButton(BuildContext context, LayrzCalendarMode buttonMode, LayrzUiL10n l10n) {
+    final (label, icon) = switch (buttonMode) {
+      LayrzCalendarMode.month => (l10n.calendarViewMonth, MdiIcons.calendarMonth),
+      LayrzCalendarMode.week => (l10n.calendarViewWeek, MdiIcons.calendarWeek),
+      LayrzCalendarMode.day => (l10n.calendarViewDay, MdiIcons.viewDay),
+    };
     final isSelected = buttonMode == mode;
     final style = compact
         ? (isSelected ? LayrzButtonStyle.filledFab : LayrzButtonStyle.outlinedFab)
