@@ -5888,3 +5888,45 @@ its populated `sf1` fill is unchanged).
 - Changing an input fill is now a one-place edit in `LayrzInputColorTokens`.
 - Switch, checkbox, card, skeleton shimmer and menu items still read `sf*` tokens directly (out of scope).
 - The chrome edit does not widen the freeze exception: any further chrome change still needs maintainer sign-off.
+
+## D84: `LayrzConfirmationDialog` Is a `Future<bool>` Preset Over `LayrzDialog`, Dismissible by Default
+
+**Date**: 2026-11-17  
+**Status**: Decided  
+**Category**: Components / Dialogs
+
+### Context
+
+Consumers (`layrz_users`, `layrz_admin_users`) hand-rolled the same delete confirmation on top of
+`LayrzDialog.show<bool>`: a title, a description, an optional list of item names, a dismiss button and a
+`LayrzButton.delete` confirm, each one popping the root navigator by hand and coalescing `null` to `false`.
+`LayrzUiL10n` already shipped the `confirmation*` strings for exactly this dialog, unused. Product asked that
+every delete action confirm through one shared dialog that can grow beyond deletion.
+
+### Decision
+
+- **Static-method surface, like `LayrzDialog`/`LayrzResponsiveModal`**: `LayrzConfirmationDialog.show` (generic)
+  and `LayrzConfirmationDialog.delete` (preset). No widget to construct.
+- **Always `Future<bool>`, never `bool?`**: `true` only for the confirm button. Every other exit (dismiss
+  button, barrier, Escape, X, back gesture) resolves `false`, so call sites read
+  `if (!await LayrzConfirmationDialog.delete(...)) return;`.
+- **`canDismiss` defaults to `true`**, unlike `LayrzDialog` with actions (which defaults to `false`). Escaping a
+  confirmation means "no", the safe answer, so blocking the barrier protects nothing. `canDismiss: false`
+  remains available to force an explicit choice.
+- **Confirm color is a `LayrzButtonType`** (`type`, default `success`) plus an optional `icon`. The dismiss
+  button takes the opposite color: `success` when the confirm is `danger`/`warning`, `danger` otherwise. This
+  matches both hand-made sources (delete: success dismiss + danger confirm; lock/suspend: danger cancel +
+  success confirm) without a second color parameter.
+- **`delete` defaults come from `LayrzUiL10n`**: `confirmationTitle`/`confirmationContent`, or the `Multiple`
+  variants when `items.length > 1`; labels from `confirmationConfirm`/`confirmationDismiss`. `items` render
+  comma-separated in label size with title weight, as in `layrz_users`. No new l10n members.
+- **Buttons pop through `LayrzModalRoute.popIfCurrent`** from a context inside the route, so a fast double tap
+  cannot pop the page underneath.
+- **No built-in multi-step API.** A two-step confirmation is two chained `show` calls guarded by
+  `context.mounted`; a `steps` parameter would need a step data type for no behavior the chain lacks.
+
+### Consequences
+
+- Delete flows in components can drop their hand-made dialogs and per-component confirmation keys in favor of
+  `LayrzConfirmationDialog.delete`, mapping `confirmations.*` through their `LayrzUiL10n` subclass.
+- Item lists render as one wrapped text line; a very long list scrolls inside the dialog body.

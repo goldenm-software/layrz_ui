@@ -29,6 +29,10 @@ class _DialogsSectionState extends State<DialogsSection> {
   /// has not been opened yet, or was dismissed without a value.
   bool? _lastConfirmResult;
 
+  /// The result returned by the last [LayrzConfirmationDialog], or `null` if
+  /// none has been opened yet.
+  bool? _lastConfirmationResult;
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.tokens;
@@ -79,6 +83,61 @@ class _DialogsSectionState extends State<DialogsSection> {
                 if (_lastConfirmResult != null)
                   Text(
                     'Last result: ${_lastConfirmResult! ? 'confirmed (true)' : 'cancelled (false)'}',
+                    style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
+                  ),
+              ],
+            ),
+          ),
+
+          _DialogShowcaseCard(
+            title: 'LayrzConfirmationDialog',
+            description:
+                'Ready-made yes/no confirmation resolving to Future<bool> (false on dismiss, barrier, '
+                'Escape or X). delete() reads its texts from LayrzUiL10n and switches to the plural '
+                'copy when more than one item is listed.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: tokens.spacing.sp2,
+              children: [
+                Wrap(
+                  spacing: tokens.spacing.sp2,
+                  runSpacing: tokens.spacing.sp2,
+                  children: [
+                    LayrzButton.delete(
+                      labelText: 'Delete one',
+                      onTap: () async {
+                        final result = await LayrzConfirmationDialog.delete(context, items: const ['Truck 01']);
+                        setState(() => _lastConfirmationResult = result);
+                      },
+                    ),
+                    LayrzButton.delete(
+                      labelText: 'Delete many',
+                      onTap: () async {
+                        final result = await LayrzConfirmationDialog.delete(
+                          context,
+                          items: const ['Truck 01', 'Truck 02', 'Van 07'],
+                        );
+                        setState(() => _lastConfirmationResult = result);
+                      },
+                    ),
+                    LayrzButton.edit(
+                      labelText: 'Generic (warning)',
+                      onTap: () async {
+                        final result = await LayrzConfirmationDialog.show(
+                          context,
+                          title: 'Suspend this account?',
+                          description: 'The user will not be able to sign in until reactivated.',
+                          confirmLabel: 'Suspend',
+                          type: .warning,
+                        );
+                        setState(() => _lastConfirmationResult = result);
+                      },
+                    ),
+                  ],
+                ),
+                if (_lastConfirmationResult != null)
+                  Text(
+                    'Last result: $_lastConfirmationResult',
                     style: tokens.typography.body.copyWith(color: tokens.colors.fg3),
                   ),
               ],
