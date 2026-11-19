@@ -57,6 +57,7 @@ class LayrzLayout extends StatefulWidget {
     this.backgroundColor,
     this.selectableContent = true,
     this.controller,
+    this.railWidth = kLayrzLayoutRailWidth,
     super.key,
   });
 
@@ -155,6 +156,11 @@ class LayrzLayout extends StatefulWidget {
   /// caller is responsible for calling [LayrzLayoutController.dispose] on
   /// it; [LayrzLayout] never disposes a controller it did not create.
   final LayrzLayoutController? controller;
+
+  /// The width of the navigation rail in expanded presentation.
+  ///
+  /// Defaults to [kLayrzLayoutRailWidth]. The body is inset by the same amount.
+  final double railWidth;
 
   @override
   State<LayrzLayout> createState() => _LayrzLayoutState();
@@ -400,7 +406,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
         children: [
           Positioned.directional(
             textDirection: Directionality.of(context),
-            start: kLayrzLayoutRailWidth,
+            start: widget.railWidth,
             end: 0,
             top: 0,
             bottom: viewInsets.bottom,
@@ -435,7 +441,7 @@ class _LayrzLayoutState extends State<LayrzLayout> {
               removeBottom: true,
               child: LayrzLayoutNavigatorPanel(
                 tokens: tokens,
-                width: kLayrzLayoutRailWidth,
+                width: widget.railWidth,
                 items: widget.items,
                 logo: widget.logo,
                 userName: widget.userName,
