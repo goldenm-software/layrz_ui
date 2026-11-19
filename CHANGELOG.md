@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.0
+
+- `LayrzLayout` accepts `railWidth` (default `kLayrzLayoutRailWidth`, 220) to widen the navigation rail in expanded presentation; the body is inset by the same amount. The drawer width is unchanged.
+
 ## 1.11.0
 
 - New `LayrzOverflowBadgeVisual`: a `LayrzBadgeVisual` that shows a hidden-items count as `+N` (capped at `+99`), with the same size, colors and centering. `LayrzBadgeVisual` gains an overridable `formatLabel`; its output is unchanged.
